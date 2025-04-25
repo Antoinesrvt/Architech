@@ -1,24 +1,127 @@
 @import "tailwindcss";
+@plugin "daisyui";
 
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    font-family: var(--font-geist-sans);
+  }
+  
+  body {
+    min-height: 100vh;
+    /* We'll use direct CSS for the background and text instead of Tailwind classes */
+    background-color: var(--fallback-b1, oklch(var(--b1)));
+    color: var(--fallback-bc, oklch(var(--bc)));
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Your component styles here */
+}
+
+/* Import DaisyUI */
+@custom-variant dark (&:is(.dark *));
+
+/* DaisyUI custom themes */
+@plugin "daisyui/theme" {
+  name: "architech";
+  default: true;
+  prefersdark: true;
+  color-scheme: "dark";
+  
+  /* Couleurs de base - Fond sombre professionnel avec subtile teinte bleue */
+  --color-base-100: oklch(18% 0.02 240);
+  --color-base-200: oklch(15% 0.02 240);
+  --color-base-300: oklch(12% 0.02 240);
+  --color-base-content: oklch(92% 0.01 240);
+  
+  /* Primaire - Bleu distinctif mais accessible */
+  --color-primary: oklch(65% 0.2 230);
+  --color-primary-content: oklch(98% 0.005 0);
+  
+  /* Secondaire - Violet créatif complémentaire */
+  --color-secondary: oklch(70% 0.18 280);
+  --color-secondary-content: oklch(98% 0.005 0);
+  
+  /* Accent - Cyan énergique pour les points focaux */
+  --color-accent: oklch(75% 0.19 190);
+  --color-accent-content: oklch(15% 0.02 240);
+  
+  /* Neutre - Gris bleuté pour équilibrer */
+  --color-neutral: oklch(30% 0.02 240);
+  --color-neutral-content: oklch(85% 0.01 240);
+  
+  /* États informatifs */
+  --color-info: oklch(74% 0.16 210);
+  --color-info-content: oklch(98% 0.005 0);
+  --color-success: oklch(76% 0.15 160);
+  --color-success-content: oklch(15% 0.02 160);
+  --color-warning: oklch(80% 0.15 85);
+  --color-warning-content: oklch(15% 0.02 85);
+  --color-error: oklch(70% 0.17 25);
+  --color-error-content: oklch(98% 0.005 0);
+  
+  /* Rayons et tailles */
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.625rem;
+  --size-selector: 0.2rem;
+  --size-field: 0.2rem;
+  --border: 1px;
+  --depth: 2;
+  --noise: 0.05;
+}
+
+
+@plugin "daisyui/theme" {
+  name: "architech-light";
+  default: false;
+  prefersdark: false;
+  color-scheme: "light";
+  
+  /* Couleurs de base - Fond clair avec subtile teinte bleue */
+  --color-base-100: oklch(99% 0.01 240);
+  --color-base-200: oklch(96% 0.01 240);
+  --color-base-300: oklch(93% 0.01 240);
+  --color-base-content: oklch(22% 0.02 240);
+  
+  /* Primaire - Bleu professionnel, légèrement plus foncé pour contraste sur fond clair */
+  --color-primary: oklch(60% 0.2 230);
+  --color-primary-content: oklch(99% 0.005 0);
+  
+  /* Secondaire - Violet créatif ajusté pour le mode clair */
+  --color-secondary: oklch(65% 0.18 280);
+  --color-secondary-content: oklch(99% 0.005 0);
+  
+  /* Accent - Cyan énergique ajusté pour le mode clair */
+  --color-accent: oklch(70% 0.19 190);
+  --color-accent-content: oklch(99% 0.005 0);
+  
+  /* Neutre - Gris bleuté pour équilibrer */
+  --color-neutral: oklch(75% 0.02 240);
+  --color-neutral-content: oklch(99% 0.005 0);
+  
+  /* États informatifs - Ajustés pour le mode clair */
+  --color-info: oklch(70% 0.17 210);
+  --color-info-content: oklch(99% 0.005 0);
+  --color-success: oklch(72% 0.16 160);
+  --color-success-content: oklch(99% 0.005 0);
+  --color-warning: oklch(82% 0.16 85);
+  --color-warning-content: oklch(20% 0.03 85);
+  --color-error: oklch(68% 0.18 25);
+  --color-error-content: oklch(99% 0.005 0);
+  
+  /* Rayons et tailles - Identiques au thème sombre pour cohérence */
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.625rem;
+  --size-selector: 0.2rem;
+  --size-field: 0.2rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0.03;
 }

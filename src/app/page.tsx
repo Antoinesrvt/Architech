@@ -1,100 +1,113 @@
 "use client";
-import { RoundedButton } from "@/components/RoundedButton";
-import { invoke } from "@tauri-apps/api/core";
-import Image from "next/image";
-import { useCallback, useState } from "react";
 
-export default function Home() {
-  const [greeted, setGreeted] = useState<string | null>(null);
-  const greet = useCallback((): void => {
-    invoke<string>("greet")
-      .then((s) => {
-        setGreeted(s);
-      })
-      .catch((err: unknown) => {
-        console.error(err);
-      });
-  }, []);
+import { useEffect, useState } from "react";
+import MainLayout from "@/components/layouts/MainLayout";
+import RecentProjects from "@/components/project/RecentProjects";
+import { useTemplateStore } from "@/lib/store";
+import { getApiService } from "@/lib/api";
+import Link from "next/link";
+
+export default function Dashboard() {
+  const { templates, setTemplates, modules, setModules } = useTemplateStore();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const api = getApiService();
+
+  // Fetch templates and modules on component mount
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        
+        // Fetch templates
+        const templatesData = await api.getTemplates();
+        setTemplates(templatesData);
+        
+        // Fetch modules
+        const modulesData = await api.getModules();
+        setModules(modulesData);
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+        setError("Failed to load templates and modules. Please restart the application.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [api, setTemplates, setModules]);
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex flex-col gap-2 items-start">
-          <RoundedButton
-            onClick={greet}
-            title="Call &quot;greet&quot; from Rust"
-          />
-          <p className="break-words w-md">
-            {greeted ?? "Click the button to call the Rust function"}
-          </p>
+    <MainLayout>
+      <div className="space-y-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">ArchiTech Dashboard</h1>
+          <Link href="/new-project" className="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Project
+          </Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card bg-base-100 shadow-lg">
+            <div className="card-body">
+              <h2 className="card-title flex gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Templates
+              </h2>
+              <p className="text-3xl font-bold">{isLoading ? '-' : templates.length}</p>
+              <div className="card-actions justify-end">
+                <Link href="/templates" className="btn btn-sm btn-ghost">View All</Link>
+              </div>
+            </div>
+          </div>
+          
+          <div className="card bg-base-100 shadow-lg">
+            <div className="card-body">
+              <h2 className="card-title flex gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                </svg>
+                Modules
+              </h2>
+              <p className="text-3xl font-bold">{isLoading ? '-' : modules.length}</p>
+              <div className="card-actions justify-end">
+                <Link href="/modules" className="btn btn-sm btn-ghost">View All</Link>
+              </div>
+            </div>
+          </div>
+          
+          <div className="card bg-primary text-primary-content shadow-lg">
+            <div className="card-body">
+              <h2 className="card-title flex gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Quick Start
+              </h2>
+              <p>Create a new project with our wizard</p>
+              <div className="card-actions justify-end">
+                <Link href="/new-project" className="btn btn-sm">Start Now</Link>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {error ? (
+          <div className="alert alert-error">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        ) : (
+          <RecentProjects />
+        )}
+      </div>
+    </MainLayout>
   );
 }

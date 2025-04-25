@@ -1,460 +1,552 @@
-Guidelines de Développement: ArchiTech avec Tauri + Next.js
-1. Vue d'ensemble actualisée
-Architecture avec tauri-nextjs-template
- ┌─────────────────────────────────────────────────────┐
-│                  ArchiTech (Tauri)                  │
-│                                                     │
-│  ┌─────────────────┐          ┌──────────────────┐  │
-│  │                 │          │                  │  │
-│  │  Next.js UI     │          │  Tauri/Rust      │  │
-│  │  (React + SSG)  │◄────────►│  Backend         │  │
-│  │                 │          │                  │  │
-│  └─────────────────┘          └──────────────────┘  │
-│           │                            │            │
-│           ▼                            ▼            │
-│  ┌─────────────────┐          ┌──────────────────┐  │
-│  │                 │          │                  │  │
-│  │  TailwindCSS +  │          │  Système de      │  │
-│  │  shadcn/ui      │          │  Fichiers Local  │  │
-│  │                 │          │                  │  │
-│  └─────────────────┘          └──────────────────┘  │
-│                                                     │
-└─────────────────────────────────────────────────────┘
- Avantages spécifiques au template
-	•	Mode SSG (Static Site Generation) de Next.js pour une application desktop rapide 	•	TailwindCSS déjà configuré avec le design system 	•	TypeScript intégré avec configuration stricte 	•	GitHub Actions préconfigurées pour build multi-plateforme 	•	Système de linting opinionné
-2. Structure de projet adaptée
+Guide de Développement: ArchiTech POC avec Next.js & Tauri
+1. Vision et Contexte du Projet
+À Propos d'ArchiTech
+ArchiTech est un générateur de templates nouvelle génération qui transforme fondamentalement le processus de création d'applications web. Notre objectif est de réduire le temps de configuration d'un projet de "plusieurs semaines à quelques minutes", permettant aux développeurs de se concentrer sur la création de valeur plutôt que sur la configuration technique.
+Problèmes Résolus
+	•	Friction technique : 60% du temps des développeurs est perdu en configuration plutôt qu'en création 	•	Déconnexion design-code : Les équipes luttent pour maintenir la cohérence entre design et implémentation 	•	Réinvention constante : Les équipes réimplémentent continuellement des solutions à des problèmes déjà résolus 	•	Barrière à l'innovation : La complexité technique limite qui peut créer des applications significatives
+Vision du Produit
+Notre POC représente la première étape vers un système auto-évolutif qui apprend, s'adapte et évolue avec ses utilisateurs, éliminant les frontières artificielles entre l'idéation et l'implémentation.
+2. Environnement de Développement
+Prérequis Techniques
+	•	Node.js (v18+) 	•	Rust (édition 2021+) 	•	Git 	•	VS Code (recommandé avec extensions Tauri et React)
+Initialisation du Projet
+ # Cloner le template avec configuration Tailwind et DaisyUI
+git clone [URL_REPO_TEMPLATE] architech
+cd architech
+
+# Installer les dépendances
+npm install
+
+# Démarrer en mode développement
+npm run tauri dev
+ Structure de Projet Optimisée
  architech/
-├── next.config.js              # Configuration Next.js (mode SSG requis)
-├── tailwind.config.js          # Configuration TailwindCSS
-├── tsconfig.json               # Configuration TypeScript
-│
-├── src/                        # Code Next.js (frontend)
-│   ├── components/             # Composants React
-│   │   ├── ui/                 # Composants UI (shadcn/ui)
-│   │   ├── wizard/             # Assistants de génération
-│   │   ├── project/            # Gestion de projets
-│   │   └── layouts/            # Mises en page
+├── src/                        # Code Next.js
+│   ├── app/                    # Routage App Router
+│   │   ├── layout.tsx          # Layout principal
+│   │   ├── page.tsx            # Page d'accueil
+│   │   └── (sections)/         # Routes groupées par section
+│   │       ├── project-wizard/ # Assistant de création de projet
+│   │       ├── templates/      # Navigateur de templates
+│   │       └── settings/       # Paramètres application
 │   │
-│   ├── lib/                    # Logique applicative
+│   ├── components/             # Composants React
+│   │   ├── ui/                 # Composants de base (avec shadcn/ui)
+│   │   ├── features/           # Composants spécifiques aux fonctionnalités  
+│   │   └── wizard/             # Composants de l'assistant de création
+│   │
+│   ├── lib/                    # Logique métier
 │   │   ├── store/              # État global (Zustand)
-│   │   │   ├── project-store.ts   # État des projets
-│   │   │   ├── template-store.ts  # État des templates
-│   │   │   └── settings-store.ts  # Préférences utilisateur
+│   │   ├── services/           # Services d'abstraction
+│   │   │   ├── template-service.ts  # Gestion des templates
+│   │   │   ├── project-service.ts   # Génération de projets
+│   │   │   └── system-service.ts    # Opérations système
 │   │   │
-│   │   ├── api/                # Couche d'abstraction API
-│   │   │   ├── types.ts           # Types partagés
-│   │   │   ├── local.ts           # Implémentation locale
-│   │   │   └── index.ts           # Factory d'API
-│   │   │
-│   │   ├── templates/          # Définitions des templates
-│   │   ├── modules/            # Définitions des modules
+│   │   ├── types/              # Types TypeScript partagés
+│   │   ├── constants/          # Constantes et configuration
 │   │   └── utils/              # Utilitaires
 │   │
-│   ├── pages/                  # Pages Next.js
-│   │   ├── index.tsx           # Dashboard principal
-│   │   ├── new-project.tsx     # Création de projet
-│   │   ├── settings.tsx        # Paramètres
-│   │   └── templates.tsx       # Explorateur de templates
-│   │
-│   ├── styles/                 # Styles globaux
-│   │   └── globals.css         # CSS global (avec Tailwind)
-│   │
-│   └── types/                  # Types TypeScript
+│   └── styles/                 # Styles globaux (Tailwind + DaisyUI)
 │
-├── src-tauri/                  # Code Rust
+├── src-tauri/                  # Code Rust (backend Tauri)
+│   ├── src/
+│   │   ├── main.rs             # Point d'entrée Rust
+│   │   ├── commands.rs         # Commandes exposées au frontend
+│   │   ├── generator/          # Logique de génération
+│   │   └── utils.rs            # Utilitaires Rust
+│   │
 │   ├── Cargo.toml              # Configuration Rust
-│   ├── tauri.conf.json         # Configuration Tauri
-│   └── src/
-│       ├── main.rs             # Point d'entrée Rust
-│       ├── commands/           # Commandes Tauri
-│       │   ├── project.rs      # Commandes de gestion de projets
-│       │   ├── template.rs     # Commandes de gestion de templates
-│       │   └── system.rs       # Commandes système
-│       │
-│       └── utils/              # Utilitaires Rust
+│   └── tauri.conf.json         # Configuration Tauri
 │
-├── public/                     # Assets statiques
-│   ├── icons/                  # Icônes d'application
-│   └── templates-registry/     # Registre local des templates
+├── template-data/              # Définitions des templates et modules
+│   ├── templates/              # Définitions des templates
+│   │   └── nextjs/             # Templates Next.js
+│   │       ├── base.json       # Template de base
+│   │       ├── saas.json       # Template SaaS
+│   │       └── dashboard.json  # Template Dashboard
+│   │
+│   └── modules/                # Définitions des modules
+│       ├── tailwind.json       # Module Tailwind
+│       ├── i18n.json           # Module i18n
+│       └── state.json          # Module state management
 │
-└── templates/                  # Templates et modules
-    ├── nextjs/                 # Templates Next.js
-    │   ├── base/               # Template de base
-    │   ├── saas/               # Template SaaS
-    │   └── dashboard/          # Template dashboard
-    │
-    └── modules/                # Modules d'extension
-        ├── tailwind/           # Module Tailwind
-        ├── i18n/               # Module i18n
-        └── state/              # Module state management
- 3. Configuration spécifique au template
-Next.js en mode SSG
-Configurer ⁠next.config.js pour une utilisation optimale avec Tauri:
- // next.config.js
-const nextConfig = {
-  // Mode statique requis pour Tauri
-  output: 'export',
-  
-  // Optimisations pour Tauri
-  images: {
-    unoptimized: true,
-  },
-  
-  // Désactiver les features serveur inutiles
-  experimental: {
-    // Configurations supplémentaires pour optimiser la build
-  },
-  
-  // Pour le bundle SSG Tauri
-  trailingSlash: true,
-};
-
-module.exports = nextConfig;
- Configuration Tauri
-Ajuster la configuration dans ⁠src-tauri/tauri.conf.json:
- {
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:3000",
-    "distDir": "../out"
-  },
-  "bundle": {
-    "active": true,
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "identifier": "com.architech.dev",
-    "targets": ["deb", "msi", "dmg", "updater"]
-  }
+└── template-files/             # Fichiers de template à copier lors de la génération
+    ├── tailwind/               # Fichiers pour le module Tailwind
+    ├── i18n/                   # Fichiers pour le module i18n
+    └── state/                  # Fichiers pour le module state
+ 3. Architecture Technique Spécifique
+Interface Frontend/Backend
+1. Commandes Tauri
+Exposer les fonctionnalités Rust au frontend via les commandes Tauri:
+ // src-tauri/src/commands.rs
+#[tauri::command]
+fn get_templates() -> Result<Vec<Template>, String> {
+    // Lire et retourner les templates disponibles
 }
- Optimisation des permissions
-Configurer les permissions Tauri nécessaires:
- {
-  "tauri": {
-    "allowlist": {
-      "fs": {
-        "all": true,
-        "scope": ["$APPDATA/*", "$APPDATA/../**"]
-      },
-      "shell": {
-        "all": true,
-        "execute": true,
-        "sidecar": true,
-        "open": true,
-        "scope": [
-          { "name": "npm", "cmd": "npm", "args": true },
-          { "name": "npx", "cmd": "npx", "args": true },
-          { "name": "yarn", "cmd": "yarn", "args": true },
-          { "name": "code", "cmd": "code", "args": true }
-        ]
-      },
-      "dialog": {
-        "all": true
-      },
-      "path": {
-        "all": true
-      }
-    }
-  }
-}
- 4. Flux de développement optimisé
-Cycle de développement
-	1.	Développement UI (Next.js)
- # Dans le répertoire principal
-npm run dev
- Cela lancera Next.js en mode développement sur localhost:3000 	2.	Développement Tauri (avec UI)
- # Dans le répertoire principal
-npm run tauri dev
- Cela lancera l'application Tauri avec l'UI Next.js intégrée 	3.	Tests
- # Tests React
-npm run test
 
-# Tests Tauri/Rust
-cd src-tauri && cargo test
- 
-Bonnes pratiques de commits
-	•	Utiliser le format conventionnel: ⁠type(scope): message
-	▪	⁠feat: pour les nouvelles fonctionnalités 	▪	⁠fix: pour les corrections de bugs 	▪	⁠chore: pour la maintenance 	▪	⁠docs: pour la documentation 	▪	⁠refactor: pour les refactorisations 	▪	⁠test: pour les ajouts/modifications de tests 	•	Créer des branches par fonctionnalité:
-	▪	⁠feature/wizard-ui 	▪	⁠feature/template-generation
-5. Implémentation des fonctionnalités clés
-1. Communication React ↔ Rust
-Établir une communication bidirectionnelle entre Next.js et Rust:
- // src/lib/api/local.ts
+#[tauri::command]
+fn get_modules() -> Result<Vec<Module>, String> {
+    // Lire et retourner les modules disponibles
+}
+
+#[tauri::command]
+fn generate_project(config: ProjectConfig) -> Result<ProjectResult, String> {
+    // Générer un projet selon la configuration fournie
+}
+ 2. Couche Service Next.js
+ // src/lib/services/template-service.ts
 import { invoke } from '@tauri-apps/api/tauri';
-import { TemplateService, Template, Module, ProjectConfig } from './types';
+import type { Template, Module, ProjectConfig, ProjectResult } from '../types';
 
-export class LocalTemplateService implements TemplateService {
+// Interface qui sera compatible avec une future implémentation backend
+export interface TemplateServiceInterface {
+  getTemplates(): Promise<Template[]>;
+  getModules(): Promise<Module[]>;
+  generateProject(config: ProjectConfig): Promise<ProjectResult>;
+}
+
+// Implémentation Tauri (locale)
+export class TauriTemplateService implements TemplateServiceInterface {
   async getTemplates(): Promise<Template[]> {
     return await invoke('get_templates');
   }
-
+  
   async getModules(): Promise<Module[]> {
     return await invoke('get_modules');
   }
-
-  async generateProject(config: ProjectConfig): Promise<string> {
+  
+  async generateProject(config: ProjectConfig): Promise<ProjectResult> {
     return await invoke('generate_project', { config });
   }
 }
- Côté Rust:
- // src-tauri/src/commands/template.rs
-use tauri::command;
-use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Template {
-    id: String,
-    name: String,
-    description: String,
+// Factory pour obtenir l'implémentation appropriée
+export function getTemplateService(): TemplateServiceInterface {
+  return new TauriTemplateService();
 }
-
-#[command]
-pub fn get_templates() -> Vec<Template> {
-    // Implémenter la logique de récupération des templates
-}
- 2. Intégration de shadcn/ui avec Next.js + Tailwind
- # Initialiser shadcn/ui
-npx shadcn-ui@latest init
-
-# Ajouter les composants nécessaires
-npx shadcn-ui@latest add button card tabs select dialog
- 3. État global avec Zustand
+ 3. Gestion d'État avec Zustand
  // src/lib/store/project-store.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { getTemplateService } from '../services/template-service';
+
+const templateService = getTemplateService();
 
 interface ProjectState {
-  recentProjects: RecentProject[];
-  addProject: (project: RecentProject) => void;
-  removeProject: (projectId: string) => void;
+  templates: Template[];
+  modules: Module[];
+  selectedTemplate: string | null;
+  selectedModules: string[];
+  projectConfig: Partial<ProjectConfig>;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Actions
+  fetchTemplates: () => Promise<void>;
+  fetchModules: () => Promise<void>;
+  selectTemplate: (templateId: string) => void;
+  toggleModule: (moduleId: string) => void;
+  updateProjectConfig: (config: Partial<ProjectConfig>) => void;
+  generateProject: () => Promise<ProjectResult>;
 }
 
-export const useProjectStore = create<ProjectState>()(
-  persist(
-    (set) => ({
-      recentProjects: [],
-      addProject: (project) => set((state) => ({ 
-        recentProjects: [project, ...state.recentProjects].slice(0, 10) 
-      })),
-      removeProject: (projectId) => set((state) => ({
-        recentProjects: state.recentProjects.filter(p => p.id !== projectId)
-      })),
-    }),
-    {
-      name: 'architech-projects',
+export const useProjectStore = create<ProjectState>((set, get) => ({
+  templates: [],
+  modules: [],
+  selectedTemplate: null,
+  selectedModules: [],
+  projectConfig: {},
+  isLoading: false,
+  error: null,
+  
+  fetchTemplates: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const templates = await templateService.getTemplates();
+      set({ templates, isLoading: false });
+    } catch (error) {
+      set({ error: String(error), isLoading: false });
     }
-  )
-);
- 6. Plan de développement itératif
-Sprint 1: Fondation et infrastructure (1 semaine)
-	•	Setup du projet avec tauri-nextjs-template 	•	Configuration de shadcn/ui 	•	Mise en place de Zustand pour la gestion d'état 	•	Définition des types et interfaces principaux 	•	Implémentation des commandes Tauri de base
-Sprint 2: Interface utilisateur principale (1 semaine)
-	•	Création du dashboard principal 	•	Mise en place de la navigation 	•	Développement de l'UI des paramètres 	•	Création des composants réutilisables
-Sprint 3: Wizard de création de projet (1.5 semaine)
-	•	Développement du formulaire multi-étapes 	•	Intégration avec l'état global 	•	Visualisation des options sélectionnées 	•	Validation des entrées utilisateur
-Sprint 4: Génération de projets (1.5 semaine)
-	•	Implémentation des commandes Rust pour la génération 	•	Intégration avec create-next-app 	•	Système de gestion des modules 	•	Gestion des fichiers et transformations
-Sprint 5: Templates et modules (1 semaine)
-	•	Création des templates de base 	•	Implémentation des modules principaux (Tailwind, i18n, state) 	•	Interface d'exploration des templates 	•	Système de configuration des modules
-Sprint 6: Tests et finalisation (1 semaine)
-	•	Tests d'intégration complets 	•	Corrections de bugs 	•	Optimisation des performances 	•	Documentation utilisateur 	•	Préparation de la démo
-7. Spécifications techniques détaillées
-Interface de génération de projet
-Définition complète de l'interface entre Next.js et Rust:
- // src/lib/api/types.ts
-export interface ProjectConfig {
-  name: string;
-  path: string;
-  template: string;
-  modules: ModuleConfig[];
-  options: {
-    typescript: boolean;
-    appRouter: boolean;
-    eslint: boolean;
-  };
-}
-
-export interface ModuleConfig {
-  id: string;
-  options: Record<string, any>;
-}
-
-export interface GenerationProgress {
-  step: string;
-  message: string;
-  progress: number;
-}
-
-export interface TemplateService {
-  getTemplates(): Promise<Template[]>;
-  getModules(): Promise<Module[]>;
-  validateProjectConfig(config: ProjectConfig): Promise<ValidationResult>;
-  generateProject(config: ProjectConfig): Promise<string>;
-  listenToProgress(callback: (progress: GenerationProgress) => void): () => void;
-}
- Structure des templates et modules
-Définir la structure standardisée pour les templates et modules:
- // src/lib/templates/types.ts
-export interface Template {
-  id: string;
-  name: string;
-  description: string;
-  version: string;
-  tags: string[];
-  screenshot?: string;
-  baseCommand: string;
-  recommendedModules: string[];
-  structure: {
-    enforced: boolean;
-    directories: string[];
-  };
-}
-
-// src/lib/modules/types.ts
-export interface Module {
-  id: string;
-  name: string;
-  description: string;
-  version: string;
-  category: 'styling' | 'state' | 'i18n' | 'testing' | 'ui' | 'forms' | 'advanced';
-  dependencies: string[];
-  incompatibleWith: string[];
-  installation: {
-    commands: string[];
-    files: FileOperation[];
-    transforms: Transform[];
-  };
-  configuration: {
-    options: ModuleOption[];
-  };
-}
- 8. Workflow de génération Next.js
-Étapes précises de génération
-	1.	Préparation:
-	▪	Validation des entrées 	▪	Vérification des prérequis système 	▪	Création du répertoire de destination 	2.	Création du projet de base:
-	▪	Exécution de ⁠create-next-app avec les options sélectionnées 	▪	Attente de la fin du processus 	▪	Vérification du succès 	3.	Application des modules:
-	▪	Pour chaque module sélectionné:
-	◦	Installation des dépendances 	◦	Copie des fichiers 	◦	Application des transformations 	◦	Exécution des commandes post-installation 	4.	Finalisation:
-	▪	Nettoyage des fichiers temporaires 	▪	Génération du README spécifique 	▪	Initialisation du dépôt Git (optionnel)
-Exemple d'implémentation Rust
- // src-tauri/src/commands/project.rs
-#[command]
-pub async fn generate_project(config: ProjectConfig) -> Result<String, String> {
-    // 1. Préparation
-    let project_path = prepare_project_directory(&config)?;
+  },
+  
+  // Autres actions...
+  
+  generateProject: async () => {
+    const { projectConfig, selectedTemplate, selectedModules } = get();
+    set({ isLoading: true, error: null });
     
-    // 2. Création du projet de base
-    create_base_project(&config, &project_path).await?;
+    try {
+      const config = {
+        ...projectConfig,
+        templateId: selectedTemplate,
+        moduleIds: selectedModules,
+      } as ProjectConfig;
+      
+      const result = await templateService.generateProject(config);
+      set({ isLoading: false });
+      return result;
+    } catch (error) {
+      set({ error: String(error), isLoading: false });
+      throw error;
+    }
+  }
+}));
+ 4. Flux de Développement
+Phase 1: Fondation (Semaine 1)
+Objectifs
+	•	Configuration du framework Tauri avec Next.js 	•	Structuration de l'interface utilisateur de base 	•	Mise en place de la communication frontend/backend
+Tâches
+	1.	Configuration de l'environnement [1j]
+	▪	Installer les dépendances nécessaires 	▪	Configurer TypeScript et ESLint 	▪	Mettre en place la structure de dossiers 	2.	Interface Utilisateur de Base [2j]
+	▪	Créer les layouts principaux avec DaisyUI 	▪	Implémenter la navigation entre sections 	▪	Mettre en place le thème clair/sombre 	3.	Communication Tauri [2j]
+	▪	Définir les premières commandes Rust 	▪	Créer la couche de service d'abstraction 	▪	Tester la communication bidirectionnelle
+Phase 2: Core Generator (Semaine 2)
+Objectifs
+	•	Implémentation de la logique de génération de projet en Rust 	•	Structure des templates et modules 	•	Manipulation de fichiers et exécution de commandes
+Tâches
+	1.	Moteur de Génération Rust [3j]
+	▪	Créer les structures de données pour templates et modules 	▪	Implémenter l'exécution de commandes shell 	▪	Développer les fonctions de manipulation de fichiers 	2.	Définition des Templates/Modules [2j]
+	▪	Structurer les fichiers JSON de définition 	▪	Créer les premiers templates Next.js 	▪	Définir les modules de base (Tailwind, etc.)
+Phase 3: Assistant de Création (Semaine 3)
+Objectifs
+	•	Développement de l'assistant de création de projet en plusieurs étapes 	•	Intégration complète avec la logique de génération 	•	Interface utilisateur riche et réactive
+Tâches
+	1.	Flux de l'Assistant [3j]
+	▪	Mettre en place le wizard multi-étapes 	▪	Créer les formulaires pour chaque étape 	▪	Implémenter la navigation entre étapes 	2.	Sélection et Configuration [2j]
+	▪	Développer l'interface de sélection de template 	▪	Créer l'interface de sélection et configuration des modules 	▪	Implémenter la visualisation du résumé
+Phase 4: Modules et Templates (Semaine 4)
+Objectifs
+	•	Implémentation des modules spécifiques 	•	Création des templates spécialisés 	•	Tests et validation du processus complet
+Tâches
+	1.	Modules Fonctionnels [3j]
+	▪	Implémenter le module d'internationalisation (next-intl) 	▪	Développer le module de gestion d'état (Zustand) 	▪	Créer le module de formulaires (React Hook Form) 	2.	Templates Spécialisés [2j]
+	▪	Créer le template SaaS 	▪	Développer le template Dashboard 	▪	Implémenter le template Marketing
+Phase 5: Finition (1 semaine supplémentaire si nécessaire)
+Objectifs
+	•	Amélioration de l'expérience utilisateur 	•	Correction des problèmes identifiés 	•	Préparation de la démo
+Tâches
+	1.	Polissage UI/UX [2j]
+	▪	Affiner les transitions et animations 	▪	Améliorer les états de chargement et retours visuels 	▪	Optimiser pour différentes tailles d'écran 	2.	Tests et Corrections [2j]
+	▪	Tests sur différents systèmes d'exploitation 	▪	Correction des bugs identifiés 	▪	Optimisations de performance 	3.	Préparation de la Démo [1j]
+	▪	Créer des scénarios de démonstration 	▪	Préparer des projets exemple 	▪	Documenter les fonctionnalités clés
+5. Implémentation des Fonctionnalités Clés
+Générateur de Projet
+Implémentation Rust
+Le cœur du générateur utilise:
+	1.	L'exécution de ⁠create-next-app avec les options appropriées 	2.	L'application séquentielle des modules sélectionnés 	3.	Des opérations de fichiers pour ajouter/modifier le code
+ // src-tauri/src/generator/mod.rs
+pub fn generate_project(config: ProjectConfig) -> Result<(), String> {
+    // 1. Créer le projet de base avec create-next-app
+    let cmd_result = create_base_project(&config)?;
     
-    // 3. Application des modules
-    for module_config in &config.modules {
-        apply_module(&module_config, &project_path).await?;
+    // 2. Appliquer la structure de dossiers imposée
+    enforce_project_structure(&config.path)?;
+    
+    // 3. Appliquer les modules séquentiellement
+    for module_id in &config.module_ids {
+        apply_module(&config.path, module_id)?;
     }
     
-    // 4. Finalisation
-    finalize_project(&config, &project_path).await?;
+    // 4. Configuration finale et nettoyage
+    finalize_project(&config.path)?;
     
-    Ok(project_path)
+    Ok(())
 }
- 9. Considérations UX pour l'application Tauri/Next.js
-Navigation optimisée pour desktop
-Utiliser une navigation adaptée aux applications desktop:
- // src/components/layouts/MainLayout.tsx
-import { Sidebar } from '../ui/sidebar';
-import { TopBar } from '../ui/top-bar';
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+fn create_base_project(config: &ProjectConfig) -> Result<(), String> {
+    // Construire la commande create-next-app avec les options appropriées
+    let mut cmd = Command::new("npx");
+    cmd.arg("create-next-app@latest")
+       .arg(&config.name)
+       .arg("--typescript")
+       .current_dir(&config.parent_directory);
+    
+    if config.use_app_router {
+        cmd.arg("--app");
+    }
+    
+    // Exécuter la commande
+    let output = cmd.output().map_err(|e| e.to_string())?;
+    
+    if !output.status.success() {
+        return Err(format!("Failed to create project: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+    
+    Ok(())
+}
+ Interface React pour le Wizard
+Créer un assistant en plusieurs étapes avec une expérience fluide:
+ // src/components/wizard/ProjectWizard.tsx
+import { useState } from 'react';
+import { useProjectStore } from '@/lib/store/project-store';
+import { BasicInfoStep, FrameworkConfigStep, ModulesStep, ConfigurationStep, SummaryStep } from './steps';
+
+export function ProjectWizard() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const { isLoading, error, generateProject } = useProjectStore();
+  
+  const steps = [
+    { title: 'Informations de base', component: BasicInfoStep },
+    { title: 'Configuration Next.js', component: FrameworkConfigStep },
+    { title: 'Sélection des Modules', component: ModulesStep },
+    { title: 'Configuration des Modules', component: ConfigurationStep },
+    { title: 'Résumé et Génération', component: SummaryStep },
+  ];
+  
+  const CurrentStepComponent = steps[currentStep].component;
+  
+  const goToNextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+  
+  const goToPreviousStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+  
+  const handleGenerate = async () => {
+    try {
+      const result = await generateProject();
+      // Gérer le succès, peut-être naviguer vers une page de succès
+    } catch (error) {
+      // Gérer l'erreur
+    }
+  };
+  
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <div className="flex flex-col flex-1">
-        <TopBar />
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
+    <div className="container mx-auto py-8">
+      <div className="mb-8">
+        <ul className="steps steps-horizontal w-full">
+          {steps.map((step, index) => (
+            <li
+              key={index}
+              className={`step ${index <= currentStep ? 'step-primary' : ''}`}
+              onClick={() => index < currentStep && setCurrentStep(index)}
+            >
+              {step.title}
+            </li>
+          ))}
+        </ul>
+      </div>
+      
+      <div className="card bg-base-200 shadow-xl">
+        <div className="card-body">
+          <CurrentStepComponent />
+          
+          {error && (
+            <div className="alert alert-error mt-4">
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <div className="card-actions justify-end mt-6">
+            {currentStep > 0 && (
+              <button
+                className="btn btn-outline"
+                onClick={goToPreviousStep}
+                disabled={isLoading}
+              >
+                Précédent
+              </button>
+            )}
+            
+            {currentStep < steps.length - 1 ? (
+              <button
+                className="btn btn-primary"
+                onClick={goToNextStep}
+                disabled={isLoading}
+              >
+                Suivant
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={handleGenerate}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="loading loading-spinner"></span>
+                    Génération en cours...
+                  </>
+                ) : (
+                  'Générer le Projet'
+                )}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
- Gestion du chargement et des erreurs
- // src/components/ui/command-feedback.tsx
-import { useState, useEffect } from 'react';
-import { Progress } from './progress';
-import { Alert, AlertTitle, AlertDescription } from './alert';
-
-export function CommandFeedback({ 
-  status, 
-  progress, 
-  message, 
-  error 
-}: CommandFeedbackProps) {
-  return (
-    <div className="mt-4">
-      {status === 'loading' && (
-        <div className="space-y-2">
-          <p className="text-sm">{message}</p>
-          <Progress value={progress} />
-        </div>
-      )}
-      
-      {status === 'error' && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      {status === 'success' && (
-        <Alert variant="success">
-          <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      )}
-    </div>
-  );
+ Définition de Module
+Structure JSON pour définir un module:
+ {
+  "id": "tailwind",
+  "name": "Tailwind CSS",
+  "description": "Framework CSS utilitaire pour un développement rapide",
+  "category": "styling",
+  "icon": "brush",
+  "commands": {
+    "install": "npm install -D tailwindcss postcss autoprefixer",
+    "init": "npx tailwindcss init -p"
+  },
+  "files": [
+    {
+      "source": "tailwind/tailwind.config.js",
+      "destination": "tailwind.config.js",
+      "operation": "create_or_merge"
+    },
+    {
+      "source": "tailwind/globals.css",
+      "destination": "src/styles/globals.css",
+      "operation": "create_if_not_exists"
+    }
+  ],
+  "transforms": [
+    {
+      "type": "json",
+      "target": "package.json",
+      "operations": [
+        {
+          "path": "dependencies",
+          "action": "merge",
+          "value": {
+            "tailwindcss": "^3.3.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "import",
+      "target": "src/app/layout.tsx",
+      "operations": [
+        {
+          "action": "add",
+          "value": "import './globals.css'"
+        }
+      ]
+    }
+  ],
+  "configuration": {
+    "options": [
+      {
+        "id": "plugins",
+        "type": "multiselect",
+        "label": "Plugins Tailwind",
+        "description": "Sélectionnez les plugins additionnels",
+        "default": ["typography"],
+        "choices": [
+          {"value": "typography", "label": "Typography"},
+          {"value": "forms", "label": "Forms"},
+          {"value": "aspect-ratio", "label": "Aspect Ratio"}
+        ]
+      },
+      {
+        "id": "darkMode",
+        "type": "select",
+        "label": "Mode Sombre",
+        "description": "Configuration du mode sombre",
+        "default": "class",
+        "choices": [
+          {"value": "media", "label": "Basé sur les préférences système"},
+          {"value": "class", "label": "Basé sur les classes"}
+        ]
+      }
+    ]
+  }
 }
- 10. Stratégie de tests
-Tests React avec Next.js
- // src/components/ui/button.test.tsx
+ 6. Tests et Assurance Qualité
+Tests Automatisés
+Tests React avec Vitest et Testing Library
+ // src/components/wizard/steps/BasicInfoStep.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Button } from './button';
+import { BasicInfoStep } from './BasicInfoStep';
+import { useProjectStore } from '@/lib/store/project-store';
 
-describe('Button component', () => {
-  test('renders button with text', () => {
-    render(<Button>Click me</Button>);
-    expect(screen.getByText('Click me')).toBeInTheDocument();
+// Mock le store Zustand
+vi.mock('@/lib/store/project-store');
+
+describe('BasicInfoStep', () => {
+  beforeEach(() => {
+    vi.mocked(useProjectStore).mockReturnValue({
+      projectConfig: { name: '', path: '' },
+      updateProjectConfig: vi.fn(),
+    } as any);
   });
-  
-  test('calls onClick when clicked', () => {
-    const handleClick = jest.fn();
-    render(<Button onClick={handleClick}>Click me</Button>);
-    fireEvent.click(screen.getByText('Click me'));
-    expect(handleClick).toHaveBeenCalledTimes(1);
+
+  it('should update project config when form changes', () => {
+    const updateProjectConfig = vi.fn();
+    vi.mocked(useProjectStore).mockReturnValue({
+      projectConfig: { name: '', path: '' },
+      updateProjectConfig,
+    } as any);
+
+    render(<BasicInfoStep />);
+    
+    const nameInput = screen.getByLabelText(/nom du projet/i);
+    fireEvent.change(nameInput, { target: { value: 'my-awesome-project' } });
+    
+    expect(updateProjectConfig).toHaveBeenCalledWith({
+      name: 'my-awesome-project',
+    });
   });
 });
- Tests de commandes Tauri
- // src-tauri/src/commands/project_test.rs
+ Tests Rust avec Cargo Test
+ // src-tauri/src/generator/tests.rs
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use tempfile::tempdir;
-    
+
     #[test]
-    fn test_prepare_project_directory() {
-        let temp = tempdir().unwrap();
-        let config = ProjectConfig {
-            name: "test-project".to_string(),
-            path: temp.path().to_str().unwrap().to_string(),
-            // ... autres champs
-        };
+    fn test_apply_module() {
+        // Créer un répertoire temporaire pour les tests
+        let temp_dir = tempdir().unwrap();
+        let temp_path = temp_dir.path().to_str().unwrap().to_string();
         
-        let result = prepare_project_directory(&config);
+        // Créer un projet fictif minimal
+        fs::create_dir_all(format!("{}/src", temp_path)).unwrap();
+        fs::write(
+            format!("{}/package.json", temp_path),
+            r#"{"name":"test-project","dependencies":{}}"#,
+        ).unwrap();
+        
+        // Appliquer le module tailwind
+        let result = apply_module(&temp_path, "tailwind");
         assert!(result.is_ok());
+        
+        // Vérifier que les fichiers ont été créés
+        assert!(fs::metadata(format!("{}/tailwind.config.js", temp_path)).is_ok());
+        
+        // Vérifier que package.json a été mis à jour
+        let package_json = fs::read_to_string(format!("{}/package.json", temp_path)).unwrap();
+        assert!(package_json.contains("tailwindcss"));
     }
 }
- 
+ Plan de Test Manuel
+Pour chaque version, tester manuellement:
+	1.	Flux complet de création
+	▪	Création d'un projet basique 	▪	Projet avec plusieurs modules 	▪	Projet avec toutes les options 	2.	Validation de projet
+	▪	Vérifier que le projet généré démarre correctement 	▪	Tester les fonctionnalités des modules 	▪	Vérifier la structure de dossiers imposée 	3.	Tests multi-plateformes
+	▪	Windows 10/11 	▪	macOS 	▪	Ubuntu Linux
+7. Livraison du POC
+Critères d'Acceptation
+Le POC sera considéré comme réussi lorsque:
+	1.	Un utilisateur peut générer un projet Next.js complet en moins de 2 minutes 	2.	Les projets générés respectent nos standards de structure et bonnes pratiques 	3.	L'application fonctionne sur Windows, macOS et Linux 	4.	Au moins 3 templates spécialisés sont disponibles 	5.	Au moins 5 modules fonctionnels sont implémentés
+Démonstration
+Préparer une démonstration qui met en évidence:
+	1.	La rapidité du processus (chronométrer la génération vs. configuration manuelle) 	2.	La qualité des projets générés (montrer les fonctionnalités) 	3.	La flexibilité et modularité du système 	4.	La facilité d'utilisation pour les développeurs de tous niveaux
+Documentation du POC
+Fournir:
+	1.	Un README détaillé expliquant l'installation et l'utilisation 	2.	Une documentation sur l'architecture technique 	3.	Un guide pour ajouter de nouveaux templates et modules 	4.	Un plan pour les prochaines étapes de développement
+8. Prochaines Étapes
+Après le POC, les développements prioritaires seront:
+	1.	Backend Services
+	▪	API pour templates et modules 	▪	Système d'analyse et d'amélioration continue 	▪	Authentification et personnalisation 	2.	Intelligence Avancée
+	▪	Recommandations basées sur l'usage 	▪	Détection de patterns dans les projets 	▪	Génération de code contextuelle 	3.	Marketplace de Modules
+	▪	Système de contribution communautaire 	▪	Mécanismes de notation et d'évaluation 	▪	Possibilités de monétisation

@@ -1,18 +1,56 @@
 @import "tailwindcss";
+
 @plugin "daisyui";
 
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 
-@layer base {
-  html {
-    font-family: var(--font-geist-sans);
+@keyframes slideIn {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-out;
   }
   
+  .animate-slideUp {
+    animation: slideUp 0.5s ease-out;
+  }
+  
+  .animate-slideIn {
+    animation: slideIn 0.5s ease-out;
+  }
+}
+
+@layer base {
   body {
-    min-height: 100vh;
-    /* We'll use direct CSS for the background and text instead of Tailwind classes */
-    background-color: var(--fallback-b1, oklch(var(--b1)));
-    color: var(--fallback-bc, oklch(var(--bc)));
+    @apply bg-base-100 text-base-content;
   }
 }
 

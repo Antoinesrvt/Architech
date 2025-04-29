@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useFrameworkStore } from '@/lib/store';
+import { useFrameworkSelection } from '../hooks/useFrameworkSelection';
 import { Framework } from '@/lib/store/framework-store';
 import { cn } from '@/lib/utils/cn';
 
@@ -13,8 +12,8 @@ function FrameworkCard({ framework, selected, onSelect }: FrameworkCardProps) {
   return (
     <div
       className={cn(
-        "card bg-base-200 hover:bg-base-300 cursor-pointer transition-all",
-        selected && "border-2 border-primary"
+        "card bg-base-200 hover:bg-base-300 cursor-pointer transition-all transform hover:scale-[1.02] duration-300 border-2",
+        selected ? "border-primary shadow-lg" : "border-transparent"
       )}
       onClick={onSelect}
     >
@@ -35,42 +34,18 @@ function FrameworkCard({ framework, selected, onSelect }: FrameworkCardProps) {
 }
 
 export function FrameworkStep() {
-  const { frameworks, setFrameworks } = useFrameworkStore();
-  const [selectedType, setSelectedType] = useState<string>('web');
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch frameworks on component mount
-  useEffect(() => {
-    const fetchFrameworks = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // In a real implementation, this would call the API
-        // For now, assume frameworks are already loaded or use mock data
-        const response = await fetch('/api/frameworks');
-        const data = await response.json();
-        setFrameworks(data);
-      } catch (err) {
-        setError('Failed to load frameworks');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (frameworks.length === 0) {
-      fetchFrameworks();
-    }
-  }, [frameworks.length, setFrameworks]);
-
-  // Filter frameworks by type
-  const filteredFrameworks = frameworks.filter(framework => framework.type === selectedType);
+  const { 
+    frameworksByType,
+    selectedFrameworkId,
+    selectedType,
+    loading,
+    error,
+    setSelectedType,
+    selectFramework
+  } = useFrameworkSelection();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       <h2 className="text-2xl font-bold">Select a Framework</h2>
       <p className="text-base-content/70">
         Choose the type of framework you want to use for your project.
@@ -113,20 +88,28 @@ export function FrameworkStep() {
 
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFrameworks.map(framework => (
+          {frameworksByType.map(framework => (
             <FrameworkCard
               key={framework.id}
               framework={framework}
               selected={framework.id === selectedFrameworkId}
-              onSelect={() => setSelectedFrameworkId(framework.id)}
+              onSelect={() => selectFramework(framework.id)}
             />
           ))}
           
-          {filteredFrameworks.length === 0 && (
+          {frameworksByType.length === 0 && (
             <div className="col-span-3 text-center py-8">
               <p className="text-base-content/50">No frameworks available for this type.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Selection summary */}
+      {selectedFrameworkId && (
+        <div className="alert alert-success mt-4 animate-fadeIn">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>You've selected a framework! Click "Next" to continue.</span>
         </div>
       )}
     </div>

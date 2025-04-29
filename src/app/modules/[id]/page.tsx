@@ -8,16 +8,16 @@ import { useFrameworkStore } from "@/lib/store";
 import { Module, FileOperation, Transform, ModuleOption } from "@/lib/store/framework-store";
 import { frameworkService } from "@/lib/api";
 
-// This function is required for Next.js static site generation with dynamic routes
-export async function generateStaticParams() {
-  // Get all module IDs from the frameworkService
-  const modules = await frameworkService.getModules();
+// // This function is required for Next.js static site generation with dynamic routes
+// export async function generateStaticParams() {
+//   // Get all module IDs from the frameworkService
+//   const modules = await frameworkService.getModules();
   
-  // Return an array of objects with the id parameter
-  return modules.map(module => ({
-    id: module.id,
-  }));
-}
+//   // Return an array of objects with the id parameter
+//   return modules.map(module => ({
+//     id: module.id,
+//   }));
+// }
 
 export default function ModuleDetailPage() {
   const params = useParams();

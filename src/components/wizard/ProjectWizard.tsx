@@ -1,22 +1,17 @@
 import { useState } from 'react';
+import { useWizardNavigation, WizardStep } from './hooks/useWizardNavigation';
 import { FrameworkStep } from './steps/FrameworkStep';
 import { BasicInfoStep } from './steps/BasicInfoStep';
 import { ModulesStep } from './steps/ModulesStep';
 import { ConfigurationStep } from './steps/ConfigurationStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { useProjectStore } from '@/lib/store/project-store';
-import { frameworkService } from '@/lib/api';
-
-type WizardStep = {
-  id: string;
-  title: string;
-  component: React.ComponentType;
-};
+import { cn } from '@/lib/utils/cn';
 
 export function ProjectWizard() {
-  const [currentStep, setCurrentStep] = useState(0);
   const { generateProject, isLoading, error } = useProjectStore();
   
+  // Define wizard steps
   const steps: WizardStep[] = [
     { id: 'basic', title: 'Project Info', component: BasicInfoStep },
     { id: 'framework', title: 'Select Framework', component: FrameworkStep },
@@ -24,21 +19,19 @@ export function ProjectWizard() {
     { id: 'config', title: 'Configuration', component: ConfigurationStep },
     { id: 'summary', title: 'Review & Generate', component: SummaryStep },
   ];
-  
-  const CurrentStepComponent = steps[currentStep].component;
-  
-  const goToNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-  
-  const goToPreviousStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-  
+
+  // Initialize wizard navigation
+  const { 
+    currentStep, 
+    currentStepIndex, 
+    visitedSteps, 
+    goToNextStep, 
+    goToPreviousStep, 
+    goToStep, 
+    progress 
+  } = useWizardNavigation({ steps });
+
+  // Project generation handling
   const handleGenerate = async () => {
     try {
       await generateProject();
@@ -48,16 +41,32 @@ export function ProjectWizard() {
       console.error('Project generation failed:', err);
     }
   };
-  
+
+  // Component for the current step
+  const CurrentStepComponent = currentStep.component;
+
   return (
-    <div className="container mx-auto py-8">
+    <div className="py-6 relative animate-fadeIn">
+      {/* Progress bar at the top */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-base-200">
+        <div 
+          className="h-full bg-primary transition-all duration-500 ease-in-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Step indicators */}
       <div className="mb-8">
         <ul className="steps steps-horizontal w-full">
           {steps.map((step, index) => (
             <li
               key={step.id}
-              className={`step ${index <= currentStep ? 'step-primary' : ''}`}
-              onClick={() => index < currentStep && setCurrentStep(index)}
+              className={cn(
+                "step cursor-pointer transition-all duration-300", 
+                index <= currentStepIndex ? "step-primary" : "",
+                visitedSteps[index] ? "step-accent" : ""
+              )}
+              onClick={() => index <= currentStepIndex && goToStep(index)}
             >
               {step.title}
             </li>
@@ -65,51 +74,74 @@ export function ProjectWizard() {
         </ul>
       </div>
       
+      {/* Card with current step */}
       <div className="card bg-base-200 shadow-xl">
         <div className="card-body">
-          <CurrentStepComponent />
+          {/* Current step component */}
+          <div className="min-h-[50vh] transition-all duration-300 animate-fadeIn">
+            <CurrentStepComponent />
+          </div>
           
+          {/* Error display */}
           {error && (
-            <div className="alert alert-error mt-4">
+            <div className="alert alert-error mt-4 animate-slideUp">
+              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span>{error}</span>
             </div>
           )}
           
-          <div className="card-actions justify-end mt-6">
-            {currentStep > 0 && (
-              <button
-                className="btn btn-outline"
-                onClick={goToPreviousStep}
-                disabled={isLoading}
-              >
-                Previous
-              </button>
-            )}
-            
-            {currentStep < steps.length - 1 ? (
-              <button
-                className="btn btn-primary"
-                onClick={goToNextStep}
-                disabled={isLoading}
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary"
-                onClick={handleGenerate}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="loading loading-spinner"></span>
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Project'
-                )}
-              </button>
-            )}
+          {/* Navigation buttons */}
+          <div className="card-actions justify-between mt-6">
+            <div>
+              {currentStepIndex > 0 && (
+                <button
+                  className="btn btn-outline hover:btn-primary transition-all"
+                  onClick={goToPreviousStep}
+                  disabled={isLoading}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Previous
+                </button>
+              )}
+            </div>
+            <div>
+              {currentStepIndex < steps.length - 1 ? (
+                <button
+                  className="btn btn-primary transform transition-transform hover:scale-105"
+                  onClick={goToNextStep}
+                  disabled={isLoading}
+                >
+                  Next
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary btn-lg animate-pulse transform transition-transform hover:scale-105"
+                  onClick={handleGenerate}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="loading loading-spinner"></span>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      Generate Project
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

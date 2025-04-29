@@ -40,7 +40,7 @@ export default function ProgressIndicator({
       <div className="w-full">
         <progress 
           className="progress progress-primary w-full" 
-          value={progress?.progress || 0} 
+          value={progress?.progress ? progress.progress * 100 : 0} 
           max="100"
         ></progress>
         <div className="flex justify-between text-xs mt-1">
@@ -70,16 +70,17 @@ export default function ProgressIndicator({
         )}
 
         <ul className="steps steps-vertical">
-          {['init', 'base', 'modules', 'finalize', 'complete'].map((step, index) => (
+          {['init', 'framework', 'create', 'structure', 'modules', 'complete'].map((step, index) => (
             <li 
               key={step} 
               className={`step ${steps.includes(step) ? 'step-primary' : ''}`}
               data-content={steps.includes(step) ? '✓' : (index + 1)}
             >
-              {step === 'init' && 'Preparing'}
-              {step === 'base' && 'Creating base project'}
+              {step === 'init' && 'Initializing'}
+              {step === 'framework' && 'Loading framework'}
+              {step === 'create' && 'Creating project'}
+              {step === 'structure' && 'Setting up structure'}
               {step === 'modules' && 'Installing modules'}
-              {step === 'finalize' && 'Finalizing project'}
               {step === 'complete' && 'Project ready'}
             </li>
           ))}

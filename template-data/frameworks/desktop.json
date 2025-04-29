@@ -1,0 +1,30 @@
+[
+  {
+    "id": "tauri",
+    "name": "Tauri",
+    "description": "Build smaller, faster, and more secure desktop applications with a web frontend",
+    "version": "1.0.0",
+    "type": "desktop",
+    "tags": ["rust", "desktop", "cross-platform"],
+    "base_command": "npm create tauri-app@latest",
+    "compatible_modules": ["tailwind", "daisyui", "i18n", "zustand", "forms"],
+    "structure": {
+      "enforced": true,
+      "directories": ["src", "src-tauri", "public"]
+    }
+  },
+  {
+    "id": "electron",
+    "name": "Electron",
+    "description": "Build cross-platform desktop apps with JavaScript, HTML, and CSS",
+    "version": "1.0.0",
+    "type": "desktop",
+    "tags": ["javascript", "desktop", "cross-platform"],
+    "base_command": "npm init electron-app@latest",
+    "compatible_modules": ["tailwind", "daisyui", "i18n", "zustand", "forms"],
+    "structure": {
+      "enforced": true,
+      "directories": ["src", "public"]
+    }
+  }
+] 

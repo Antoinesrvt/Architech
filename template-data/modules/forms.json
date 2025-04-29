@@ -1,0 +1,45 @@
+{
+  "id": "forms",
+  "name": "React Hook Form",
+  "description": "Performant, flexible and extensible forms with easy-to-use validation",
+  "version": "1.0.0",
+  "category": "forms",
+  "dependencies": [],
+  "incompatible_with": [],
+  "installation": {
+    "commands": [
+      "npm install react-hook-form @hookform/resolvers zod"
+    ],
+    "files": [
+      {
+        "source": "forms/FormProvider.tsx",
+        "destination": "src/components/ui/form-provider.tsx"
+      },
+      {
+        "source": "forms/FormField.tsx",
+        "destination": "src/components/ui/form-field.tsx"
+      },
+      {
+        "source": "forms/FormInput.tsx",
+        "destination": "src/components/ui/form-input.tsx"
+      }
+    ],
+    "transforms": []
+  },
+  "configuration": {
+    "options": [
+      {
+        "name": "includeZod",
+        "type": "boolean",
+        "description": "Include Zod for schema validation",
+        "default": true
+      },
+      {
+        "name": "includeExamples",
+        "type": "boolean",
+        "description": "Include example form components",
+        "default": true
+      }
+    ]
+  }
+} 

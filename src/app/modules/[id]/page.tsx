@@ -4,16 +4,27 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/layouts/MainLayout";
-import { useTemplateStore } from "@/lib/store";
-import { Module } from "@/lib/store/template-store";
-import { getApiService } from "@/lib/api";
+import { useFrameworkStore } from "@/lib/store";
+import { Module, FileOperation, Transform, ModuleOption } from "@/lib/store/framework-store";
+import { frameworkService } from "@/lib/api";
+
+// This function is required for Next.js static site generation with dynamic routes
+export async function generateStaticParams() {
+  // Get all module IDs from the frameworkService
+  const modules = await frameworkService.getModules();
+  
+  // Return an array of objects with the id parameter
+  return modules.map(module => ({
+    id: module.id,
+  }));
+}
 
 export default function ModuleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const moduleId = params.id as string;
   
-  const { modules = [] } = useTemplateStore();
+  const { modules = [] } = useFrameworkStore();
   const [module, setModule] = useState<Module | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +38,10 @@ export default function ModuleDetailPage() {
           setError(null);
           
           // Fetch modules from API
-          const templateService = getApiService();
-          const modulesData = await templateService.getModules();
+          const modulesData = await frameworkService.getModules();
           
           // Update store
-          useTemplateStore.getState().setModules(modulesData);
+          useFrameworkStore.getState().setModules(modulesData);
           
           // Find the requested module
           const foundModule = modulesData.find(m => m.id === moduleId);
@@ -170,7 +180,7 @@ export default function ModuleDetailPage() {
                 <div className="mt-6">
                   <h3 className="font-bold text-lg">Installation</h3>
                   <div className="mt-2 space-y-3">
-                    {module.installation.commands.map((command, index) => (
+                    {module.installation.commands.map((command: string, index: number) => (
                       <div key={index} className="bg-base-300 rounded-lg p-3 font-mono text-sm relative group">
                         {command}
                         <button className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -200,7 +210,7 @@ export default function ModuleDetailPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {module.installation.files.map((file, index) => (
+                          {module.installation.files.map((file: FileOperation, index: number) => (
                             <tr key={index}>
                               <td className="font-mono text-sm">{file.destination}</td>
                               <td className="font-mono text-sm">{file.source}</td>
@@ -228,7 +238,7 @@ export default function ModuleDetailPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {module.installation.transforms.map((transform, index) => (
+                          {module.installation.transforms.map((transform: Transform, index: number) => (
                             <tr key={index}>
                               <td className="font-mono text-sm">{transform.file}</td>
                               <td>Pattern replacement</td>
@@ -253,7 +263,7 @@ export default function ModuleDetailPage() {
                   <p className="text-base-content/70">No dependencies required</p>
                 ) : (
                   <div className="space-y-2 mt-2">
-                    {module.dependencies.map(dep => (
+                    {module.dependencies.map((dep: string) => (
                       <Link 
                         key={dep} 
                         href={`/modules/${dep}`} 
@@ -276,7 +286,7 @@ export default function ModuleDetailPage() {
                     This module cannot be used with:
                   </p>
                   <div className="space-y-2 mt-2">
-                    {module.incompatibleWith.map(inc => (
+                    {module.incompatibleWith.map((inc: string) => (
                       <div key={inc} className="flex items-center p-2 bg-error/10 text-error rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -295,7 +305,7 @@ export default function ModuleDetailPage() {
                 <div className="card-body">
                   <h2 className="card-title">Configuration Options</h2>
                   <div className="space-y-4 mt-2">
-                    {module.configuration.options.map(option => (
+                    {module.configuration.options.map((option: ModuleOption) => (
                       <div key={option.name} className="border-b pb-3 last:border-0">
                         <h3 className="font-bold">{option.name}</h3>
                         <p className="text-base-content/70 text-sm">{option.description}</p>
@@ -313,7 +323,7 @@ export default function ModuleDetailPage() {
                           <div className="mt-2">
                             <p className="text-xs font-medium">Available options:</p>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {option.options.map(opt => (
+                              {option.options.map((opt: string) => (
                                 <span key={opt} className="badge badge-sm badge-outline">{opt}</span>
                               ))}
                             </div>

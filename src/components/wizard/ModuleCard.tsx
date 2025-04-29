@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Module } from "@/lib/store/template-store";
+import { Module } from "@/lib/store/framework-store";
 
 interface ModuleCardProps {
   module: Module;

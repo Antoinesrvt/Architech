@@ -4,166 +4,105 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layouts/MainLayout";
-import { useTemplateStore } from "@/lib/store";
-import { getApiService } from "@/lib/api";
+import { useFrameworkStore } from "@/lib/store";
+import { frameworkService } from "@/lib/api";
+import { Module as ModuleType, Framework } from "@/lib/store/framework-store";
 
-// Define types for template and module structures
-interface Module {
-  id: string;
-  name: string;
-  description: string;
-  tags: string[];
-  dependencies: Record<string, string>;
+interface ModuleWithMetadata extends ModuleType {
   uses: Set<string>;
-  screenshot: string | null;
-}
-
-interface ModuleData {
-  name?: string;
-  description?: string;
   tags?: string[];
-  dependencies?: Record<string, string>;
-  screenshot?: string;
-}
-
-interface Template {
-  id: string;
-  name: string;
-  modules?: Record<string, ModuleData>;
-  description?: string;
-  tags?: string[];
-  screenshot?: string;
+  screenshot?: string | null;
 }
 
 export default function ModulesPage() {
   const router = useRouter();
-  const templateStore = useTemplateStore();
-  const templates = Array.isArray(templateStore.templates) ? templateStore.templates : [];
+  const { frameworks, modules, setFrameworks, setModules } = useFrameworkStore();
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
-  const [isInitialized, setIsInitialized] = useState(false);
   
-  // Extract all modules from templates with defensive coding
-  const extractModules = useMemo(() => {
-    try {
-      if (!Array.isArray(templates)) return [];
-      
-      const modulesMap = new Map<string, Module>();
-      
-      templates.forEach(template => {
-        if (!template || typeof template !== 'object') return;
-        
-        // Use type assertion for the full Template interface
-        const typedTemplate = template as Template & { modules?: Record<string, ModuleData> };
-        
-        // Check if modules property exists and is an object
-        const templateModules = typedTemplate.modules;
-        if (!templateModules || typeof templateModules !== 'object') return;
-        
-        Object.entries(templateModules).forEach(([moduleId, rawModuleData]) => {
-          if (!moduleId) return;
-          
-          // Cast to ModuleData to access properties safely
-          const moduleData = rawModuleData as ModuleData;
-          
-          try {
-            modulesMap.set(moduleId, {
-              id: moduleId,
-              name: typeof moduleData.name === 'string' ? moduleData.name : moduleId,
-              description: typeof moduleData.description === 'string' ? moduleData.description : "",
-              tags: Array.isArray(moduleData.tags) ? moduleData.tags : [],
-              dependencies: typeof moduleData.dependencies === 'object' ? moduleData.dependencies || {} : {},
-              uses: new Set([typedTemplate.id]),
-              screenshot: typeof moduleData.screenshot === 'string' ? moduleData.screenshot : null,
-            });
-          } catch (err) {
-            console.error('Error processing module:', moduleId, err);
-          }
-        });
-      });
-      
-      return Array.from(modulesMap.values());
-    } catch (err) {
-      console.error('Error extracting modules:', err);
-      return [];
-    }
-  }, [templates]);
-  
-  // Extract unique tags from all modules
-  const tags = useMemo(() => {
-    try {
-      if (!extractModules || !Array.isArray(extractModules)) return [];
-      
-      return Array.from(
-        new Set(
-          extractModules.flatMap(module => 
-            Array.isArray(module.tags) ? module.tags : []
-          )
-        )
-      ).sort();
-    } catch (err) {
-      console.error('Error extracting tags:', err);
-      return [];
-    }
-  }, [extractModules]);
-  
-  // Filter modules based on search query and selected tag
-  const filteredModules = useMemo(() => {
-    try {
-      if (!Array.isArray(extractModules)) return [];
-      
-      return extractModules.filter(module => {
-        if (!module) return false;
-        
-        const matchesQuery = !searchQuery || 
-          (typeof module.name === 'string' && module.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (typeof module.description === 'string' && module.description.toLowerCase().includes(searchQuery.toLowerCase()));
-        
-        const matchesTag = !selectedTag || 
-          (Array.isArray(module.tags) && module.tags.includes(selectedTag));
-        
-        return matchesQuery && matchesTag;
-      });
-    } catch (err) {
-      console.error('Error filtering modules:', err);
-      return [];
-    }
-  }, [extractModules, searchQuery, selectedTag]);
-  
-  // Load templates if not already loaded
+  // Fetch data if needed
   useEffect(() => {
-    if (isInitialized) return;
-    
-    async function initialize() {
+    async function fetchData() {
       try {
         setIsLoading(true);
         setError(null);
         
         // Only fetch if we need to
-        if (!Array.isArray(templateStore.templates) || templateStore.templates.length === 0) {
-          const apiService = getApiService();
-          const templatesData = await apiService.getTemplates();
-          
-          // Safely update store
-          if (typeof templateStore.setTemplates === 'function') {
-            templateStore.setTemplates(templatesData || []);
-          }
+        if (frameworks.length === 0) {
+          const frameworksData = await frameworkService.getFrameworks();
+          setFrameworks(frameworksData);
         }
         
-        setIsInitialized(true);
+        if (modules.length === 0) {
+          const modulesData = await frameworkService.getModules();
+          setModules(modulesData);
+        }
       } catch (err) {
-        console.error('Failed to fetch templates:', err);
+        console.error('Failed to fetch data:', err);
         setError('Failed to load modules. Please try again.');
       } finally {
         setIsLoading(false);
       }
     }
     
-    void initialize();
-  }, [templateStore, isInitialized]);
+    fetchData();
+  }, [frameworks.length, modules.length, setFrameworks, setModules]);
+  
+  // Enhance modules with usage data
+  const enhancedModules = useMemo(() => {
+    const result: ModuleWithMetadata[] = [];
+    
+    // Create a map of module IDs to frameworks that use them
+    const usageMap = new Map<string, Set<string>>();
+    
+    // Populate the map
+    frameworks.forEach(framework => {
+      framework.compatibleModules.forEach(moduleId => {
+        if (!usageMap.has(moduleId)) {
+          usageMap.set(moduleId, new Set());
+        }
+        usageMap.get(moduleId)?.add(framework.id);
+      });
+    });
+    
+    // Create enhanced modules
+    modules.forEach(module => {
+      result.push({
+        ...module,
+        uses: usageMap.get(module.id) || new Set()
+      });
+    });
+    
+    return result;
+  }, [frameworks, modules]);
+  
+  // Extract unique tags from all modules
+  const tags = useMemo(() => {
+    return Array.from(
+      new Set(
+        enhancedModules.flatMap(module => 
+          module.tags || []
+        )
+      )
+    ).sort();
+  }, [enhancedModules]);
+  
+  // Filter modules based on search query and selected tag
+  const filteredModules = useMemo(() => {
+    return enhancedModules.filter(module => {
+      const matchesQuery = !searchQuery || 
+        module.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        module.description.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesTag = !selectedTag || 
+        (module.tags && module.tags.includes(selectedTag));
+      
+      return matchesQuery && matchesTag;
+    });
+  }, [enhancedModules, searchQuery, selectedTag]);
   
   const handleTagClick = (tag: string) => {
     setSelectedTag(tag === selectedTag ? "" : tag);
@@ -242,12 +181,12 @@ export default function ModulesPage() {
             </svg>
             <span>{error}</span>
           </div>
-        ) : extractModules.length === 0 ? (
+        ) : enhancedModules.length === 0 ? (
           <div className="alert">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-info shrink-0 w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <span>No modules found. Try selecting a template first.</span>
+            <span>No modules found. Try selecting a framework first.</span>
           </div>
         ) : filteredModules.length === 0 ? (
           <div className="alert">
@@ -286,14 +225,14 @@ export default function ModulesPage() {
                   <p className="text-sm line-clamp-2">{module.description}</p>
                   
                   <div className="flex flex-wrap gap-1 my-2">
-                    {module.tags.map(tag => (
+                    {module.tags && module.tags.map(tag => (
                       <span key={tag} className="badge badge-sm badge-outline">{tag}</span>
                     ))}
                   </div>
                   
                   <div className="card-actions justify-between items-center mt-2">
                     <div className="text-xs opacity-70">
-                      Used in {module.uses.size} template{module.uses.size !== 1 ? 's' : ''}
+                      Used in {module.uses.size} framework{module.uses.size !== 1 ? 's' : ''}
                     </div>
                     <Link href={`/modules/${module.id}`} className="btn btn-sm btn-primary">
                       View Details

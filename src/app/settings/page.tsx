@@ -3,7 +3,7 @@
 import { useState } from "react";
 import MainLayout from "@/components/layouts/MainLayout";
 import { useSettingsStore } from "@/lib/store";
-import { getApiService } from "@/lib/api";
+import { frameworkService } from "@/lib/api";
 
 export default function SettingsPage() {
   const {
@@ -22,11 +22,10 @@ export default function SettingsPage() {
   const [tempPath, setTempPath] = useState(defaultProjectPath);
   const [tempEditor, setTempEditor] = useState(editorCommand);
   const [isSaved, setIsSaved] = useState(false);
-  const api = getApiService();
 
   // Handle browsing for default project path
   const handleBrowseProjectPath = async () => {
-    const path = await api.browseForDirectory();
+    const path = await frameworkService.browseForDirectory();
     if (path) {
       setTempPath(path);
     }

@@ -3,39 +3,38 @@
 import { useEffect, useState } from "react";
 import MainLayout from "@/components/layouts/MainLayout";
 import RecentProjects from "@/components/project/RecentProjects";
-import { useTemplateStore } from "@/lib/store";
-import { getApiService } from "@/lib/api";
+import { useFrameworkStore } from "@/lib/store";
+import { frameworkService } from "@/lib/api";
 import Link from "next/link";
 
 export default function Dashboard() {
-  const { templates, setTemplates, modules, setModules } = useTemplateStore();
+  const { frameworks, setFrameworks, modules, setModules } = useFrameworkStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const api = getApiService();
 
-  // Fetch templates and modules on component mount
+  // Fetch frameworks and modules on component mount
   useEffect(() => {
     async function fetchData() {
       try {
         setIsLoading(true);
         
-        // Fetch templates
-        const templatesData = await api.getTemplates();
-        setTemplates(templatesData);
+        // Fetch frameworks
+        const frameworksData = await frameworkService.getFrameworks();
+        setFrameworks(frameworksData);
         
         // Fetch modules
-        const modulesData = await api.getModules();
+        const modulesData = await frameworkService.getModules();
         setModules(modulesData);
       } catch (err) {
         console.error("Failed to fetch data:", err);
-        setError("Failed to load templates and modules. Please restart the application.");
+        setError("Failed to load frameworks and modules. Please restart the application.");
       } finally {
         setIsLoading(false);
       }
     }
     
     fetchData();
-  }, [api, setTemplates, setModules]);
+  }, [setFrameworks, setModules]);
 
   return (
     <MainLayout>
@@ -57,11 +56,11 @@ export default function Dashboard() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
-                Templates
+                Frameworks
               </h2>
-              <p className="text-3xl font-bold">{isLoading ? '-' : templates.length}</p>
+              <p className="text-3xl font-bold">{isLoading ? '-' : frameworks.length}</p>
               <div className="card-actions justify-end">
-                <Link href="/templates" className="btn btn-sm btn-ghost">View All</Link>
+                <Link href="/frameworks" className="btn btn-sm btn-ghost">View All</Link>
               </div>
             </div>
           </div>

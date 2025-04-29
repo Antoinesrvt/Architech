@@ -1,11 +1,24 @@
 Guide de Développement: ArchiTech POC avec Next.js & Tauri
 1. Vision et Contexte du Projet
 À Propos d'ArchiTech
-ArchiTech est un générateur de templates nouvelle génération qui transforme fondamentalement le processus de création d'applications web. Notre objectif est de réduire le temps de configuration d'un projet de "plusieurs semaines à quelques minutes", permettant aux développeurs de se concentrer sur la création de valeur plutôt que sur la configuration technique.
+ArchiTech est un générateur de frameworks nouvelle génération qui transforme fondamentalement le processus de création d'applications web. Notre objectif est de réduire le temps de configuration d'un projet de "plusieurs semaines à quelques minutes", permettant aux développeurs de se concentrer sur la création de valeur plutôt que sur la configuration technique.
 Problèmes Résolus
 	•	Friction technique : 60% du temps des développeurs est perdu en configuration plutôt qu'en création 	•	Déconnexion design-code : Les équipes luttent pour maintenir la cohérence entre design et implémentation 	•	Réinvention constante : Les équipes réimplémentent continuellement des solutions à des problèmes déjà résolus 	•	Barrière à l'innovation : La complexité technique limite qui peut créer des applications significatives
 Vision du Produit
 Notre POC représente la première étape vers un système auto-évolutif qui apprend, s'adapte et évolue avec ses utilisateurs, éliminant les frontières artificielles entre l'idéation et l'implémentation.
+
+## Approche Framework-First
+
+ArchiTech adopte une approche "framework-first" plutôt qu'une approche basée sur des templates. Cette distinction est fondamentale car elle permet une génération plus précise et personnalisée:
+
+- **Frameworks au lieu de Templates**: Au lieu d'offrir des templates prédéfinis avec du code potentiellement inutilisé, nous proposons de choisir un framework de base (Next.js, Vite, Tauri, etc.) puis de le personnaliser avec des modules.
+
+- **Génération à la demande**: Chaque projet est généré exactement selon les besoins spécifiés, sans code superflu.
+
+- **Modularité maximale**: Les modules peuvent être combinés librement tant qu'ils sont compatibles avec le framework sélectionné.
+
+- **Évolutivité**: Cette approche permet d'ajouter facilement de nouveaux frameworks et modules sans restructurer l'application.
+
 2. Environnement de Développement
 Prérequis Techniques
 	•	Node.js (v18+) 	•	Rust (édition 2021+) 	•	Git 	•	VS Code (recommandé avec extensions Tauri et React)
@@ -27,7 +40,7 @@ npm run tauri dev
 │   │   ├── page.tsx            # Page d'accueil
 │   │   └── (sections)/         # Routes groupées par section
 │   │       ├── project-wizard/ # Assistant de création de projet
-│   │       ├── templates/      # Navigateur de templates
+│   │       ├── frameworks/     # Navigateur de frameworks
 │   │       └── settings/       # Paramètres application
 │   │
 │   ├── components/             # Composants React
@@ -38,7 +51,7 @@ npm run tauri dev
 │   ├── lib/                    # Logique métier
 │   │   ├── store/              # État global (Zustand)
 │   │   ├── services/           # Services d'abstraction
-│   │   │   ├── template-service.ts  # Gestion des templates
+│   │   │   ├── framework-service.ts  # Gestion des frameworks
 │   │   │   ├── project-service.ts   # Génération de projets
 │   │   │   └── system-service.ts    # Opérations système
 │   │   │
@@ -58,12 +71,11 @@ npm run tauri dev
 │   ├── Cargo.toml              # Configuration Rust
 │   └── tauri.conf.json         # Configuration Tauri
 │
-├── template-data/              # Définitions des templates et modules
-│   ├── templates/              # Définitions des templates
-│   │   └── nextjs/             # Templates Next.js
-│   │       ├── base.json       # Template de base
-│   │       ├── saas.json       # Template SaaS
-│   │       └── dashboard.json  # Template Dashboard
+├── template-data/              # Définitions des frameworks et modules
+│   ├── frameworks/             # Définitions des frameworks
+│   │   ├── web.json            # Frameworks web (Next.js, Vite, etc.)
+│   │   ├── app.json            # Frameworks mobiles (Expo, Capacitor, etc.)
+│   │   └── desktop.json        # Frameworks desktop (Tauri, Electron, etc.)
 │   │
 │   └── modules/                # Définitions des modules
 │       ├── tailwind.json       # Module Tailwind
@@ -80,8 +92,8 @@ Interface Frontend/Backend
 Exposer les fonctionnalités Rust au frontend via les commandes Tauri:
  // src-tauri/src/commands.rs
 #[tauri::command]
-fn get_templates() -> Result<Vec<Template>, String> {
-    // Lire et retourner les templates disponibles
+fn get_frameworks() -> Result<Vec<Framework>, String> {
+    // Lire et retourner les frameworks disponibles
 }
 
 #[tauri::command]
@@ -94,21 +106,21 @@ fn generate_project(config: ProjectConfig) -> Result<ProjectResult, String> {
     // Générer un projet selon la configuration fournie
 }
  2. Couche Service Next.js
- // src/lib/services/template-service.ts
+ // src/lib/services/framework-service.ts
 import { invoke } from '@tauri-apps/api/tauri';
-import type { Template, Module, ProjectConfig, ProjectResult } from '../types';
+import type { Framework, Module, ProjectConfig, ProjectResult } from '../types';
 
 // Interface qui sera compatible avec une future implémentation backend
-export interface TemplateServiceInterface {
-  getTemplates(): Promise<Template[]>;
+export interface FrameworkServiceInterface {
+  getFrameworks(): Promise<Framework[]>;
   getModules(): Promise<Module[]>;
   generateProject(config: ProjectConfig): Promise<ProjectResult>;
 }
 
 // Implémentation Tauri (locale)
-export class TauriTemplateService implements TemplateServiceInterface {
-  async getTemplates(): Promise<Template[]> {
-    return await invoke('get_templates');
+export class TauriFrameworkService implements FrameworkServiceInterface {
+  async getFrameworks(): Promise<Framework[]> {
+    return await invoke('get_frameworks');
   }
   
   async getModules(): Promise<Module[]> {
@@ -121,48 +133,48 @@ export class TauriTemplateService implements TemplateServiceInterface {
 }
 
 // Factory pour obtenir l'implémentation appropriée
-export function getTemplateService(): TemplateServiceInterface {
-  return new TauriTemplateService();
+export function getFrameworkService(): FrameworkServiceInterface {
+  return new TauriFrameworkService();
 }
  3. Gestion d'État avec Zustand
  // src/lib/store/project-store.ts
 import { create } from 'zustand';
-import { getTemplateService } from '../services/template-service';
+import { getFrameworkService } from '../services/framework-service';
 
-const templateService = getTemplateService();
+const frameworkService = getFrameworkService();
 
 interface ProjectState {
-  templates: Template[];
+  frameworks: Framework[];
   modules: Module[];
-  selectedTemplate: string | null;
+  selectedFramework: string | null;
   selectedModules: string[];
   projectConfig: Partial<ProjectConfig>;
   isLoading: boolean;
   error: string | null;
   
   // Actions
-  fetchTemplates: () => Promise<void>;
+  fetchFrameworks: () => Promise<void>;
   fetchModules: () => Promise<void>;
-  selectTemplate: (templateId: string) => void;
+  selectFramework: (frameworkId: string) => void;
   toggleModule: (moduleId: string) => void;
   updateProjectConfig: (config: Partial<ProjectConfig>) => void;
   generateProject: () => Promise<ProjectResult>;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
-  templates: [],
+  frameworks: [],
   modules: [],
-  selectedTemplate: null,
+  selectedFramework: null,
   selectedModules: [],
   projectConfig: {},
   isLoading: false,
   error: null,
   
-  fetchTemplates: async () => {
+  fetchFrameworks: async () => {
     set({ isLoading: true, error: null });
     try {
-      const templates = await templateService.getTemplates();
-      set({ templates, isLoading: false });
+      const frameworks = await frameworkService.getFrameworks();
+      set({ frameworks, isLoading: false });
     } catch (error) {
       set({ error: String(error), isLoading: false });
     }
@@ -171,17 +183,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   // Autres actions...
   
   generateProject: async () => {
-    const { projectConfig, selectedTemplate, selectedModules } = get();
+    const { projectConfig, selectedFramework, selectedModules } = get();
     set({ isLoading: true, error: null });
     
     try {
       const config = {
         ...projectConfig,
-        templateId: selectedTemplate,
+        frameworkId: selectedFramework,
         moduleIds: selectedModules,
       } as ProjectConfig;
       
-      const result = await templateService.generateProject(config);
+      const result = await frameworkService.generateProject(config);
       set({ isLoading: false });
       return result;
     } catch (error) {

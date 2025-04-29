@@ -1,0 +1,30 @@
+[
+  {
+    "id": "expo",
+    "name": "Expo",
+    "description": "Framework for building native mobile apps with React Native",
+    "version": "1.0.0",
+    "type": "app",
+    "tags": ["react-native", "mobile", "ios", "android"],
+    "base_command": "npx create-expo-app",
+    "compatible_modules": ["i18n", "zustand", "forms", "auth"],
+    "structure": {
+      "enforced": true,
+      "directories": ["src", "assets"]
+    }
+  },
+  {
+    "id": "capacitor",
+    "name": "Ionic + Capacitor",
+    "description": "Framework for building cross-platform mobile apps with web technologies",
+    "version": "1.0.0",
+    "type": "app",
+    "tags": ["ionic", "mobile", "ios", "android"],
+    "base_command": "npm init @ionic/app",
+    "compatible_modules": ["i18n", "zustand", "forms", "auth"],
+    "structure": {
+      "enforced": true,
+      "directories": ["src", "public", "resources"]
+    }
+  }
+] 

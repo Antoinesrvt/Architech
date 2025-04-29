@@ -1,13 +1,17 @@
-import { LocalTemplateService } from './local';
-import { TemplateService } from './types';
+import { LocalFrameworkService } from './local';
+import { FrameworkService } from './types';
 
-let apiInstance: TemplateService | null = null;
-
-export function getApiService(): TemplateService {
-  if (!apiInstance) {
-    apiInstance = new LocalTemplateService();
-  }
-  return apiInstance;
+// Factory function to get the appropriate service implementation
+// based on environment or configuration
+export function getFrameworkService(): FrameworkService {
+  // For now, we only have local implementation
+  return new LocalFrameworkService();
 }
+
+// Singleton instance for convenience
+export const frameworkService = getFrameworkService();
+
+// For backward compatibility
+export const getApiService = getFrameworkService;
 
 export * from './types'; 

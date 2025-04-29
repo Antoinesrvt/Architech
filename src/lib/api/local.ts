@@ -1,41 +1,43 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { Template, Module } from '../store/template-store';
+import { Framework, Module } from '../store/framework-store';
 import { 
-  TemplateService, 
+  FrameworkService, 
   ProjectConfig, 
   GenerationProgress, 
   ValidationResult 
 } from './types';
 
-// Mock data for templates when running in browser mode
-const mockTemplates: Template[] = [
+// Mock data for frameworks when running in browser mode
+const mockFrameworks: Framework[] = [
   {
-    id: "nextjs-base",
-    name: "Next.js Base Template",
-    description: "A basic Next.js template with TypeScript support",
+    id: "nextjs",
+    name: "Next.js",
+    description: "React framework for production-grade applications",
     version: "1.0.0",
-    tags: ["frontend", "react", "typescript"],
+    type: "web",
+    tags: ["react", "frontend", "ssr", "ssg"],
     screenshot: undefined,
     baseCommand: "npx create-next-app@latest",
-    recommendedModules: ["tailwind", "daisyui"],
+    compatibleModules: ["tailwind", "daisyui", "i18n", "zustand", "forms", "auth", "testing"],
     structure: {
       enforced: true,
       directories: ["src", "public", "components"]
     }
   },
   {
-    id: "nextjs-dashboard",
-    name: "Next.js Dashboard Template",
-    description: "A template for admin dashboards with Next.js",
+    id: "vite-react",
+    name: "Vite + React",
+    description: "Lightweight React setup with Vite",
     version: "1.0.0",
-    tags: ["frontend", "react", "dashboard"],
+    type: "web",
+    tags: ["react", "frontend", "spa", "vite"],
     screenshot: undefined,
-    baseCommand: "npx create-next-app@latest",
-    recommendedModules: ["tailwind", "recharts"],
+    baseCommand: "npm create vite@latest",
+    compatibleModules: ["tailwind", "daisyui", "i18n", "zustand", "forms", "testing"],
     structure: {
       enforced: true,
-      directories: ["src", "public", "components", "pages", "dashboard"]
+      directories: ["src", "public"]
     }
   }
 ];
@@ -142,8 +144,11 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
   } else {
     console.warn("Tauri API is not available in this environment. Running in mock mode.");
     // Provide mock implementations for browser environment
-    if (command === 'get_templates') {
-      return mockTemplates as T;
+    if (command === 'get_frameworks') {
+      return mockFrameworks as T;
+    } else if (command === 'get_templates') {
+      // For backward compatibility
+      return mockFrameworks as T;
     } else if (command === 'get_modules') {
       return mockModules as T;
     } else {
@@ -153,13 +158,14 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
   }
 };
 
-export class LocalTemplateService implements TemplateService {
-  async getTemplates(): Promise<Template[]> {
+export class LocalFrameworkService implements FrameworkService {
+  async getFrameworks(): Promise<Framework[]> {
     try {
-      return await safeInvoke<Template[]>('get_templates');
+      return await safeInvoke<Framework[]>('get_frameworks');
     } catch (error) {
-      console.error('Failed to get templates:', error);
-      return [];
+      console.error('Failed to get frameworks:', error);
+      // Return mock frameworks if there's an error
+      return mockFrameworks;
     }
   }
 
@@ -168,7 +174,8 @@ export class LocalTemplateService implements TemplateService {
       return await safeInvoke<Module[]>('get_modules');
     } catch (error) {
       console.error('Failed to get modules:', error);
-      return [];
+      // Return mock modules if there's an error
+      return mockModules;
     }
   }
 
@@ -177,32 +184,72 @@ export class LocalTemplateService implements TemplateService {
       return await safeInvoke<ValidationResult>('validate_project_config', { config });
     } catch (error) {
       console.error('Failed to validate project config:', error);
-      return { valid: false, errors: ['Validation failed due to system error'] };
+      
+      // Provide a more user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { 
+        valid: false, 
+        errors: [`Validation failed: ${errorMessage}`] 
+      };
     }
   }
 
   async generateProject(config: ProjectConfig): Promise<string> {
     try {
+      // Validate the config first
+      const validation = await this.validateProjectConfig(config);
+      if (!validation.valid) {
+        throw new Error(validation.errors.join(', '));
+      }
+      
+      // If validation passes, generate the project
       return await safeInvoke<string>('generate_project', { config });
     } catch (error) {
       console.error('Failed to generate project:', error);
-      throw new Error(`Project generation failed: ${error}`);
+      throw error;
     }
   }
 
   listenToProgress(callback: (progress: GenerationProgress) => void): () => void {
-    const unlistenPromise = listen('generation-progress', (eventData) => {
-      callback(eventData.payload as GenerationProgress);
-    });
-
-    return () => {
-      unlistenPromise.then(unlisten => unlisten());
-    };
+    // In browser mode, simulate progress
+    if (!(window as any).__TAURI__) {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 0.05;
+        if (progress <= 1) {
+          const stepNames = ['init', 'framework', 'create', 'structure', 'dependencies', 'modules', 'complete'];
+          const step = stepNames[Math.min(Math.floor(progress * stepNames.length), stepNames.length - 1)];
+          callback({
+            step,
+            message: `Mock ${step} step`,
+            progress,
+          });
+        } else {
+          clearInterval(interval);
+        }
+      }, 500);
+      
+      return () => clearInterval(interval);
+    }
+    
+    // In Tauri mode, listen to real events
+    try {
+      const unlisten = listen<GenerationProgress>('generation-progress', (event) => {
+        callback(event.payload);
+      });
+      
+      return () => {
+        unlisten.then(unlistenFn => unlistenFn());
+      };
+    } catch (error) {
+      console.error('Failed to listen to progress events:', error);
+      return () => {};
+    }
   }
 
   async openInEditor(path: string, editor = 'code'): Promise<boolean> {
     try {
-      await safeInvoke('open_in_editor', { path, editor });
+      await safeInvoke<void>('open_in_editor', { path, editor });
       return true;
     } catch (error) {
       console.error('Failed to open in editor:', error);
@@ -212,8 +259,10 @@ export class LocalTemplateService implements TemplateService {
 
   async browseForDirectory(): Promise<string | null> {
     try {
-      const selected = await safeInvoke<string>('browse_directory', { title: 'Select Project Location' });
-      return selected || null;
+      const path = await safeInvoke<string>('browse_directory', { 
+        title: 'Select Project Location' 
+      });
+      return path;
     } catch (error) {
       console.error('Failed to browse for directory:', error);
       return null;

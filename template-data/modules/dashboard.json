@@ -1,0 +1,60 @@
+{
+  "id": "dashboard",
+  "name": "Dashboard Components",
+  "description": "A collection of dashboard components for admin interfaces with header, sidebar, and charts",
+  "version": "1.0.0",
+  "category": "ui",
+  "dependencies": ["tailwind", "ui"],
+  "incompatible_with": [],
+  "installation": {
+    "commands": [],
+    "files": [
+      {
+        "source": "dashboard/header.tsx",
+        "destination": "src/components/dashboard/header.tsx"
+      },
+      {
+        "source": "dashboard/sidebar.tsx",
+        "destination": "src/components/dashboard/sidebar.tsx"
+      },
+      {
+        "source": "dashboard/sales-chart.tsx",
+        "destination": "src/components/dashboard/sales-chart.tsx"
+      },
+      {
+        "source": "dashboard/recent-activity.tsx",
+        "destination": "src/components/dashboard/recent-activity.tsx"
+      },
+      {
+        "source": "dashboard/utils.ts",
+        "destination": "src/lib/utils.ts"
+      },
+      {
+        "source": "dashboard/dashboard-layout.tsx",
+        "destination": "src/app/dashboard/layout.tsx"
+      },
+      {
+        "source": "dashboard/dashboard-page.tsx",
+        "destination": "src/app/dashboard/page.tsx"
+      }
+    ],
+    "transforms": []
+  },
+  "configuration": {
+    "options": [
+      {
+        "name": "includeDarkMode",
+        "type": "boolean",
+        "description": "Include dark mode support in dashboard",
+        "default": true
+      },
+      {
+        "name": "chartLibrary",
+        "type": "select",
+        "description": "Chart library to use for data visualization",
+        "default": "none",
+        "options": ["none", "chart.js", "recharts"]
+      }
+    ]
+  }
+} 

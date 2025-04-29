@@ -3,31 +3,31 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layouts/MainLayout";
-import TemplateCard from "@/components/project/TemplateCard";
+import FrameworkCard from "@/components/project/FrameworkCard";
 import ModuleCard from "@/components/wizard/ModuleCard";
 import ProgressIndicator from "@/components/wizard/ProgressIndicator";
-import { useTemplateStore, useProjectStore, useSettingsStore } from "@/lib/store";
-import { getApiService } from "@/lib/api";
+import { useFrameworkStore, useProjectStore, useSettingsStore } from "@/lib/store";
+import { frameworkService } from "@/lib/api";
 import { generateUUID } from "@/lib/utils";
 import { validateProjectName, validateProjectPath } from "@/lib/utils/validation";
-import { Template, Module, ModuleOption } from "@/lib/store/template-store";
+import { Framework, Module, ModuleOption } from "@/lib/store/framework-store";
 import { GenerationProgress } from "@/lib/api/types";
 
-type WizardStep = "template" | "config" | "modules" | "module-config" | "generating";
+type WizardStep = "framework" | "config" | "modules" | "module-config" | "generating";
 
 export default function NewProject() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const templateId = searchParams.get("template");
+  const frameworkId = searchParams.get("framework");
   
-  const { templates, modules } = useTemplateStore();
+  const { frameworks, modules } = useFrameworkStore();
   const { addProject } = useProjectStore();
   const { defaultProjectPath } = useSettingsStore();
-  const api = getApiService();
+  const api = frameworkService;
 
   // Wizard state
-  const [currentStep, setCurrentStep] = useState<WizardStep>("template");
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [currentStep, setCurrentStep] = useState<WizardStep>("framework");
+  const [selectedFramework, setSelectedFramework] = useState<Framework | null>(null);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   
   // Module configuration state
@@ -51,16 +51,16 @@ export default function NewProject() {
   const [nameError, setNameError] = useState("");
   const [pathError, setPathError] = useState("");
 
-  // Initialize with template if provided in URL
+  // Initialize with framework if provided in URL
   useEffect(() => {
-    if (templateId && templates.length > 0) {
-      const template = templates.find(t => t.id === templateId);
-      if (template) {
-        setSelectedTemplate(template);
+    if (frameworkId && frameworks.length > 0) {
+      const framework = frameworks.find(f => f.id === frameworkId);
+      if (framework) {
+        setSelectedFramework(framework);
         setCurrentStep("config");
       }
     }
-  }, [templateId, templates]);
+  }, [frameworkId, frameworks]);
 
   // Set up progress listener
   useEffect(() => {
@@ -100,14 +100,14 @@ export default function NewProject() {
     setModuleConfigs(newConfigs);
   }, [selectedModules, modules]);
 
-  // Handle template selection
-  const handleTemplateSelect = (template: Template) => {
-    setSelectedTemplate(template);
+  // Handle framework selection
+  const handleFrameworkSelect = (framework: Framework) => {
+    setSelectedFramework(framework);
     setCurrentStep("config");
     
-    // Pre-select recommended modules
-    if (template.recommendedModules.length > 0) {
-      setSelectedModules(template.recommendedModules);
+    // Pre-select compatible modules
+    if (framework.compatibleModules.length > 0) {
+      setSelectedModules(framework.compatibleModules);
     }
   };
 
@@ -200,7 +200,7 @@ export default function NewProject() {
       const generatedPath = await api.generateProject({
         name: projectName,
         path: projectPath,
-        template: selectedTemplate?.id || "",
+        framework: selectedFramework?.id || "",
         modules: moduleConfigsArray,
         options: {
           typescript: useTypeScript,
@@ -216,7 +216,7 @@ export default function NewProject() {
         id: generateUUID(),
         name: projectName,
         path: generatedPath,
-        template: selectedTemplate?.name || "",
+        framework: selectedFramework?.id || "",
         createdAt: new Date().toISOString(),
         lastOpenedAt: new Date().toISOString(),
       });
@@ -239,8 +239,8 @@ export default function NewProject() {
   // Check if current step can proceed
   const canProceed = () => {
     switch (currentStep) {
-      case "template":
-        return selectedTemplate !== null;
+      case "framework":
+        return selectedFramework !== null;
       case "config":
         return projectName !== "" && projectPath !== "" && !nameError && !pathError;
       case "modules":
@@ -254,20 +254,20 @@ export default function NewProject() {
     }
   };
 
-  // Render templates selection step
-  const renderTemplateStep = () => (
+  // Render frameworks selection step
+  const renderFrameworkStep = () => (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Choose a Template</h2>
+      <h2 className="text-2xl font-bold">Choose a Framework</h2>
       <p className="text-base-content/70">
-        Select a template to use as a starting point for your project.
+        Select a framework to use as a base for your project.
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map(template => (
-          <TemplateCard 
-            key={template.id} 
-            template={template} 
-            onSelect={() => handleTemplateSelect(template)} 
+        {frameworks.map(framework => (
+          <FrameworkCard 
+            key={framework.id} 
+            framework={framework} 
+            onSelect={() => handleFrameworkSelect(framework)} 
           />
         ))}
       </div>
@@ -391,11 +391,16 @@ export default function NewProject() {
 
   // Render modules selection step
   const renderModulesStep = () => {
-    // Get compatible modules (only show modules that aren't incompatible with already selected modules)
+    // Get compatible modules based on selected framework
     const compatibleModules = modules.filter(module => {
+      // Check if module is compatible with selected framework
+      const isFrameworkCompatible = !selectedFramework || 
+        selectedFramework.compatibleModules.includes(module.id);
+      
       // Check if this module is compatible with other selected modules
       const isCompatible = !module.incompatibleWith.some(id => selectedModules.includes(id));
-      return isCompatible;
+      
+      return isFrameworkCompatible && isCompatible;
     });
 
     // Group modules by category for better organization
@@ -443,7 +448,7 @@ export default function NewProject() {
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-info shrink-0 w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <span>No compatible modules found for the selected template.</span>
+            <span>No compatible modules found for the selected framework.</span>
           </div>
         )}
       </div>
@@ -598,8 +603,8 @@ export default function NewProject() {
   // Render current step
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case "template":
-        return renderTemplateStep();
+      case "framework":
+        return renderFrameworkStep();
       case "config":
         return renderConfigStep();
       case "modules":
@@ -609,19 +614,19 @@ export default function NewProject() {
       case "generating":
         return renderGeneratingStep();
       default:
-        return renderTemplateStep();
+        return renderFrameworkStep();
     }
   };
 
   // Helper function to get the current step index
   const getCurrentStepIndex = () => {
-    const steps: WizardStep[] = ["template", "config", "modules", "module-config", "generating"];
+    const steps: WizardStep[] = ["framework", "config", "modules", "module-config", "generating"];
     return steps.indexOf(currentStep);
   };
 
   // Go to next step
   const goToNextStep = () => {
-    const steps: WizardStep[] = ["template", "config", "modules", "module-config", "generating"];
+    const steps: WizardStep[] = ["framework", "config", "modules", "module-config", "generating"];
     const currentIndex = getCurrentStepIndex();
     
     if (currentIndex < steps.length - 1) {
@@ -646,7 +651,7 @@ export default function NewProject() {
 
   // Go to previous step
   const goToPreviousStep = () => {
-    const steps: WizardStep[] = ["template", "config", "modules", "module-config", "generating"];
+    const steps: WizardStep[] = ["framework", "config", "modules", "module-config", "generating"];
     const currentIndex = getCurrentStepIndex();
     
     if (currentIndex > 0) {
@@ -659,8 +664,8 @@ export default function NewProject() {
       <div className="container mx-auto py-8">
         <div className="mb-8">
           <ul className="steps w-full">
-            <li className={`step ${currentStep === "template" || getCurrentStepIndex() > 0 ? "step-primary" : ""}`}>
-              Choose Template
+            <li className={`step ${currentStep === "framework" || getCurrentStepIndex() > 0 ? "step-primary" : ""}`}>
+              Choose Framework
             </li>
             <li className={`step ${currentStep === "config" || getCurrentStepIndex() > 1 ? "step-primary" : ""}`}>
               Basic Config

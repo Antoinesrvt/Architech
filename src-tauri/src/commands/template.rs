@@ -5,20 +5,22 @@ use std::path::Path;
 use std::error::Error;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Template {
+pub struct Framework {
     pub id: String,
     pub name: String,
     pub description: String,
     pub version: String,
+    pub type_: String,
+    #[serde(rename = "type")]
+    pub framework_type: String,
     pub tags: Vec<String>,
-    pub screenshot: Option<String>,
     pub base_command: String,
-    pub recommended_modules: Vec<String>,
-    pub structure: TemplateStructure,
+    pub compatible_modules: Vec<String>,
+    pub structure: FrameworkStructure,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TemplateStructure {
+pub struct FrameworkStructure {
     pub enforced: bool,
     pub directories: Vec<String>,
 }
@@ -91,8 +93,8 @@ fn read_directory<T: for<'de> serde::Deserialize<'de>>(dir_path: &str) -> Result
         
         if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
             let content = fs::read_to_string(&path)?;
-            let item: T = serde_json::from_str(&content)?;
-            items.push(item);
+            let items_from_file: Vec<T> = serde_json::from_str(&content)?;
+            items.extend(items_from_file);
         }
     }
     
@@ -100,29 +102,30 @@ fn read_directory<T: for<'de> serde::Deserialize<'de>>(dir_path: &str) -> Result
 }
 
 #[command]
-pub async fn get_templates() -> Result<Vec<Template>, String> {
-    match read_directory::<Template>("template-data/templates/nextjs") {
-        Ok(templates) => Ok(templates),
+pub async fn get_frameworks() -> Result<Vec<Framework>, String> {
+    match read_directory::<Framework>("template-data/frameworks") {
+        Ok(frameworks) => Ok(frameworks),
         Err(e) => {
-            // Fallback to default template if error
-            eprintln!("Error reading templates: {}", e);
+            // Fallback to default framework if error
+            eprintln!("Error reading frameworks: {}", e);
             
-            let template = Template {
-                id: "nextjs-base".to_string(),
-                name: "Next.js Base".to_string(),
-                description: "A basic Next.js template with TypeScript and Tailwind CSS".to_string(),
+            let framework = Framework {
+                id: "nextjs".to_string(),
+                name: "Next.js".to_string(),
+                description: "React framework for production".to_string(),
                 version: "1.0.0".to_string(),
-                tags: vec!["nextjs".to_string(), "typescript".to_string(), "tailwind".to_string()],
-                screenshot: None,
+                type_: "web".to_string(),
+                framework_type: "web".to_string(),
+                tags: vec!["react".to_string(), "typescript".to_string(), "frontend".to_string()],
                 base_command: "npx create-next-app@latest".to_string(),
-                recommended_modules: vec!["tailwind".to_string(), "i18n".to_string()],
-                structure: TemplateStructure {
+                compatible_modules: vec!["tailwind".to_string(), "i18n".to_string()],
+                structure: FrameworkStructure {
                     enforced: true,
                     directories: vec!["src".to_string(), "public".to_string()],
                 },
             };
             
-            Ok(vec![template])
+            Ok(vec![framework])
         }
     }
 }

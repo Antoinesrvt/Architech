@@ -1,9 +1,12 @@
-import { Template, Module } from '../store/template-store';
+import { Framework, Module } from '../store/framework-store';
+
+// For backward compatibility - Template is now Framework
+export type Template = Framework;
 
 export interface ProjectConfig {
   name: string;
   path: string;
-  template: string;
+  framework: string;
   modules: ModuleConfig[];
   options: {
     typescript: boolean;
@@ -28,12 +31,15 @@ export interface GenerationProgress {
   progress: number;
 }
 
-export interface TemplateService {
-  getTemplates(): Promise<Template[]>;
+export interface FrameworkService {
+  getFrameworks(): Promise<Framework[]>;
   getModules(): Promise<Module[]>;
   validateProjectConfig(config: ProjectConfig): Promise<ValidationResult>;
   generateProject(config: ProjectConfig): Promise<string>;
   listenToProgress(callback: (progress: GenerationProgress) => void): () => void;
   openInEditor(path: string, editor?: string): Promise<boolean>;
   browseForDirectory(): Promise<string | null>;
-} 
+}
+
+// For backward compatibility - TemplateService is now FrameworkService
+export type TemplateService = FrameworkService; 

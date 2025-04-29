@@ -1,0 +1,21 @@
+{
+  "Index": {
+    "title": "Welcome to Next.js",
+    "description": "Get started by editing"
+  },
+  "Navigation": {
+    "home": "Home",
+    "about": "About",
+    "dashboard": "Dashboard",
+    "settings": "Settings"
+  },
+  "Common": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search"
+  }
+} 

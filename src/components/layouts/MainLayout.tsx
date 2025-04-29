@@ -64,7 +64,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <div className="drawer-side z-40">
         <label htmlFor="drawer-toggle" aria-label="close sidebar" className="drawer-overlay"></label>
         
-        <aside className="bg-base-200 w-80 min-h-screen">
+        <aside className="bg-base-200 w-50 min-h-screen">
           <div className="navbar">
             <div className="flex-1">
               <Link href="/" className="btn btn-ghost text-xl">ArchiTech</Link>

@@ -1,0 +1,21 @@
+{
+  "id": "nextjs-base",
+  "name": "Next.js Base",
+  "description": "A modern Next.js application with TypeScript and Tailwind CSS",
+  "version": "1.0.0",
+  "tags": ["nextjs", "typescript", "tailwind"],
+  "screenshot": null,
+  "base_command": "npx create-next-app@latest",
+  "recommended_modules": ["tailwind", "daisyui"],
+  "structure": {
+    "enforced": true,
+    "directories": [
+      "src/app",
+      "src/components",
+      "src/lib",
+      "src/styles",
+      "src/types",
+      "public"
+    ]
+  }
+} 

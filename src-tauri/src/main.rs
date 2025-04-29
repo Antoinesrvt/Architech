@@ -16,9 +16,13 @@ fn main() {
             add_project,
             edit_project,
             delete_project,
-            get_project_templates,
+            get_templates,
+            get_modules,
+            validate_project_config,
             generate_project,
             get_system_info,
+            browse_directory,
+            open_in_editor,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

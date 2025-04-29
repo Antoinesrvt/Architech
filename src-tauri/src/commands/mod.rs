@@ -1,6 +1,6 @@
-pub mod project;
-pub mod template;
-pub mod system;
+mod project;
+mod template;
+mod system;
 
 pub use project::*;
 pub use template::*;

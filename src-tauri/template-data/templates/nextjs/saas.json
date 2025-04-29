@@ -1,0 +1,30 @@
+{
+  "id": "nextjs-saas",
+  "name": "Next.js SaaS",
+  "description": "A complete Next.js SaaS starter template with authentication, dashboard, and billing",
+  "version": "1.0.0",
+  "tags": ["nextjs", "saas", "dashboard", "auth"],
+  "screenshot": null,
+  "base_command": "npx create-next-app@latest",
+  "recommended_modules": ["tailwind", "daisyui", "i18n", "state"],
+  "structure": {
+    "enforced": true,
+    "directories": [
+      "src/app",
+      "src/app/(auth)",
+      "src/app/(dashboard)",
+      "src/app/(marketing)",
+      "src/components",
+      "src/components/auth",
+      "src/components/dashboard",
+      "src/components/marketing",
+      "src/lib",
+      "src/lib/auth",
+      "src/lib/api",
+      "src/lib/store",
+      "src/styles",
+      "src/types",
+      "public"
+    ]
+  }
+} 

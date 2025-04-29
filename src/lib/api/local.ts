@@ -8,6 +8,120 @@ import {
   ValidationResult 
 } from './types';
 
+// Mock data for templates when running in browser mode
+const mockTemplates: Template[] = [
+  {
+    id: "nextjs-base",
+    name: "Next.js Base Template",
+    description: "A basic Next.js template with TypeScript support",
+    version: "1.0.0",
+    tags: ["frontend", "react", "typescript"],
+    screenshot: undefined,
+    baseCommand: "npx create-next-app@latest",
+    recommendedModules: ["tailwind", "daisyui"],
+    structure: {
+      enforced: true,
+      directories: ["src", "public", "components"]
+    }
+  },
+  {
+    id: "nextjs-dashboard",
+    name: "Next.js Dashboard Template",
+    description: "A template for admin dashboards with Next.js",
+    version: "1.0.0",
+    tags: ["frontend", "react", "dashboard"],
+    screenshot: undefined,
+    baseCommand: "npx create-next-app@latest",
+    recommendedModules: ["tailwind", "recharts"],
+    structure: {
+      enforced: true,
+      directories: ["src", "public", "components", "pages", "dashboard"]
+    }
+  }
+];
+
+// Mock data for modules when running in browser mode
+const mockModules: Module[] = [
+  {
+    id: "tailwind",
+    name: "Tailwind CSS",
+    description: "A utility-first CSS framework",
+    version: "1.0.0",
+    category: "styling",
+    dependencies: [],
+    incompatibleWith: [],
+    installation: {
+      commands: ["npm install -D tailwindcss postcss autoprefixer", "npx tailwindcss init -p"],
+      files: [
+        {
+          source: "tailwind/tailwind.config.js",
+          destination: "tailwind.config.js"
+        }
+      ],
+      transforms: []
+    },
+    configuration: {
+      options: [
+        {
+          name: "darkMode",
+          type: "select",
+          description: "Dark mode configuration",
+          default: "class",
+          options: ["media", "class"]
+        }
+      ]
+    }
+  },
+  {
+    id: "daisyui",
+    name: "DaisyUI",
+    description: "Component library for Tailwind CSS",
+    version: "1.0.0",
+    category: "ui",
+    dependencies: ["tailwind"],
+    incompatibleWith: [],
+    installation: {
+      commands: ["npm install daisyui"],
+      files: [],
+      transforms: [
+        {
+          file: "tailwind.config.js",
+          pattern: "plugins: \\[.*\\]",
+          replacement: "plugins: [require(\"daisyui\")]"
+        }
+      ]
+    },
+    configuration: {
+      options: [
+        {
+          name: "themes",
+          type: "select",
+          description: "DaisyUI themes to include",
+          default: "light",
+          options: ["light", "dark", "corporate"]
+        }
+      ]
+    }
+  },
+  {
+    id: "recharts",
+    name: "Recharts",
+    description: "Redefined chart library built with React and D3",
+    version: "1.0.0",
+    category: "ui",
+    dependencies: [],
+    incompatibleWith: [],
+    installation: {
+      commands: ["npm install recharts"],
+      files: [],
+      transforms: []
+    },
+    configuration: {
+      options: []
+    }
+  }
+];
+
 // Safe invoke function that handles both Tauri and browser environments
 const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
   // Check if we're in a Tauri environment
@@ -27,8 +141,15 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
     }
   } else {
     console.warn("Tauri API is not available in this environment. Running in mock mode.");
-    // Provide mock implementations or fallbacks for browser environment
-    return {} as T;
+    // Provide mock implementations for browser environment
+    if (command === 'get_templates') {
+      return mockTemplates as T;
+    } else if (command === 'get_modules') {
+      return mockModules as T;
+    } else {
+      console.warn(`Mock for command ${command} not implemented`);
+      return {} as T;
+    }
   }
 };
 

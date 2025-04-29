@@ -1,0 +1,51 @@
+{
+  "id": "tailwind",
+  "name": "Tailwind CSS",
+  "description": "A utility-first CSS framework for rapid UI development",
+  "version": "4.0.0",
+  "category": "styling",
+  "dependencies": [],
+  "incompatible_with": [],
+  "installation": {
+    "commands": [
+      "npm install -D tailwindcss@latest postcss autoprefixer"
+    ],
+    "files": [
+      {
+        "source": "tailwind/tailwind.config.js",
+        "destination": "tailwind.config.js"
+      },
+      {
+        "source": "tailwind/globals.css",
+        "destination": "src/styles/globals.css"
+      },
+      {
+        "source": "tailwind/postcss.config.js",
+        "destination": "postcss.config.js"
+      }
+    ],
+    "transforms": [
+      {
+        "file": "src/app/layout.tsx",
+        "pattern": "// Import global styles",
+        "replacement": "import '../styles/globals.css';"
+      }
+    ]
+  },
+  "configuration": {
+    "options": [
+      {
+        "name": "jit",
+        "type": "boolean",
+        "description": "Use Just-in-Time mode for Tailwind",
+        "default": true
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "description": "Content paths for Tailwind to scan",
+        "default": "./src/**/*.{js,ts,jsx,tsx}"
+      }
+    ]
+  }
+} 

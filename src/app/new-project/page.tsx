@@ -20,10 +20,14 @@ export default function NewProject() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get("template");
   
-  const { templates, modules } = useTemplateStore();
+  const { templates = [], modules = [] } = useTemplateStore() as { templates: Template[], modules: Module[] };
   const { addProject } = useProjectStore();
   const { defaultProjectPath } = useSettingsStore();
   const api = getApiService();
+  
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>("template");
@@ -47,6 +51,36 @@ export default function NewProject() {
   // Validation errors
   const [nameError, setNameError] = useState("");
   const [pathError, setPathError] = useState("");
+
+  // Load templates and modules if they're not already loaded
+  useEffect(() => {
+    async function fetchData() {
+      if (templates.length === 0 || modules.length === 0) {
+        try {
+          setIsLoading(true);
+          setError(null);
+          
+          // Fetch data from API
+          const templateService = getApiService();
+          const templatesData = await templateService.getTemplates();
+          const modulesData = await templateService.getModules();
+          
+          // Update store
+          useTemplateStore.getState().setTemplates(templatesData);
+          useTemplateStore.getState().setModules(modulesData);
+        } catch (err) {
+          console.error('Failed to fetch templates or modules:', err);
+          setError('Failed to load templates and modules. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [templates.length, modules.length]);
 
   // Initialize with template if provided in URL
   useEffect(() => {
@@ -82,7 +116,7 @@ export default function NewProject() {
     setCurrentStep("config");
     
     // Pre-select recommended modules
-    if (template.recommendedModules.length > 0) {
+    if (template.recommendedModules && template.recommendedModules.length > 0) {
       setSelectedModules(template.recommendedModules);
     }
   };
@@ -201,15 +235,35 @@ export default function NewProject() {
         Select a template to use as a starting point for your project.
       </p>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map(template => (
-          <TemplateCard 
-            key={template.id} 
-            template={template} 
-            onSelect={() => handleTemplateSelect(template)} 
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      ) : error ? (
+        <div className="alert alert-error">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{error}</span>
+        </div>
+      ) : templates.length === 0 ? (
+        <div className="alert">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-info shrink-0 w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>No templates available. Please check your installation.</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {templates.map(template => (
+            <TemplateCard 
+              key={template.id} 
+              template={template} 
+              onSelect={() => handleTemplateSelect(template)} 
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 

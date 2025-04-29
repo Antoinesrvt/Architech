@@ -1,0 +1,80 @@
+{
+  "id": "i18n",
+  "name": "Internationalization (next-intl)",
+  "description": "Add multi-language support to your Next.js application",
+  "version": "3.5.0",
+  "category": "i18n",
+  "dependencies": [],
+  "incompatible_with": [],
+  "installation": {
+    "commands": [
+      "npm install next-intl@latest"
+    ],
+    "files": [
+      {
+        "source": "i18n/i18n.config.js",
+        "destination": "i18n.config.js"
+      },
+      {
+        "source": "i18n/middleware.ts",
+        "destination": "middleware.ts"
+      },
+      {
+        "source": "i18n/messages/en.json",
+        "destination": "messages/en.json"
+      },
+      {
+        "source": "i18n/messages/fr.json",
+        "destination": "messages/fr.json"
+      },
+      {
+        "source": "i18n/lib/i18n.ts",
+        "destination": "src/lib/i18n.ts"
+      }
+    ],
+    "transforms": [
+      {
+        "file": "next.config.js",
+        "pattern": "/** @type {import('next').NextConfig} */\\nconst nextConfig = {",
+        "replacement": "/** @type {import('next').NextConfig} */\nconst withNextIntl = require('next-intl/plugin')();\n\nconst nextConfig = {"
+      },
+      {
+        "file": "next.config.js",
+        "pattern": "module.exports = nextConfig",
+        "replacement": "module.exports = withNextIntl(nextConfig)"
+      },
+      {
+        "file": "next.config.ts",
+        "pattern": "import type { NextConfig } from 'next';",
+        "replacement": "import type { NextConfig } from 'next';\nimport withNextIntl from 'next-intl/plugin';"
+      },
+      {
+        "file": "next.config.ts",
+        "pattern": "export default config",
+        "replacement": "export default withNextIntl()(config)"
+      }
+    ]
+  },
+  "configuration": {
+    "options": [
+      {
+        "name": "locales",
+        "type": "select",
+        "description": "Languages to support",
+        "default": ["en", "fr"],
+        "options": [
+          "en", "fr", "es", "de", "it", "ja", "ko", "pt", "ru", "zh"
+        ]
+      },
+      {
+        "name": "defaultLocale",
+        "type": "select",
+        "description": "Default language",
+        "default": "en",
+        "options": [
+          "en", "fr", "es", "de", "it", "ja", "ko", "pt", "ru", "zh"
+        ]
+      }
+    ]
+  }
+} 

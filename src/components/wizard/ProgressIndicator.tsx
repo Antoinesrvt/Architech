@@ -17,7 +17,7 @@ export default function ProgressIndicator({
   const [steps, setSteps] = useState<string[]>([]);
 
   useEffect(() => {
-    if (progress && !steps.includes(progress.step)) {
+    if (progress?.step && !steps.includes(progress.step)) {
       setSteps((prevSteps) => [...prevSteps, progress.step]);
     }
   }, [progress, steps]);
@@ -35,12 +35,14 @@ export default function ProgressIndicator({
     return <div className="skeleton h-32 w-full"></div>;
   }
 
+  const progressPercentage = progress?.progress ? progress.progress * 100 : 0;
+
   return (
     <div className="space-y-4">
       <div className="w-full">
         <progress 
           className="progress progress-primary w-full" 
-          value={progress?.progress ? progress.progress * 100 : 0} 
+          value={progressPercentage} 
           max="100"
         ></progress>
         <div className="flex justify-between text-xs mt-1">
@@ -58,7 +60,7 @@ export default function ProgressIndicator({
             <span>Project generation complete!</span>
           </div>
         ) : (
-          progress && (
+          progress && progress.message && (
             <div className="flex items-center gap-3">
               <div className="loading loading-spinner loading-sm"></div>
               <div>

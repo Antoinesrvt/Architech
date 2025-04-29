@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import MainLayout from "@/components/layouts/MainLayout";
 import RecentProjects from "@/components/project/RecentProjects";
+import ProjectDrafts from "@/components/project/ProjectDrafts";
 import { useFrameworkStore } from "@/lib/store";
 import { frameworkService } from "@/lib/api";
 import Link from "next/link";
@@ -104,7 +105,14 @@ export default function Dashboard() {
             <span>{error}</span>
           </div>
         ) : (
-          <RecentProjects />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <RecentProjects />
+            </div>
+            <div className="lg:col-span-1">
+              <ProjectDrafts />
+            </div>
+          </div>
         )}
       </div>
     </MainLayout>

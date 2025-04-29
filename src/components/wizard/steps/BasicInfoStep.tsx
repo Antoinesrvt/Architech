@@ -1,16 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
 
 export function BasicInfoStep() {
-  const [projectName, setProjectName] = useState('');
-  const [projectPath, setProjectPath] = useState('');
-  const [projectDescription, setProjectDescription] = useState('');
+  const { 
+    projectName, 
+    projectPath, 
+    projectDescription, 
+    setProjectName, 
+    setProjectPath, 
+    setProjectDescription,
+    saveDraft
+  } = useProjectStore();
+  
   const [isSelectingPath, setIsSelectingPath] = useState(false);
   const [formErrors, setFormErrors] = useState({
     name: '',
     path: '',
   });
+
+  // Initialize form errors on mount
+  useEffect(() => {
+    setFormErrors({
+      name: validateProjectName(projectName),
+      path: projectPath ? '' : 'Project path is required'
+    });
+  }, [projectName, projectPath]);
 
   // Validate project name
   const validateProjectName = (name: string) => {
@@ -34,6 +49,14 @@ export function BasicInfoStep() {
       ...prev,
       name: validateProjectName(name),
     }));
+    
+    // Auto-save after a short delay
+    const timeoutId = setTimeout(() => {
+      saveDraft();
+    }, 500);
+    
+    // Clean up the timeout
+    return () => clearTimeout(timeoutId);
   };
 
   // Browse for directory
@@ -47,12 +70,27 @@ export function BasicInfoStep() {
           ...prev,
           path: '',
         }));
+        saveDraft();
       }
     } catch (error) {
       console.error('Failed to browse for directory:', error);
     } finally {
       setIsSelectingPath(false);
     }
+  };
+
+  // Handle description change
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const description = e.target.value;
+    setProjectDescription(description);
+    
+    // Auto-save after a short delay
+    const timeoutId = setTimeout(() => {
+      saveDraft();
+    }, 500);
+    
+    // Clean up the timeout
+    return () => clearTimeout(timeoutId);
   };
 
   // Is the form valid?
@@ -95,7 +133,6 @@ export function BasicInfoStep() {
             placeholder="/path/to/project"
             className="input input-bordered join-item w-full"
             value={projectPath}
-            onChange={(e) => setProjectPath(e.target.value)}
             readOnly
           />
           <button 
@@ -125,7 +162,7 @@ export function BasicInfoStep() {
           className="textarea textarea-bordered w-full"
           placeholder="Briefly describe your project"
           value={projectDescription}
-          onChange={(e) => setProjectDescription(e.target.value)}
+          onChange={handleDescriptionChange}
         />
       </div>
 

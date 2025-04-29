@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWizardNavigation, WizardStep } from './hooks/useWizardNavigation';
 import { FrameworkStep } from './steps/FrameworkStep';
 import { BasicInfoStep } from './steps/BasicInfoStep';
@@ -7,10 +7,41 @@ import { ConfigurationStep } from './steps/ConfigurationStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { useProjectStore } from '@/lib/store/project-store';
 import { cn } from '@/lib/utils/cn';
+import { useRouter } from 'next/navigation';
 
 export function ProjectWizard() {
-  const { generateProject, isLoading, error } = useProjectStore();
+  const router = useRouter();
+  const { 
+    generateProject, 
+    isLoading, 
+    error, 
+    currentDraftId, 
+    createDraft, 
+    saveDraft,
+    deleteDraft,
+    resetWizardState
+  } = useProjectStore();
   
+  // Create or use existing draft
+  useEffect(() => {
+    if (!currentDraftId) {
+      createDraft();
+    }
+  }, [currentDraftId, createDraft]);
+
+  // Save draft when leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveDraft();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [saveDraft]);
+
   // Define wizard steps
   const steps: WizardStep[] = [
     { id: 'basic', title: 'Project Info', component: BasicInfoStep },
@@ -29,7 +60,12 @@ export function ProjectWizard() {
     goToPreviousStep, 
     goToStep, 
     progress 
-  } = useWizardNavigation({ steps });
+  } = useWizardNavigation({ 
+    steps,
+    onComplete: () => {
+      saveDraft();
+    }
+  });
 
   // Project generation handling
   const handleGenerate = async () => {
@@ -42,8 +78,28 @@ export function ProjectWizard() {
     }
   };
 
+  // Clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      saveDraft();
+    };
+  }, [saveDraft]);
+
   // Component for the current step
   const CurrentStepComponent = currentStep.component;
+  
+  // Navigation handlers
+  const handleKeepDraft = () => {
+    saveDraft();
+    router.push('/');
+  };
+
+  const handleDiscardDraft = () => {
+    if (currentDraftId) {
+      deleteDraft(currentDraftId);
+    }
+    router.push('/');
+  };
 
   return (
     <div className="py-6 relative animate-fadeIn">
@@ -53,6 +109,16 @@ export function ProjectWizard() {
           className="h-full bg-primary transition-all duration-500 ease-in-out"
           style={{ width: `${progress}%` }}
         />
+      </div>
+
+      {/* Page title with back button */}
+      <div className="flex items-center mb-6 mt-2">
+        <label htmlFor="back-confirmation-modal" className="btn btn-ghost btn-sm mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </label>
+        <h1 className="text-2xl font-bold">Create New Project</h1>
       </div>
 
       {/* Step indicators */}
@@ -144,6 +210,33 @@ export function ProjectWizard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Back Confirmation Modal using DaisyUI */}
+      <input type="checkbox" id="back-confirmation-modal" className="modal-toggle" />
+      <div className="modal" role="dialog">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Return to Dashboard?</h3>
+          <p className="py-4">What would you like to do with your current progress?</p>
+          <div className="modal-action flex flex-col sm:flex-row gap-2">
+            <button 
+              className="btn btn-primary flex-1"
+              onClick={handleKeepDraft}
+            >
+              Save as Draft
+            </button>
+            <button 
+              className="btn btn-error flex-1"
+              onClick={handleDiscardDraft}
+            >
+              Discard
+            </button>
+            <label htmlFor="back-confirmation-modal" className="btn btn-ghost flex-1">
+              Cancel
+            </label>
+          </div>
+        </div>
+        <label className="modal-backdrop" htmlFor="back-confirmation-modal"></label>
       </div>
     </div>
   );

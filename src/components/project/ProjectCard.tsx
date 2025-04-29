@@ -41,7 +41,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         <div className="text-sm opacity-70 mb-2">{project.path}</div>
         
         <div className="flex items-center gap-2 mb-3">
-          <div className="badge badge-outline">{project.template}</div>
+          <div className="badge badge-outline">{project.framework}</div>
           <div className="text-xs opacity-50">
             Last opened {formatRelativeTime(project.lastOpenedAt)}
           </div>

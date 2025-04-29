@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
+import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
 
 export function useFrameworkSelection() {
   const { frameworks, setFrameworks } = useFrameworkStore();
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
+  const { selectedFrameworkId, setSelectedFramework, saveDraft } = useProjectStore();
   const [selectedType, setSelectedType] = useState<string>('web');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,6 +14,13 @@ export function useFrameworkSelection() {
   const selectedFramework = selectedFrameworkId
     ? frameworks.find(f => f.id === selectedFrameworkId)
     : null;
+
+  // Update selected type based on selected framework
+  useEffect(() => {
+    if (selectedFramework) {
+      setSelectedType(selectedFramework.type);
+    }
+  }, [selectedFramework]);
 
   // Filter frameworks by type
   const frameworksByType = frameworks.filter(framework => framework.type === selectedType);
@@ -42,7 +50,8 @@ export function useFrameworkSelection() {
 
   // Select a framework
   const selectFramework = (frameworkId: string) => {
-    setSelectedFrameworkId(frameworkId);
+    setSelectedFramework(frameworkId);
+    // Draft is automatically saved by the setSelectedFramework method
   };
 
   return {

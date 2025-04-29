@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
+import { useProjectStore } from '@/lib/store/project-store';
 import { Module } from '@/lib/store/framework-store';
 import ModuleCard from '../ModuleCard';
 import { cn } from '@/lib/utils/cn';
@@ -8,10 +9,16 @@ type ModuleCategory = 'all' | 'styling' | 'ui' | 'state' | 'i18n' | 'forms' | 't
 
 export function ModulesStep() {
   const { modules, frameworks } = useFrameworkStore();
-  const [selectedModules, setSelectedModules] = useState<string[]>([]);
+  const { 
+    selectedFrameworkId, 
+    selectedModuleIds, 
+    addModule, 
+    removeModule,
+    saveDraft 
+  } = useProjectStore();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ModuleCategory>('all');
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
   
   // Get the selected framework
   const selectedFramework = selectedFrameworkId 
@@ -41,8 +48,8 @@ export function ModulesStep() {
     })
     .sort((a, b) => {
       // Sort by selected status first
-      const aSelected = selectedModules.includes(a.id);
-      const bSelected = selectedModules.includes(b.id);
+      const aSelected = selectedModuleIds.includes(a.id);
+      const bSelected = selectedModuleIds.includes(b.id);
       
       if (aSelected && !bSelected) return -1;
       if (!aSelected && bSelected) return 1;
@@ -56,7 +63,7 @@ export function ModulesStep() {
     // If we're trying to deselect a module, make sure no selected module depends on it
     if (selected) {
       const selectedDependentModules = modules
-        .filter(m => selectedModules.includes(m.id) && m.dependencies.includes(module.id));
+        .filter(m => selectedModuleIds.includes(m.id) && m.dependencies.includes(module.id));
       
       if (selectedDependentModules.length > 0) {
         return {
@@ -69,7 +76,7 @@ export function ModulesStep() {
     else {
       // Check if this module is incompatible with any already selected module
       const incompatibleModules = modules
-        .filter(m => selectedModules.includes(m.id) && 
+        .filter(m => selectedModuleIds.includes(m.id) && 
           (m.incompatibleWith.includes(module.id) || module.incompatibleWith.includes(m.id)));
       
       if (incompatibleModules.length > 0) {
@@ -85,7 +92,7 @@ export function ModulesStep() {
 
   // Handle module toggle
   const handleModuleToggle = (module: Module) => {
-    const isSelected = selectedModules.includes(module.id);
+    const isSelected = selectedModuleIds.includes(module.id);
     const toggle = canToggleModule(module, isSelected);
     
     if (!toggle.can) {
@@ -96,16 +103,17 @@ export function ModulesStep() {
     
     if (isSelected) {
       // Remove module from selection
-      setSelectedModules(selectedModules.filter(id => id !== module.id));
+      removeModule(module.id);
     } else {
-      // Add module and its dependencies to selection
-      const newSelection = [...selectedModules, module.id];
+      // Add module to selection
+      addModule(module.id);
       
       // Also add all dependencies
-      const allDependencies = [...module.dependencies];
-      
-      // Add module and all dependencies
-      setSelectedModules([...new Set([...newSelection, ...allDependencies])]);
+      module.dependencies.forEach(depId => {
+        if (!selectedModuleIds.includes(depId)) {
+          addModule(depId);
+        }
+      });
     }
   };
 
@@ -212,7 +220,7 @@ export function ModulesStep() {
           <ModuleCard
             key={module.id}
             module={module}
-            selected={selectedModules.includes(module.id)}
+            selected={selectedModuleIds.includes(module.id)}
             onToggle={() => handleModuleToggle(module)}
           />
         ))}
@@ -225,14 +233,14 @@ export function ModulesStep() {
       </div>
 
       {/* Selected modules summary */}
-      {selectedModules.length > 0 && (
+      {selectedModuleIds.length > 0 && (
         <div className="alert alert-success shadow-lg transition-all duration-300">
           <div>
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>
-              You've selected {selectedModules.length} module{selectedModules.length !== 1 ? 's' : ''}.
+              You've selected {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''}.
             </span>
           </div>
         </div>

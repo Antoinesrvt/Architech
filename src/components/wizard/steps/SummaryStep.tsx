@@ -1,23 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
+import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
 import ProgressIndicator from '../ProgressIndicator';
 import { GenerationProgress } from '@/lib/api/types';
 
 export function SummaryStep() {
   const { frameworks, modules } = useFrameworkStore();
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { 
+    projectName,
+    projectPath,
+    projectDescription,
+    selectedFrameworkId,
+    selectedModuleIds,
+    moduleConfigurations,
+    generateProject,
+    isLoading,
+    error: projectError
+  } = useProjectStore();
+
   const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
   const [currentStep, setCurrentStep] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
-  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
-  const [projectDetails, setProjectDetails] = useState({
-    name: '',
-    path: '',
-    description: '',
-  });
 
   // Get the selected framework
   const selectedFramework = selectedFrameworkId 
@@ -27,54 +32,37 @@ export function SummaryStep() {
   // Get the selected modules
   const selectedModules = modules.filter(module => selectedModuleIds.includes(module.id));
 
+  // Set up progress listener
+  useEffect(() => {
+    const unsubscribe = frameworkService.listenToProgress((progress) => {
+      setCurrentStep(progress.step);
+      setGenerationProgress(progress);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
   // Handle project generation
   const handleGenerateProject = async () => {
-    setIsGenerating(true);
     setError(null);
     setSuccess(false);
     
     try {
-      // Set up progress listener
-      const unsubscribe = frameworkService.listenToProgress((progress) => {
-        setCurrentStep(progress.step);
-        setGenerationProgress(progress);
-      });
-      
-      // Create project config
-      const config = {
-        name: projectDetails.name,
-        path: projectDetails.path,
-        framework: selectedFrameworkId!,
-        modules: selectedModuleIds.map(id => ({ id, options: {} })),
-        options: {
-          typescript: true,
-          appRouter: true,
-          eslint: true,
-        }
-      };
-      
-      // Generate project
-      await frameworkService.generateProject(config);
-      
-      // Clean up listener
-      unsubscribe();
-      
-      // Set success
+      // Generate project using the store method
+      await generateProject();
       setSuccess(true);
-    } catch (error) {
-      console.error('Project generation failed:', error);
-      setError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsGenerating(false);
+    } catch (err) {
+      console.error('Project generation failed:', err);
+      setError(err instanceof Error ? err.message : String(err));
     }
   };
 
   // Handle opening the project in an editor
   const handleOpenInEditor = async () => {
-    if (!projectDetails.path || !projectDetails.name) return;
+    if (!projectPath || !projectName) return;
     
     try {
-      await frameworkService.openInEditor(`${projectDetails.path}/${projectDetails.name}`);
+      await frameworkService.openInEditor(`${projectPath}/${projectName}`);
     } catch (error) {
       console.error('Failed to open in editor:', error);
       setError('Failed to open project in editor');
@@ -96,16 +84,16 @@ export function SummaryStep() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="font-medium">Name:</span>
-                <span>{projectDetails.name}</span>
+                <span>{projectName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Location:</span>
-                <span className="text-right">{projectDetails.path}</span>
+                <span className="text-right">{projectPath}</span>
               </div>
-              {projectDetails.description && (
+              {projectDescription && (
                 <div>
                   <span className="font-medium">Description:</span>
-                  <p className="text-sm mt-1">{projectDetails.description}</p>
+                  <p className="text-sm mt-1">{projectDescription}</p>
                 </div>
               )}
             </div>
@@ -121,9 +109,11 @@ export function SummaryStep() {
                 <p className="font-medium">{selectedFramework.name}</p>
                 <p className="text-sm">{selectedFramework.description}</p>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedFramework.tags.map(tag => (
-                    <span key={tag} className="badge badge-primary badge-sm">{tag}</span>
-                  ))}
+                  {selectedFramework.tags && Array.isArray(selectedFramework.tags) && 
+                    selectedFramework.tags.map(tag => (
+                      <span key={tag} className="badge badge-primary badge-sm">{tag}</span>
+                    ))
+                  }
                 </div>
               </div>
             ) : (
@@ -158,10 +148,12 @@ export function SummaryStep() {
         <div className="card-body">
           <h3 className="card-title">Project Structure Preview</h3>
           <div className="bg-base-100 p-4 rounded-lg font-mono text-sm">
-            <p>📁 {projectDetails.name}/</p>
-            {selectedFramework?.structure.directories.map(dir => (
-              <p key={dir} className="ml-4">📁 {dir}/</p>
-            ))}
+            <p>📁 {projectName || 'my-project'}/</p>
+            {selectedFramework?.structure?.directories && Array.isArray(selectedFramework.structure.directories) && 
+              selectedFramework.structure.directories.map(dir => (
+                <p key={dir} className="ml-4">📁 {dir}/</p>
+              ))
+            }
             <p className="ml-4">📄 package.json</p>
             <p className="ml-4">📄 README.md</p>
             {selectedModules.some(m => m.id === 'tailwind') && (
@@ -172,14 +164,14 @@ export function SummaryStep() {
       </div>
 
       {/* Generation Progress */}
-      {isGenerating && (
+      {isLoading && (
         <div className="card bg-base-300 shadow-sm">
           <div className="card-body">
             <h3 className="card-title">Generating Project</h3>
             <ProgressIndicator 
               progress={generationProgress} 
               isComplete={success}
-              error={error}
+              error={error || projectError}
             />
             {generationProgress && (
               <p className="text-center mt-2">{generationProgress.message}</p>
@@ -189,10 +181,10 @@ export function SummaryStep() {
       )}
 
       {/* Error Message */}
-      {error && !isGenerating && (
+      {(error || projectError) && !isLoading && (
         <div className="alert alert-error">
           <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <span>{error}</span>
+          <span>{error || projectError}</span>
         </div>
       )}
 
@@ -211,14 +203,14 @@ export function SummaryStep() {
       )}
 
       {/* Generate Button */}
-      {!isGenerating && !success && (
+      {!isLoading && !success && (
         <div className="flex justify-center mt-6">
           <button 
             className="btn btn-primary btn-lg"
             onClick={handleGenerateProject}
-            disabled={!selectedFrameworkId || isGenerating}
+            disabled={!selectedFrameworkId || isLoading}
           >
-            {isGenerating ? (
+            {isLoading ? (
               <>
                 <span className="loading loading-spinner"></span>
                 Generating...

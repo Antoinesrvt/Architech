@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
+import { useProjectStore } from '@/lib/store/project-store';
 import { Module, ModuleOption } from '@/lib/store/framework-store';
 import { cn } from '@/lib/utils/cn';
 
 export function ConfigurationStep() {
   const { modules, frameworks } = useFrameworkStore();
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
-  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
-  const [moduleConfigurations, setModuleConfigurations] = useState<Record<string, Record<string, any>>>({});
+  const { 
+    selectedFrameworkId,
+    selectedModuleIds,
+    moduleConfigurations,
+    setModuleConfiguration
+  } = useProjectStore();
+
+  // State for framework options (though they're fixed for now)
+  const [frameworkOptions, setFrameworkOptions] = useState({
+    typescript: true,
+    appRouter: true,
+    eslint: true
+  });
 
   // Get the selected framework
   const selectedFramework = selectedFrameworkId 
@@ -19,12 +30,17 @@ export function ConfigurationStep() {
 
   // Handle configuration change for a module option
   const handleConfigChange = (moduleId: string, optionName: string, value: any) => {
-    setModuleConfigurations(prev => ({
+    setModuleConfiguration(moduleId, {
+      ...moduleConfigurations[moduleId],
+      [optionName]: value,
+    });
+  };
+
+  // Handle framework option change
+  const handleFrameworkOptionChange = (option: string, value: boolean) => {
+    setFrameworkOptions(prev => ({
       ...prev,
-      [moduleId]: {
-        ...(prev[moduleId] || {}),
-        [optionName]: value,
-      }
+      [option]: value
     }));
   };
 
@@ -99,7 +115,13 @@ export function ConfigurationStep() {
             
             <div className="form-control">
               <label className="label cursor-pointer justify-start">
-                <input type="checkbox" className="toggle toggle-primary" checked={true} />
+                <input 
+                  type="checkbox" 
+                  className="toggle toggle-primary" 
+                  checked={frameworkOptions.typescript}
+                  onChange={(e) => handleFrameworkOptionChange('typescript', e.target.checked)}
+                  disabled={true} // Typescript is required, so disable toggling
+                />
                 <span className="label-text ml-2">TypeScript</span>
               </label>
             </div>
@@ -107,7 +129,13 @@ export function ConfigurationStep() {
             {selectedFramework.id.includes('next') && (
               <div className="form-control">
                 <label className="label cursor-pointer justify-start">
-                  <input type="checkbox" className="toggle toggle-primary" checked={true} />
+                  <input 
+                    type="checkbox" 
+                    className="toggle toggle-primary" 
+                    checked={frameworkOptions.appRouter}
+                    onChange={(e) => handleFrameworkOptionChange('appRouter', e.target.checked)}
+                    disabled={true} // App Router is required, so disable toggling
+                  />
                   <span className="label-text ml-2">Use App Router</span>
                 </label>
               </div>
@@ -115,7 +143,13 @@ export function ConfigurationStep() {
             
             <div className="form-control">
               <label className="label cursor-pointer justify-start">
-                <input type="checkbox" className="toggle toggle-primary" checked={true} />
+                <input 
+                  type="checkbox" 
+                  className="toggle toggle-primary" 
+                  checked={frameworkOptions.eslint}
+                  onChange={(e) => handleFrameworkOptionChange('eslint', e.target.checked)}
+                  disabled={true} // ESLint is required, so disable toggling
+                />
                 <span className="label-text ml-2">ESLint</span>
               </label>
             </div>
@@ -130,7 +164,7 @@ export function ConfigurationStep() {
             <div className="card-body">
               <h3 className="card-title">{module.name} Configuration</h3>
               
-              {module.configuration.options.length > 0 ? (
+              {module.configuration?.options?.length > 0 ? (
                 <div className="space-y-4">
                   {module.configuration.options.map(option => (
                     <div key={option.name}>

@@ -17,15 +17,15 @@ export interface ModuleConfig {
   options: Record<string, unknown>;
 }
 
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
 export interface GenerationProgress {
   step: string;
   message: string;
   progress: number;
-}
-
-export interface ValidationResult {
-  valid: boolean;
-  errors: string[];
 }
 
 export interface TemplateService {

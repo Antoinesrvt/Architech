@@ -10,29 +10,28 @@ import { useTemplateStore, useProjectStore, useSettingsStore } from "@/lib/store
 import { getApiService } from "@/lib/api";
 import { generateUUID } from "@/lib/utils";
 import { validateProjectName, validateProjectPath } from "@/lib/utils/validation";
-import { Template, Module } from "@/lib/store/template-store";
+import { Template, Module, ModuleOption } from "@/lib/store/template-store";
 import { GenerationProgress } from "@/lib/api/types";
 
-type WizardStep = "template" | "config" | "modules" | "generating";
+type WizardStep = "template" | "config" | "modules" | "module-config" | "generating";
 
 export default function NewProject() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateId = searchParams.get("template");
   
-  const { templates = [], modules = [] } = useTemplateStore() as { templates: Template[], modules: Module[] };
+  const { templates, modules } = useTemplateStore();
   const { addProject } = useProjectStore();
   const { defaultProjectPath } = useSettingsStore();
   const api = getApiService();
-  
-  // Loading state
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>("template");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
+  
+  // Module configuration state
+  const [moduleConfigs, setModuleConfigs] = useState<Record<string, Record<string, any>>>({});
   
   // Project configuration
   const [projectName, setProjectName] = useState("");
@@ -51,36 +50,6 @@ export default function NewProject() {
   // Validation errors
   const [nameError, setNameError] = useState("");
   const [pathError, setPathError] = useState("");
-
-  // Load templates and modules if they're not already loaded
-  useEffect(() => {
-    async function fetchData() {
-      if (templates.length === 0 || modules.length === 0) {
-        try {
-          setIsLoading(true);
-          setError(null);
-          
-          // Fetch data from API
-          const templateService = getApiService();
-          const templatesData = await templateService.getTemplates();
-          const modulesData = await templateService.getModules();
-          
-          // Update store
-          useTemplateStore.getState().setTemplates(templatesData);
-          useTemplateStore.getState().setModules(modulesData);
-        } catch (err) {
-          console.error('Failed to fetch templates or modules:', err);
-          setError('Failed to load templates and modules. Please try again.');
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-      }
-    }
-    
-    fetchData();
-  }, [templates.length, modules.length]);
 
   // Initialize with template if provided in URL
   useEffect(() => {
@@ -110,13 +79,34 @@ export default function NewProject() {
     }
   }, [currentStep, api]);
 
+  // Initialize module configs when modules are selected
+  useEffect(() => {
+    // Initialize config for newly selected modules with default values
+    const selectedModuleObjects = modules.filter(m => selectedModules.includes(m.id));
+    
+    const newConfigs = { ...moduleConfigs };
+    
+    selectedModuleObjects.forEach(module => {
+      if (!newConfigs[module.id]) {
+        // Initialize with default values
+        const config: Record<string, any> = {};
+        module.configuration.options.forEach(option => {
+          config[option.name] = option.default;
+        });
+        newConfigs[module.id] = config;
+      }
+    });
+    
+    setModuleConfigs(newConfigs);
+  }, [selectedModules, modules]);
+
   // Handle template selection
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
     setCurrentStep("config");
     
     // Pre-select recommended modules
-    if (template.recommendedModules && template.recommendedModules.length > 0) {
+    if (template.recommendedModules.length > 0) {
       setSelectedModules(template.recommendedModules);
     }
   };
@@ -124,10 +114,41 @@ export default function NewProject() {
   // Handle module toggle
   const handleModuleToggle = (moduleId: string, selected: boolean) => {
     if (selected) {
-      setSelectedModules(prev => [...prev, moduleId]);
+      // Check dependencies
+      const module = modules.find(m => m.id === moduleId);
+      if (module) {
+        // Add dependencies
+        const allToAdd = [...module.dependencies.filter(depId => !selectedModules.includes(depId)), moduleId];
+        setSelectedModules(prev => [...prev, ...allToAdd]);
+      } else {
+        setSelectedModules(prev => [...prev, moduleId]);
+      }
     } else {
+      // Check if other modules depend on this one
+      const dependentModules = modules.filter(m => 
+        selectedModules.includes(m.id) && m.dependencies.includes(moduleId)
+      );
+      
+      if (dependentModules.length > 0) {
+        // Show warning or handle dependent modules
+        const dependentNames = dependentModules.map(m => m.name).join(", ");
+        alert(`Cannot remove ${moduleId} because it's required by: ${dependentNames}`);
+        return;
+      }
+      
       setSelectedModules(prev => prev.filter(id => id !== moduleId));
     }
+  };
+
+  // Handle module config change
+  const handleModuleConfigChange = (moduleId: string, optionName: string, value: any) => {
+    setModuleConfigs(prev => ({
+      ...prev,
+      [moduleId]: {
+        ...prev[moduleId],
+        [optionName]: value
+      }
+    }));
   };
 
   // Handle project path browse
@@ -168,9 +189,11 @@ export default function NewProject() {
       setCurrentStep("generating");
       
       // Create module configs
-      const moduleConfigs = selectedModules.map(moduleId => {
-        // For now, just pass empty options
-        return { id: moduleId, options: {} };
+      const moduleConfigsArray = selectedModules.map(moduleId => {
+        return { 
+          id: moduleId, 
+          options: moduleConfigs[moduleId] || {} 
+        };
       });
       
       // Generate project
@@ -178,7 +201,7 @@ export default function NewProject() {
         name: projectName,
         path: projectPath,
         template: selectedTemplate?.id || "",
-        modules: moduleConfigs,
+        modules: moduleConfigsArray,
         options: {
           typescript: useTypeScript,
           appRouter: useAppRouter,
@@ -221,7 +244,11 @@ export default function NewProject() {
       case "config":
         return projectName !== "" && projectPath !== "" && !nameError && !pathError;
       case "modules":
-        return true; // Modules are optional
+        return selectedModules.length > 0; // At least one module should be selected
+      case "module-config":
+        return true; // Module config is optional
+      case "generating":
+        return isComplete;
       default:
         return false;
     }
@@ -235,35 +262,15 @@ export default function NewProject() {
         Select a template to use as a starting point for your project.
       </p>
       
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      ) : error ? (
-        <div className="alert alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{error}</span>
-        </div>
-      ) : templates.length === 0 ? (
-        <div className="alert">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-info shrink-0 w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <span>No templates available. Please check your installation.</span>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map(template => (
-            <TemplateCard 
-              key={template.id} 
-              template={template} 
-              onSelect={() => handleTemplateSelect(template)} 
-            />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {templates.map(template => (
+          <TemplateCard 
+            key={template.id} 
+            template={template} 
+            onSelect={() => handleTemplateSelect(template)} 
+          />
+        ))}
+      </div>
     </div>
   );
 
@@ -280,6 +287,7 @@ export default function NewProject() {
           <div className="form-control w-full mb-4">
             <label className="label">
               <span className="label-text">Project Name</span>
+              <span className="label-text-alt">Required</span>
             </label>
             <input 
               type="text" 
@@ -297,6 +305,7 @@ export default function NewProject() {
           <div className="form-control w-full mb-4">
             <label className="label">
               <span className="label-text">Project Location</span>
+              <span className="label-text-alt">Required</span>
             </label>
             <div className="flex gap-2">
               <input 
@@ -332,7 +341,12 @@ export default function NewProject() {
                   checked={useTypeScript}
                   onChange={e => setUseTypeScript(e.target.checked)}
                 />
-                <span className="label-text">Use TypeScript</span>
+                <div>
+                  <span className="label-text">Use TypeScript</span>
+                  <p className="text-xs text-base-content/60">
+                    TypeScript adds type safety to your JavaScript code
+                  </p>
+                </div>
               </label>
             </div>
             
@@ -344,7 +358,12 @@ export default function NewProject() {
                   checked={useAppRouter}
                   onChange={e => setUseAppRouter(e.target.checked)}
                 />
-                <span className="label-text">Use App Router</span>
+                <div>
+                  <span className="label-text">Use App Router</span>
+                  <p className="text-xs text-base-content/60">
+                    Next.js App Router for file-based routing with React Server Components
+                  </p>
+                </div>
               </label>
             </div>
             
@@ -356,7 +375,12 @@ export default function NewProject() {
                   checked={useEslint}
                   onChange={e => setUseEslint(e.target.checked)}
                 />
-                <span className="label-text">Use ESLint</span>
+                <div>
+                  <span className="label-text">Use ESLint</span>
+                  <p className="text-xs text-base-content/60">
+                    ESLint helps identify and fix problems in your code
+                  </p>
+                </div>
               </label>
             </div>
           </div>
@@ -367,12 +391,26 @@ export default function NewProject() {
 
   // Render modules selection step
   const renderModulesStep = () => {
-    // Filter modules based on selected template
+    // Get compatible modules (only show modules that aren't incompatible with already selected modules)
     const compatibleModules = modules.filter(module => {
       // Check if this module is compatible with other selected modules
       const isCompatible = !module.incompatibleWith.some(id => selectedModules.includes(id));
       return isCompatible;
     });
+
+    // Group modules by category for better organization
+    const groupedModules: Record<string, Module[]> = {};
+    compatibleModules.forEach(module => {
+      if (!groupedModules[module.category]) {
+        groupedModules[module.category] = [];
+      }
+      groupedModules[module.category].push(module);
+    });
+
+    // Get a list of modules that are required by selected modules (dependencies)
+    const requiredModules = modules
+      .filter(m => selectedModules.includes(m.id))
+      .flatMap(m => m.dependencies);
 
     return (
       <div className="space-y-6">
@@ -382,15 +420,22 @@ export default function NewProject() {
         </p>
         
         {compatibleModules.length > 0 ? (
-          <div className="space-y-4">
-            {compatibleModules.map(module => (
-              <ModuleCard 
-                key={module.id} 
-                module={module} 
-                selected={selectedModules.includes(module.id)}
-                onToggle={handleModuleToggle}
-                disabled={false}
-              />
+          <div className="space-y-8">
+            {Object.entries(groupedModules).map(([category, categoryModules]) => (
+              <div key={category} className="space-y-4">
+                <h3 className="font-semibold text-lg capitalize">{category}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {categoryModules.map(module => (
+                    <ModuleCard 
+                      key={module.id} 
+                      module={module} 
+                      selected={selectedModules.includes(module.id)}
+                      onToggle={handleModuleToggle}
+                      disabled={requiredModules.includes(module.id)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
@@ -403,6 +448,114 @@ export default function NewProject() {
         )}
       </div>
     );
+  };
+
+  // Render module configuration step
+  const renderModuleConfigStep = () => {
+    // Get selected module objects
+    const selectedModuleObjects = modules.filter(m => selectedModules.includes(m.id));
+    
+    // Filter to only modules that have configuration options
+    const configurableModules = selectedModuleObjects.filter(
+      m => m.configuration.options.length > 0
+    );
+    
+    if (configurableModules.length === 0) {
+      // Skip this step if no modules need configuration
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Module Configuration</h2>
+          <div className="alert alert-info">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>No configuration needed for selected modules.</span>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">Module Configuration</h2>
+        <p className="text-base-content/70">
+          Configure the selected modules for your project.
+        </p>
+        
+        <div className="space-y-6">
+          {configurableModules.map(module => (
+            <div key={module.id} className="card bg-base-100 shadow-lg">
+              <div className="card-body">
+                <h3 className="card-title">{module.name}</h3>
+                <p className="text-sm text-base-content/70">{module.description}</p>
+                
+                <div className="divider"></div>
+                
+                <div className="space-y-4">
+                  {module.configuration.options.map(option => (
+                    <div key={option.name} className="form-control w-full">
+                      <label className="label">
+                        <span className="label-text">{option.name}</span>
+                        <span className="label-text-alt">{option.description}</span>
+                      </label>
+                      
+                      {renderConfigOption(module.id, option)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function to render different option types
+  const renderConfigOption = (moduleId: string, option: ModuleOption) => {
+    const currentValue = moduleConfigs[moduleId]?.[option.name] ?? option.default;
+    
+    switch (option.type) {
+      case 'boolean':
+        return (
+          <input 
+            type="checkbox" 
+            className="toggle toggle-primary" 
+            checked={Boolean(currentValue)}
+            onChange={e => handleModuleConfigChange(moduleId, option.name, e.target.checked)}
+          />
+        );
+      case 'string':
+        return (
+          <input 
+            type="text" 
+            className="input input-bordered w-full" 
+            value={String(currentValue || '')}
+            onChange={e => handleModuleConfigChange(moduleId, option.name, e.target.value)}
+          />
+        );
+      case 'select':
+        return (
+          <select 
+            className="select select-bordered w-full"
+            value={String(currentValue)}
+            onChange={e => handleModuleConfigChange(moduleId, option.name, e.target.value)}
+          >
+            {option.options?.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        );
+      default:
+        return (
+          <input 
+            type="text" 
+            className="input input-bordered w-full" 
+            value={String(currentValue || '')}
+            onChange={e => handleModuleConfigChange(moduleId, option.name, e.target.value)}
+          />
+        );
+    }
   };
 
   // Render generation step
@@ -451,64 +604,123 @@ export default function NewProject() {
         return renderConfigStep();
       case "modules":
         return renderModulesStep();
+      case "module-config":
+        return renderModuleConfigStep();
       case "generating":
         return renderGeneratingStep();
       default:
-        return null;
+        return renderTemplateStep();
+    }
+  };
+
+  // Helper function to get the current step index
+  const getCurrentStepIndex = () => {
+    const steps: WizardStep[] = ["template", "config", "modules", "module-config", "generating"];
+    return steps.indexOf(currentStep);
+  };
+
+  // Go to next step
+  const goToNextStep = () => {
+    const steps: WizardStep[] = ["template", "config", "modules", "module-config", "generating"];
+    const currentIndex = getCurrentStepIndex();
+    
+    if (currentIndex < steps.length - 1) {
+      // Check if we can skip module configuration step
+      if (currentStep === "modules") {
+        // Get modules that need configuration
+        const configurableModules = modules
+          .filter(m => selectedModules.includes(m.id))
+          .filter(m => m.configuration.options.length > 0);
+        
+        // Skip the module-config step if no modules need configuration
+        if (configurableModules.length === 0) {
+          handleGenerateProject();
+          return;
+        }
+      }
+      
+      // Move to the next step
+      setCurrentStep(steps[currentIndex + 1]);
+    }
+  };
+
+  // Go to previous step
+  const goToPreviousStep = () => {
+    const steps: WizardStep[] = ["template", "config", "modules", "module-config", "generating"];
+    const currentIndex = getCurrentStepIndex();
+    
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1]);
     }
   };
 
   return (
     <MainLayout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Create New Project</h1>
-        </div>
-        
-        {/* Stepper */}
-        {currentStep !== "generating" && (
-          <ul className="steps steps-horizontal w-full">
-            <li className={`step ${currentStep === "template" || currentStep === "config" || currentStep === "modules" ? "step-primary" : ""}`}>
+      <div className="container mx-auto py-8">
+        <div className="mb-8">
+          <ul className="steps w-full">
+            <li className={`step ${currentStep === "template" || getCurrentStepIndex() > 0 ? "step-primary" : ""}`}>
               Choose Template
             </li>
-            <li className={`step ${currentStep === "config" || currentStep === "modules" ? "step-primary" : ""}`}>
-              Configure Project
+            <li className={`step ${currentStep === "config" || getCurrentStepIndex() > 1 ? "step-primary" : ""}`}>
+              Basic Config
             </li>
-            <li className={`step ${currentStep === "modules" ? "step-primary" : ""}`}>
+            <li className={`step ${currentStep === "modules" || getCurrentStepIndex() > 2 ? "step-primary" : ""}`}>
               Select Modules
             </li>
+            <li className={`step ${currentStep === "module-config" || getCurrentStepIndex() > 3 ? "step-primary" : ""}`}>
+              Configure Modules
+            </li>
+            <li className={`step ${currentStep === "generating" ? "step-primary" : ""}`}>
+              Generate
+            </li>
           </ul>
-        )}
+        </div>
         
-        {/* Current step content */}
-        {renderCurrentStep()}
-        
-        {/* Navigation buttons */}
-        {currentStep !== "generating" && (
-          <div className="flex justify-between">
-            <button
-              className="btn btn-outline"
-              disabled={currentStep === "template"}
-              onClick={() => {
-                if (currentStep === "config") setCurrentStep("template");
-                if (currentStep === "modules") setCurrentStep("config");
-              }}
-            >
-              Previous
-            </button>
-            <button
-              className="btn btn-primary"
-              disabled={!canProceed()}
-              onClick={() => {
-                if (currentStep === "template") setCurrentStep("config");
-                else if (currentStep === "config") setCurrentStep("modules");
-                else if (currentStep === "modules") handleGenerateProject();
-              }}
-            >
-              {currentStep === "modules" ? "Generate Project" : "Next"}
-            </button>
+        <div className="card bg-base-200 shadow-xl">
+          <div className="card-body">
+            {renderCurrentStep()}
+            
+            {currentStep !== "generating" && (
+              <div className="card-actions justify-end mt-6">
+                {getCurrentStepIndex() > 0 && (
+                  <button
+                    className="btn btn-outline"
+                    onClick={goToPreviousStep}
+                    disabled={isGenerating}
+                  >
+                    Back
+                  </button>
+                )}
+                
+                {getCurrentStepIndex() < 4 ? (
+                  <button
+                    className="btn btn-primary"
+                    onClick={goToNextStep}
+                    disabled={!canProceed() || isGenerating}
+                  >
+                    {getCurrentStepIndex() === 3 ? "Generate Project" : "Next"}
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleGenerateProject}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <span className="loading loading-spinner"></span>
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate Project"
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </MainLayout>
   );

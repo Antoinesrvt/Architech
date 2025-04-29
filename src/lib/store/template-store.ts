@@ -34,6 +34,14 @@ export interface Module {
   };
 }
 
+export interface ModuleOption {
+  name: string;
+  type: 'boolean' | 'string' | 'select';
+  description: string;
+  default?: string | boolean | string[];
+  options?: string[];
+}
+
 export interface FileOperation {
   source: string;
   destination: string;
@@ -43,14 +51,6 @@ export interface Transform {
   file: string;
   pattern: string;
   replacement: string;
-}
-
-export interface ModuleOption {
-  name: string;
-  type: 'boolean' | 'string' | 'select';
-  description: string;
-  default?: string | boolean;
-  options?: string[];
 }
 
 interface TemplateState {

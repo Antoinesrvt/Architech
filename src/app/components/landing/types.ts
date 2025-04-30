@@ -34,6 +34,13 @@ export type Benefit = {
   borderColor: string;
   stat: string;
   statLabel: string;
+  painPoint: string;
+  beforeExample: string;
+  afterExample: string;
+  codeExample: {
+    before: string;
+    after: string;
+  };
 };
 
 export type TechItem = {

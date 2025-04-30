@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWizardNavigation, WizardStep } from './hooks/useWizardNavigation';
 import { FrameworkStep } from './steps/FrameworkStep';
 import { BasicInfoStep } from './steps/BasicInfoStep';
@@ -19,8 +19,19 @@ export function ProjectWizard() {
     saveDraft,
     deleteDraft,
     resetWizardState,
+    projectName,
+    projectPath,
+    selectedFrameworkId,
+    selectedModuleIds,
   } = useProjectStore();
-  const router = useRouter()
+  const router = useRouter();
+  const [hasUserMadeChanges, setHasUserMadeChanges] = useState(false);
+  const initialStateRef = useRef({
+    projectName: '',
+    projectPath: '',
+    selectedFrameworkId: null as string | null,
+    selectedModuleIds: [] as string[],
+  });
 
   // Define wizard steps
   const steps: WizardStep[] = [
@@ -31,26 +42,38 @@ export function ProjectWizard() {
     { id: "summary", title: "Review & Generate", component: SummaryStep },
   ];
 
-  // Create or use existing draft
+  // Create or use existing draft - only when starting
   useEffect(() => {
     if (!currentDraftId) {
       createDraft();
+      // Capture initial state for detecting changes
+      const storeState = useProjectStore.getState();
+      initialStateRef.current = {
+        projectName: storeState.projectName,
+        projectPath: storeState.projectPath,
+        selectedFrameworkId: storeState.selectedFrameworkId,
+        selectedModuleIds: [...storeState.selectedModuleIds],
+      };
     }
   }, [currentDraftId, createDraft]);
 
-  // Save draft when leaving the page
+  // Check for user changes whenever relevant state changes
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      saveDraft();
-    };
+    const initialState = initialStateRef.current;
+    
+    const hasChanges = 
+      projectName !== initialState.projectName ||
+      projectPath !== initialState.projectPath ||
+      selectedFrameworkId !== initialState.selectedFrameworkId ||
+      selectedModuleIds.length !== initialState.selectedModuleIds.length ||
+      !selectedModuleIds.every(id => initialState.selectedModuleIds.includes(id));
+    
+    setHasUserMadeChanges(hasChanges);
+  }, [projectName, projectPath, selectedFrameworkId, selectedModuleIds]);
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [saveDraft]);
-
+  // Save draft only when specifically requested, not automatically on unmount
+  // We'll only call saveDraft() when explicitly asked to
+  
   // Initialize wizard navigation
   const {
     currentStep,
@@ -63,7 +86,10 @@ export function ProjectWizard() {
   } = useWizardNavigation({
     steps,
     onComplete: () => {
-      saveDraft();
+      // Only save draft on completion when user has made changes
+      if (hasUserMadeChanges) {
+        saveDraft();
+      }
     },
   });
 
@@ -78,25 +104,55 @@ export function ProjectWizard() {
     }
   };
 
-  // Clean up when component unmounts
-  useEffect(() => {
-    return () => {
-      saveDraft();
-    };
-  }, [saveDraft]);
-
-
   // Navigation handlers
+  const handleBackToDashboard = () => {
+    // If no changes made, just go back without showing modal
+    if (!hasUserMadeChanges) {
+      router.push("/");
+      return;
+    }
+    
+    // Otherwise, show the modal by triggering the checkbox
+    const modal = document.getElementById('back-confirmation-modal') as HTMLInputElement;
+    if (modal) {
+      modal.checked = true;
+    }
+  };
+
   const handleKeepDraft = () => {
-    saveDraft();
-    router.push("/");
+    // Only save if there are actual changes
+    if (hasUserMadeChanges) {
+      saveDraft();
+    }
+    
+    // Close the modal first
+    const modal = document.getElementById('back-confirmation-modal') as HTMLInputElement;
+    if (modal) {
+      modal.checked = false;
+    }
+    
+    // Small delay to ensure state is updated and modal is closed
+    setTimeout(() => {
+      router.push("/");
+    }, 100);
   };
 
   const handleDiscardDraft = () => {
     if (currentDraftId) {
       deleteDraft(currentDraftId);
+      resetWizardState(); // Ensure wizard state is completely reset
     }
-    router.push("/");
+    
+    // Close the modal first
+    const modal = document.getElementById('back-confirmation-modal') as HTMLInputElement;
+    if (modal) {
+      modal.checked = false;
+    }
+    
+    // Small delay to ensure state is updated and modal is closed
+    setTimeout(() => {
+      router.push("/");
+    }, 100);
   };
 
   // Component for the current step
@@ -115,9 +171,9 @@ export function ProjectWizard() {
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center mb-6 mt-2">
-          <label
-            htmlFor="back-confirmation-modal"
+          <button
             className="btn btn-ghost btn-sm mr-2"
+            onClick={handleBackToDashboard}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -133,7 +189,7 @@ export function ProjectWizard() {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-          </label>
+          </button>
           <h1 className="text-2xl font-bold">Create New Project</h1>
         </div>
 

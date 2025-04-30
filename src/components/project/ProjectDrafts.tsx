@@ -23,15 +23,17 @@ export default function ProjectDrafts() {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (activeDropdown && !(event.target as Element).closest('.dropdown-content') && 
+      if (activeDropdown && 
+          !(event.target as Element).closest('.dropdown-content') && 
           !(event.target as Element).closest('.dropdown-trigger')) {
         setActiveDropdown(null);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    // Add the event listener with capture to ensure it runs before other handlers
+    document.addEventListener('mousedown', handleClickOutside, true);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside, true);
     };
   }, [activeDropdown]);
 
@@ -45,13 +47,14 @@ export default function ProjectDrafts() {
   }
 
   const toggleExpand = (draftId: string) => {
-    // Don't toggle if clicking on the dropdown trigger
+    // Don't toggle if clicking on the dropdown or its content
     if (activeDropdown) return;
     setExpandedDraft(expandedDraft === draftId ? null : draftId);
   };
 
   const toggleDropdown = (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation();
+    e.preventDefault(); // Prevent any other actions
     setActiveDropdown(activeDropdown === draftId ? null : draftId);
   };
 
@@ -63,11 +66,15 @@ export default function ProjectDrafts() {
 
   const handleContinueDraft = (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation();
+    e.preventDefault();
     setActiveDropdown(null);
     
     try {
       loadDraft(draftId);
-      router.push('/new-project');
+      // Use a slight delay to ensure the state is updated before navigation
+      setTimeout(() => {
+        router.push('/new-project');
+      }, 100);
     } catch (error) {
       console.error("Error loading draft:", error);
       alert("There was an error loading this draft. It may be corrupted.");
@@ -76,10 +83,17 @@ export default function ProjectDrafts() {
 
   const handleDeleteDraft = (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation();
+    e.preventDefault();
     setActiveDropdown(null);
     
-    if (confirm('Are you sure you want to delete this draft?')) {
-      deleteDraft(draftId);
+    // Use a more attractive confirmation dialog if possible
+    if (confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
+      try {
+        deleteDraft(draftId);
+      } catch (error) {
+        console.error("Error deleting draft:", error);
+        alert("There was an error deleting this draft.");
+      }
     }
   };
 
@@ -140,16 +154,18 @@ export default function ProjectDrafts() {
                       <div className="dropdown dropdown-end">
                         <button 
                           onClick={(e) => toggleDropdown(e, draft.id)}
-                          className="btn btn-sm btn-ghost btn-square dropdown-trigger"
+                          className="btn btn-sm btn-ghost btn-square dropdown-trigger hover:bg-base-300 relative z-20"
+                          aria-label="Open actions menu"
+                          title="Actions"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                           </svg>
                         </button>
                         {activeDropdown === draft.id && (
-                          <div className="dropdown-content dropdown-menu menu p-2 shadow bg-base-100 rounded-box absolute right-0 w-48 z-10">
+                          <div className="dropdown-content dropdown-menu menu p-2 shadow bg-base-100 rounded-box absolute right-0 top-full mt-1 w-48 z-50">
                             <button 
-                              className="btn btn-sm btn-ghost justify-start gap-2"
+                              className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-base-200"
                               onClick={(e) => handleContinueDraft(e, draft.id)}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,7 +174,7 @@ export default function ProjectDrafts() {
                               Continue
                             </button>
                             <button 
-                              className="btn btn-sm btn-ghost text-error justify-start gap-2"
+                              className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
                               onClick={(e) => handleDeleteDraft(e, draft.id)}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

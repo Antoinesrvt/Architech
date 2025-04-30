@@ -164,12 +164,18 @@ export const useProjectStore = create<ProjectState>()(
       });
     },
     deleteDraft: (draftId) => {
-      set((state) => ({
-        drafts: state.drafts.filter(d => d.id !== draftId),
-        ...(state.currentDraftId === draftId ? {
+      // First, reset the current state if this is the active draft
+      if (get().currentDraftId === draftId) {
+        // Reset all current project state
+        set({
           currentDraftId: null,
           ...DEFAULT_PROJECT_STATE
-        } : {})
+        });
+      }
+      
+      // Then remove the draft from the drafts array
+      set((state) => ({
+        drafts: state.drafts.filter(d => d.id !== draftId)
       }));
     },
     
@@ -224,10 +230,20 @@ export const useProjectStore = create<ProjectState>()(
       get().saveDraft();
       return newState;
     }),
-    resetWizardState: () => set({
-      currentDraftId: null,
-      ...DEFAULT_PROJECT_STATE
-    }),
+    resetWizardState: () => {
+      // Completely reset all project-related state
+      set({
+        currentDraftId: null,
+        projectName: '',
+        projectPath: '',
+        projectDescription: '',
+        selectedFrameworkId: null,
+        selectedModuleIds: [],
+        moduleConfigurations: {},
+        isLoading: false,
+        error: null
+      });
+    },
     
     generateProject: async () => {
       const { projectName, projectPath, selectedFrameworkId, selectedModuleIds, moduleConfigurations } = get();

@@ -55,6 +55,9 @@ interface ProjectState {
   isLoading: boolean;
   error: string | null;
   
+  // Save tracking
+  lastSaved: Date | null;
+  
   // Actions for wizard steps
   setProjectName: (name: string) => void;
   setProjectPath: (path: string) => void;
@@ -77,6 +80,7 @@ const DEFAULT_PROJECT_STATE = {
   selectedFrameworkId: null,
   selectedModuleIds: [],
   moduleConfigurations: {},
+  lastSaved: null,
 };
 
 // @ts-ignore Ignoring type errors due to zustand version compatibility issues
@@ -127,6 +131,8 @@ export const useProjectStore = create<ProjectState>()(
       
       if (!currentDraftId) return;
       
+      const now = new Date();
+      
       set((state) => ({
         drafts: state.drafts.map(draft => 
           draft.id === currentDraftId
@@ -138,10 +144,11 @@ export const useProjectStore = create<ProjectState>()(
                 frameworkId: selectedFrameworkId,
                 moduleIds: selectedModuleIds,
                 moduleConfigurations: moduleConfigurations,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: now.toISOString()
               }
             : draft
-        )
+        ),
+        lastSaved: now
       }));
     },
     loadDraft: (draftId) => {
@@ -161,6 +168,7 @@ export const useProjectStore = create<ProjectState>()(
         selectedFrameworkId: draft.frameworkId || null,
         selectedModuleIds: moduleIds,
         moduleConfigurations: draft.moduleConfigurations || {}, // Add default empty object if not present
+        lastSaved: draft.lastUpdated ? new Date(draft.lastUpdated) : null,
       });
     },
     deleteDraft: (draftId) => {
@@ -241,7 +249,8 @@ export const useProjectStore = create<ProjectState>()(
         selectedModuleIds: [],
         moduleConfigurations: {},
         isLoading: false,
-        error: null
+        error: null,
+        lastSaved: null,
       });
     },
     

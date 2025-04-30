@@ -8,6 +8,10 @@ import { SummaryStep } from './steps/SummaryStep';
 import { useProjectStore } from '@/lib/store/project-store';
 import { cn } from '@/lib/utils/cn';
 import { useRouter } from 'next/navigation';
+import Button from "@/components/ui/Button";
+import { WizardSideNavigation } from './WizardSideNavigation';
+
+import { useToast } from '@/components/ui/Toast';
 
 export function ProjectWizard() {
   const {
@@ -25,7 +29,10 @@ export function ProjectWizard() {
     selectedModuleIds,
   } = useProjectStore();
   const router = useRouter();
+  const { toast } = useToast();
   const [hasUserMadeChanges, setHasUserMadeChanges] = useState(false);
+  const [isStepChanging, setIsStepChanging] = useState(false);
+  const [direction, setDirection] = useState<'forward' | 'backward' | null>(null);
   const initialStateRef = useRef({
     projectName: '',
     projectPath: '',
@@ -34,7 +41,7 @@ export function ProjectWizard() {
   });
 
   // Define wizard steps
-  const steps: WizardStep[] = [
+  const wizardSteps: WizardStep[] = [
     { id: "basic", title: "Project Info", component: BasicInfoStep },
     { id: "framework", title: "Select Framework", component: FrameworkStep },
     { id: "modules", title: "Choose Modules", component: ModulesStep },
@@ -71,38 +78,78 @@ export function ProjectWizard() {
     setHasUserMadeChanges(hasChanges);
   }, [projectName, projectPath, selectedFrameworkId, selectedModuleIds]);
 
-  // Save draft only when specifically requested, not automatically on unmount
-  // We'll only call saveDraft() when explicitly asked to
-  
+  // Custom navigation handlers with animations
+  const navigateWithAnimation = (
+    direction: 'forward' | 'backward', 
+    callback: () => void
+  ) => {
+    setDirection(direction);
+    setIsStepChanging(true);
+    
+    // Execute the callback immediately to start loading the next step content
+    callback();
+    
+    // Reset the animation state after it completes
+    setTimeout(() => {
+      setIsStepChanging(false);
+    }, 200); // Reduced from 300ms for quicker transitions
+  };
+
   // Initialize wizard navigation
   const {
     currentStep,
     currentStepIndex,
     visitedSteps,
-    goToNextStep,
-    goToPreviousStep,
-    goToStep,
+    goToNextStep: originalGoToNextStep,
+    goToPreviousStep: originalGoToPreviousStep,
+    goToStep: originalGoToStep,
     progress,
   } = useWizardNavigation({
-    steps,
+    steps: wizardSteps,
     onComplete: () => {
       // Only save draft on completion when user has made changes
       if (hasUserMadeChanges) {
         saveDraft();
+        toast({
+          type: "success",
+          title: "Draft Saved",
+          message: "Your project draft has been saved successfully.",
+        });
       }
     },
   });
 
-  // Project generation handling
-  const handleGenerate = async () => {
-    try {
-      await generateProject();
-      // Navigate to success page or show success message
-    } catch (err) {
-      // Error is handled by the store
-      console.error("Project generation failed:", err);
-    }
+  // Wrap navigation methods with animations
+  const goToNextStep = () => {
+    navigateWithAnimation('forward', originalGoToNextStep);
   };
+
+  const goToPreviousStep = () => {
+    navigateWithAnimation('backward', originalGoToPreviousStep);
+  };
+
+  const goToStep = (index: number) => {
+    const direction = index > currentStepIndex ? 'forward' : 'backward';
+    navigateWithAnimation(direction, () => originalGoToStep(index));
+  };
+
+  // Auto-save draft periodically when changes are made
+  useEffect(() => {
+    if (!hasUserMadeChanges) return;
+    
+    const saveTimer = setTimeout(() => {
+      saveDraft();
+    }, 30000); // Auto-save every 30 seconds if changes were made
+    
+    return () => clearTimeout(saveTimer);
+  }, [hasUserMadeChanges, projectName, projectPath, selectedFrameworkId, selectedModuleIds, saveDraft]);
+
+  // Convert visitedSteps object to Set for components that need it
+  const visitedStepsSet = new Set(
+    Object.entries(visitedSteps)
+      .filter(([_, visited]) => visited)
+      .map(([index]) => parseInt(index))
+  );
 
   // Navigation handlers
   const handleBackToDashboard = () => {
@@ -123,6 +170,11 @@ export function ProjectWizard() {
     // Only save if there are actual changes
     if (hasUserMadeChanges) {
       saveDraft();
+      toast({
+        type: "info",
+        title: "Draft Saved",
+        message: "Your project draft has been saved.",
+      });
     }
     
     // Close the modal first
@@ -141,6 +193,10 @@ export function ProjectWizard() {
     if (currentDraftId) {
       deleteDraft(currentDraftId);
       resetWizardState(); // Ensure wizard state is completely reset
+      toast({
+        type: "info",
+        message: "Draft discarded.",
+      });
     }
     
     // Close the modal first
@@ -159,231 +215,87 @@ export function ProjectWizard() {
   const CurrentStepComponent = currentStep.component;
 
   return (
-    <div className="py-6 relative animate-fadeIn">
+    <div className="py-6 relative">
       {/* Progress bar at the top */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-base-200">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-base-200 overflow-hidden">
         <div
-          className="h-full bg-primary transition-all duration-500 ease-in-out"
+          className="h-full bg-primary transition-all duration-700 ease-out"
           style={{ width: `${progress}%` }}
+        >
+          {/* Shimmer effect */}
+          <div className="absolute inset-0 w-full h-full bg-white/20 animate-shimmer-right" />
+        </div>
+      </div>
+
+      {/* Side navigation buttons - only visible on larger screens */}
+      <div className="hidden md:block">
+        <WizardSideNavigation
+          onNext={goToNextStep}
+          onPrevious={goToPreviousStep}
+          canGoNext={currentStepIndex < wizardSteps.length - 1}
+          canGoPrevious={currentStepIndex > 0}
         />
       </div>
 
-      {/* Header */}
-      <div className="mb-4">
-        <div className="flex items-center mb-6 mt-2">
-          <button
-            className="btn btn-ghost btn-sm mr-2"
-            onClick={handleBackToDashboard}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
-          <h1 className="text-2xl font-bold">Create New Project</h1>
-        </div>
-
-      </div>
-
-      {/* CLI-first approach callout */}
-      {/* <div className="alert alert-info mb-6">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          className="stroke-current shrink-0 w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          ></path>
-        </svg>
-        <div>
-          <h3 className="font-bold">Command-Line First Approach</h3>
-          <div className="text-xs">
-            We use the official CLI tools of each framework to ensure you get
-            the latest versions and best practices.
-          </div>
-        </div>
-      </div> */}
-
-      {/* Step indicators */}
-      <div className="mb-8">
-        <ul className="steps steps-horizontal w-full">
-          {steps.map((step, index) => (
-            <li
-              key={step.id}
-              className={cn(
-                "step cursor-pointer transition-all duration-300",
-                index <= currentStepIndex ? "step-primary" : "",
-                visitedSteps[index] ? "step-accent" : ""
-              )}
-              onClick={() => index <= currentStepIndex && goToStep(index)}
-            >
-              {step.title}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Card with current step */}
-      <div className="card bg-base-200 shadow-xl">
-        <div className="card-body">
-          {/* Current step component */}
-          <div className="min-h-[50vh] transition-all duration-300 animate-fadeIn">
-            <CurrentStepComponent />
-          </div>
-
-          {/* Error display */}
-          {error && (
-            <div className="alert alert-error mt-4 animate-slideUp">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{error}</span>
-            </div>
+      {/* Main content */}
+      <div className="relative overflow-hidden">
+        <div
+          className={cn(
+            "transition-all duration-200 ease-out", // Faster transition
+            isStepChanging && direction === "forward"
+              ? "transform translate-x-[-10px] opacity-0" // Reduced distance
+              : "",
+            isStepChanging && direction === "backward"
+              ? "transform translate-x-[10px] opacity-0" // Reduced distance
+              : "",
+            !isStepChanging && direction === "forward"
+              ? "animate-slideFromRight"
+              : "",
+            !isStepChanging && direction === "backward"
+              ? "animate-slideFromLeft"
+              : ""
           )}
-
-          {/* Navigation buttons */}
-          <div className="card-actions justify-between mt-6">
-            <div>
-              {currentStepIndex > 0 && (
-                <button
-                  className="btn btn-outline hover:btn-primary transition-all"
-                  onClick={goToPreviousStep}
-                  disabled={isLoading}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-2"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Previous
-                </button>
-              )}
-            </div>
-            <div>
-              {currentStepIndex < steps.length - 1 ? (
-                <button
-                  className="btn btn-primary transform transition-transform hover:scale-105"
-                  onClick={goToNextStep}
-                  disabled={isLoading}
-                >
-                  Next
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 ml-2"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              ) : (
-                <button
-                  className="btn btn-primary btn-lg animate-pulse transform transition-transform hover:scale-105"
-                  onClick={handleGenerate}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="loading loading-spinner"></span>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      Generate Project
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 ml-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-          {/* Back Confirmation Modal using DaisyUI */}
-          <input
-            type="checkbox"
-            id="back-confirmation-modal"
-            className="modal-toggle"
+        >
+          <CurrentStepComponent
+            onNext={goToNextStep}
+            onPrevious={goToPreviousStep}
+            canGoNext={true}
+            canGoPrevious={currentStepIndex > 0}
+            onBackToDashboard={handleBackToDashboard}
           />
-          <div className="modal" role="dialog">
-            <div className="modal-box">
-              <h3 className="font-bold text-lg">Return to Dashboard?</h3>
-              <p className="py-4">
-                What would you like to do with your current progress?
-              </p>
-              <div className="modal-action flex flex-col sm:flex-row gap-2">
-                <button
-                  className="btn btn-primary flex-1"
-                  onClick={handleKeepDraft}
-                >
-                  Save as Draft
-                </button>
-                <button
-                  className="btn btn-error flex-1"
-                  onClick={handleDiscardDraft}
-                >
-                  Discard
-                </button>
-                <label
-                  htmlFor="back-confirmation-modal"
-                  className="btn btn-ghost flex-1"
-                >
-                  Cancel
-                </label>
-              </div>
-            </div>
-            <label
-              className="modal-backdrop"
-              htmlFor="back-confirmation-modal"
-            ></label>
+        </div>
+      </div>
+
+      {/* The "go back" confirmation modal */}
+      <input
+        type="checkbox"
+        id="back-confirmation-modal"
+        className="modal-toggle"
+      />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Save your progress?</h3>
+          <p className="py-4">
+            You have unsaved changes. Would you like to save this project as a
+            draft before going back?
+          </p>
+          <div className="modal-action">
+            <label htmlFor="back-confirmation-modal" className="btn btn-ghost">
+              Cancel
+            </label>
+            <Button variant="error" onClick={handleDiscardDraft}>
+              Discard
+            </Button>
+            <button className="btn btn-primary" onClick={handleKeepDraft}>
+              Save Draft
+            </button>
           </div>
         </div>
+        <label
+          className="modal-backdrop"
+          htmlFor="back-confirmation-modal"
+        ></label>
       </div>
     </div>
   );
-} 
+}

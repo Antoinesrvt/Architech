@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { WizardStepProps } from '../types';
 
 export type WizardStep = {
   id: string;
   title: string;
-  component: React.ComponentType;
+  component: React.ComponentType<WizardStepProps>;
   canProceed?: () => boolean;
 };
 

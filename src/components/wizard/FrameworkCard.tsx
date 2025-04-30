@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Framework } from "@/lib/store/framework-store";
+import Card from "@/components/ui/Card";
+import { cn } from "@/lib/utils/cn";
 
 interface FrameworkCardProps {
   framework: Framework;
@@ -59,39 +61,54 @@ export default function FrameworkCard({
   };
 
   return (
-    <div 
-      className={`card ${selected ? 'bg-primary/10 border-2 border-primary' : 'bg-base-100 border border-base-300'} 
-        shadow-sm hover:shadow transition-all cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    <Card
+      interactive
+      selected={selected}
+      disabled={disabled}
+      hoverLift={!disabled}
       onClick={handleSelect}
+      className={cn("transition-all duration-300", 
+        expanded && "animate-pulse"
+      )}
     >
-      <div className="card-body p-4">
+      <Card.Body className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <input 
+            {/* <input 
               type="radio" 
-              className="radio radio-primary" 
+              className="radio radio-primary"
               checked={selected} 
               readOnly
               disabled={disabled}
-            />
+              aria-label={`Select ${framework.name}`}
+            /> */}
             <div>
-              <h3 className="font-bold text-lg">{framework.name} <span className="text-xs opacity-70">v{framework.version}</span></h3>
+              <h3 className="font-bold text-lg">
+                {framework.name} 
+                <span className="text-xs opacity-70 ml-1">v{framework.version}</span>
+              </h3>
               <p className="text-sm opacity-70">{framework.description}</p>
             </div>
           </div>
           
           <div className="flex gap-2 items-start">
             {framework.logo && (
-              <div className="w-12 h-12 rounded bg-base-200 flex items-center justify-center">
-                <img src={framework.logo} alt={framework.name} className="w-10 h-10 object-contain" />
+              <div className="w-12 h-12 rounded bg-base-200/50 flex items-center justify-center transition-all">
+                <img 
+                  src={framework.logo} 
+                  alt={framework.name} 
+                  className="w-10 h-10 object-contain" 
+                />
               </div>
             )}
-            <span className={`badge ${getTypeColor(framework.type)}`}>
+            <span className={cn("badge", getTypeColor(framework.type))}>
               {framework.type}
             </span>
             <button 
-              className="btn btn-circle btn-ghost btn-xs" 
+              className="btn btn-circle btn-ghost btn-xs"
               onClick={handleExpandClick}
+              aria-label={expanded ? "Show less" : "Show more"}
+              aria-expanded={expanded}
             >
               {expanded ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,12 +130,12 @@ export default function FrameworkCard({
         </div>
         
         {/* CLI Command Display */}
-        <div className="mt-3 bg-base-200 rounded-md p-2 font-mono text-xs overflow-x-auto whitespace-nowrap">
+        <div className="mt-3 cli-command animate-fadeIn">
           $ {formatCliCommand()}
         </div>
 
         {expanded && (
-          <div className="mt-4 text-sm space-y-3 border-t pt-3">
+          <div className="mt-4 text-sm space-y-3 border-t pt-3 animate-slideDown">
             {/* Interactive CLI Badge */}
             {framework.cli.interactive && (
               <div className="badge badge-warning">Interactive CLI</div>
@@ -127,9 +144,11 @@ export default function FrameworkCard({
             {/* Compatible Modules */}
             <div>
               <h4 className="font-medium mb-1">Compatible Modules</h4>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 stagger-children">
                 {framework.compatible_modules && framework.compatible_modules.map(moduleId => (
-                  <span key={moduleId} className="badge badge-outline badge-sm">{moduleId}</span>
+                  <span key={moduleId} className="badge badge-outline badge-sm animate-fadeIn">
+                    {moduleId}
+                  </span>
                 ))}
                 {(!framework.compatible_modules || framework.compatible_modules.length === 0) && (
                   <span className="text-xs text-base-content/50">No compatible modules specified</span>
@@ -140,15 +159,23 @@ export default function FrameworkCard({
             {/* Directory Structure */}
             <div>
               <h4 className="font-medium mb-1">Directory Structure</h4>
-              <div className="bg-base-200 p-2 rounded font-mono text-xs">
-                {framework.directory_structure.directories.map(dir => (
-                  <div key={dir}>└─ {dir}</div>
+              <div className="bg-base-200 p-2 rounded font-mono text-xs overflow-x-auto">
+                {framework.directory_structure.directories.map((dir, index) => (
+                  <div 
+                    key={dir} 
+                    className={cn(
+                      "animate-fadeIn whitespace-nowrap",
+                      `animation-delay-${index * 100 > 300 ? 300 : index * 100}`
+                    )}
+                  >
+                    └─ {dir}
+                  </div>
                 ))}
               </div>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </Card.Body>
+    </Card>
   );
 } 

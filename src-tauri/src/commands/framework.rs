@@ -208,54 +208,82 @@ pub async fn get_frameworks() -> Result<Vec<Framework>, String> {
 
 #[command]
 pub async fn get_modules() -> Result<Vec<Module>, String> {
-    match read_json_from_data::<Module>("modules/modules.json") {
-        Ok(modules) => Ok(modules),
-        Err(e) => {
-            // Fallback to default module if error
-            eprintln!("Error reading modules: {}", e);
-            
-            let module = Module {
-                id: "tailwind".to_string(),
-                name: "Tailwind CSS".to_string(),
-                description: "A utility-first CSS framework".to_string(),
-                version: "3.3.2".to_string(),
-                category: "styling".to_string(),
-                dependencies: vec![],
-                incompatible_with: vec![],
-                installation: ModuleInstallation {
-                    commands: vec![
-                        "npm install -D tailwindcss postcss autoprefixer".to_string(),
-                        "npx tailwindcss init -p".to_string(),
-                    ],
-                    file_operations: vec![
-                        FileOperation {
-                            operation: "create".to_string(),
-                            path: "src/styles/globals.css".to_string(),
-                            content: "@tailwind base;\n@tailwind components;\n@tailwind utilities;".to_string(),
-                            pattern: "".to_string(),
-                            replacement: "".to_string(),
-                            action: "".to_string(),
-                            import: "".to_string(),
-                        }
-                    ],
-                },
-                configuration: ModuleConfiguration {
-                    options: vec![
-                        ModuleOption {
-                            id: "jit".to_string(),
-                            option_type: "boolean".to_string(),
-                            label: "JIT Mode".to_string(),
-                            description: "Enable JIT mode".to_string(),
-                            default: serde_json::json!(true),
-                            choices: vec![],
-                        }
-                    ],
-                },
-            };
-            
-            Ok(vec![module])
+    // Look in all module files in the data/modules directory
+    // Each file can contain multiple modules for a specific category
+    let mut all_modules = Vec::new();
+    
+    // List of module files to try
+    let module_files = vec![
+        "modules/styling.json",
+        "modules/ui.json",
+        "modules/state.json",
+        "modules/i18n.json",
+        "modules/forms.json",
+        "modules/testing.json",
+        "modules/advanced.json",
+        // For backward compatibility, try the consolidated file too
+        "modules/modules.json"
+    ];
+    
+    for file in module_files {
+        match read_json_from_data::<Module>(file) {
+            Ok(modules) => {
+                all_modules.extend(modules);
+            },
+            Err(e) => {
+                println!("Warning: Failed to read {}: {}", file, e);
+                // Continue trying other files
+            }
         }
     }
+    
+    if all_modules.is_empty() {
+        // Fallback to default module if no modules found
+        eprintln!("Warning: No modules found, using fallback module");
+        
+        let module = Module {
+            id: "tailwind".to_string(),
+            name: "Tailwind CSS".to_string(),
+            description: "A utility-first CSS framework".to_string(),
+            version: "3.3.2".to_string(),
+            category: "styling".to_string(),
+            dependencies: vec![],
+            incompatible_with: vec![],
+            installation: ModuleInstallation {
+                commands: vec![
+                    "npm install -D tailwindcss postcss autoprefixer".to_string(),
+                    "npx tailwindcss init -p".to_string(),
+                ],
+                file_operations: vec![
+                    FileOperation {
+                        operation: "create".to_string(),
+                        path: "src/styles/globals.css".to_string(),
+                        content: "@tailwind base;\n@tailwind components;\n@tailwind utilities;".to_string(),
+                        pattern: "".to_string(),
+                        replacement: "".to_string(),
+                        action: "".to_string(),
+                        import: "".to_string(),
+                    }
+                ],
+            },
+            configuration: ModuleConfiguration {
+                options: vec![
+                    ModuleOption {
+                        id: "jit".to_string(),
+                        option_type: "boolean".to_string(),
+                        label: "JIT Mode".to_string(),
+                        description: "Enable JIT mode".to_string(),
+                        default: serde_json::json!(true),
+                        choices: vec![],
+                    }
+                ],
+            },
+        };
+        
+        all_modules.push(module);
+    }
+    
+    Ok(all_modules)
 }
 
 // Helper function to get a specific framework by ID
@@ -271,6 +299,7 @@ pub fn get_framework_by_id(id: &str) -> Result<Framework, String> {
 }
 
 // Helper function to get a specific module by ID
+#[allow(dead_code)]
 pub fn get_module_by_id(id: &str) -> Result<Module, String> {
     match block_on(get_modules()) {
         Ok(modules) => {

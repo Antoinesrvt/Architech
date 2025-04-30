@@ -1,0 +1,51 @@
+[
+  {
+    "id": "vitest",
+    "name": "Vitest",
+    "description": "Fast Vite-native test framework with Jest compatibility",
+    "version": "0.34.1",
+    "category": "testing",
+    "dependencies": [],
+    "incompatible_with": [],
+    "installation": {
+      "commands": [
+        "npm install -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom jsdom",
+        "mkdir -p src/tests"
+      ],
+      "file_operations": [
+        {
+          "operation": "create",
+          "path": "vitest.config.ts",
+          "content": "import { defineConfig } from 'vitest/config';\nimport react from '@vitejs/plugin-react';\nimport { resolve } from 'path';\n\nexport default defineConfig({\n  plugins: [react()],\n  test: {\n    environment: 'jsdom',\n    globals: true,\n    setupFiles: ['./src/tests/setup.ts'],\n  },\n  resolve: {\n    alias: {\n      '@': resolve(__dirname, './src'),\n    },\n  },\n});"
+        },
+        {
+          "operation": "create",
+          "path": "src/tests/setup.ts",
+          "content": "import '@testing-library/jest-dom';\n\n// Mock Next.js router\nvi.mock('next/navigation', () => ({\n  useRouter: () => ({\n    push: vi.fn(),\n    replace: vi.fn(),\n    prefetch: vi.fn(),\n    back: vi.fn(),\n    forward: vi.fn(),\n    refresh: vi.fn(),\n  }),\n  usePathname: () => '/',\n  useSearchParams: () => new URLSearchParams(),\n}));"
+        },
+        {
+          "operation": "create",
+          "path": "src/tests/example.test.tsx",
+          "content": "import { render, screen } from '@testing-library/react';\nimport { describe, it, expect } from 'vitest';\n\ndescribe('Example test', () => {\n  it('renders correctly', () => {\n    render(<div>Test Component</div>);\n    expect(screen.getByText('Test Component')).toBeInTheDocument();\n  });\n});"
+        },
+        {
+          "operation": "modify",
+          "path": "package.json",
+          "pattern": "\"scripts\": \\{",
+          "replacement": "\"scripts\": {\n    \"test\": \"vitest run\",\n    \"test:watch\": \"vitest\","
+        }
+      ]
+    },
+    "configuration": {
+      "options": [
+        {
+          "id": "coverage",
+          "type": "boolean",
+          "label": "Add Coverage",
+          "description": "Add coverage reporting to tests",
+          "default": false
+        }
+      ]
+    }
+  }
+] 

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "zustand",
+    "name": "Zustand",
+    "description": "Small, fast and scalable state-management solution",
+    "version": "4.3.8",
+    "category": "state",
+    "dependencies": [],
+    "incompatible_with": [],
+    "installation": {
+      "commands": [
+        "npm install zustand"
+      ],
+      "file_operations": [
+        {
+          "operation": "create",
+          "path": "src/lib/store/index.ts",
+          "content": "import { create } from 'zustand';\n\ninterface AppState {\n  count: number;\n  increment: () => void;\n  decrement: () => void;\n}\n\nexport const useStore = create<AppState>((set) => ({\n  count: 0,\n  increment: () => set((state) => ({ count: state.count + 1 })),\n  decrement: () => set((state) => ({ count: state.count - 1 })),\n}));"
+        }
+      ]
+    },
+    "configuration": {
+      "options": [
+        {
+          "id": "persist",
+          "type": "boolean",
+          "label": "Add Persistence",
+          "description": "Add persistence middleware to Zustand",
+          "default": false
+        }
+      ]
+    }
+  }
+] 

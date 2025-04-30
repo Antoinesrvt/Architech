@@ -1,0 +1,39 @@
+[
+  {
+    "id": "forms",
+    "name": "React Hook Form",
+    "description": "Performant, flexible and extensible forms with easy-to-use validation",
+    "version": "7.45.1",
+    "category": "forms",
+    "dependencies": [],
+    "incompatible_with": [],
+    "installation": {
+      "commands": [
+        "npm install react-hook-form zod @hookform/resolvers"
+      ],
+      "file_operations": [
+        {
+          "operation": "create",
+          "path": "src/lib/hooks/useForm.ts",
+          "content": "import { useForm as useHookForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport * as z from 'zod';\n\nexport const useForm = <T extends z.ZodType>(schema: T) => {\n  return useHookForm({\n    resolver: zodResolver(schema),\n  });\n};"
+        }
+      ]
+    },
+    "configuration": {
+      "options": [
+        {
+          "id": "validation",
+          "type": "select",
+          "label": "Validation Library",
+          "description": "Library to use for form validation",
+          "default": "zod",
+          "choices": [
+            {"value": "zod", "label": "Zod"},
+            {"value": "yup", "label": "Yup"},
+            {"value": "joi", "label": "Joi"}
+          ]
+        }
+      ]
+    }
+  }
+] 

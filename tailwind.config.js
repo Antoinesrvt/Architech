@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -34,7 +34,11 @@ module.exports = {
       },
     },
   },
-  plugins: [require("daisyui")],
+  plugins: [
+    // Import daisyui using dynamic import to maintain ESM compatibility
+    // This syntax is supported by tailwindcss for plugins
+    await import('daisyui'),
+  ],
   daisyui: {
     themes: ["light", "dark"],
     darkTheme: "dark",

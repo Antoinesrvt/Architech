@@ -3,7 +3,6 @@ use std::process::{Command as ProcessCommand};
 use tauri::Runtime;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
-use std::sync::{Arc, Mutex};
 
 #[command]
 pub async fn browse_directory<R: Runtime>(title: String, app_handle: AppHandle<R>) -> Result<String, String> {

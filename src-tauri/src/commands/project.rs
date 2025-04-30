@@ -76,6 +76,7 @@ pub async fn validate_project_config(config: ProjectConfig) -> Result<Validation
 }
 
 // New function to create directory structure
+#[allow(dead_code)]
 fn create_directory_structure(project_dir: &Path, directories: &[String]) -> Result<(), String> {
     for dir in directories {
         let dir_path = project_dir.join(dir);

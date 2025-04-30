@@ -1,0 +1,47 @@
+[
+  {
+    "id": "daisyui",
+    "name": "DaisyUI",
+    "description": "Component library for Tailwind CSS",
+    "version": "3.1.0",
+    "category": "ui",
+    "dependencies": ["tailwind"],
+    "incompatible_with": [],
+    "installation": {
+      "commands": [
+        "npm install daisyui@latest"
+      ],
+      "file_operations": [
+        {
+          "operation": "modify",
+          "path": "tailwind.config.js",
+          "pattern": "plugins: \\[",
+          "replacement": "plugins: [\n    require('daisyui'),"
+        }
+      ]
+    },
+    "configuration": {
+      "options": [
+        {
+          "id": "themes",
+          "type": "multiselect",
+          "label": "Themes",
+          "description": "DaisyUI themes to include",
+          "default": ["light", "dark"],
+          "choices": [
+            {"value": "light", "label": "Light"},
+            {"value": "dark", "label": "Dark"},
+            {"value": "cupcake", "label": "Cupcake"},
+            {"value": "bumblebee", "label": "Bumblebee"},
+            {"value": "emerald", "label": "Emerald"},
+            {"value": "corporate", "label": "Corporate"},
+            {"value": "synthwave", "label": "Synthwave"},
+            {"value": "retro", "label": "Retro"},
+            {"value": "cyberpunk", "label": "Cyberpunk"},
+            {"value": "valentine", "label": "Valentine"}
+          ]
+        }
+      ]
+    }
+  }
+] 

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "react-native",
+    "name": "React Native",
+    "description": "Create native mobile apps using React",
+    "version": "0.72.0",
+    "type": "app",
+    "tags": ["react", "mobile", "ios", "android"],
+    "cli": {
+      "base_command": "npx react-native init",
+      "arguments": {
+        "typescript": {
+          "flag": "--template react-native-template-typescript",
+          "description": "Use TypeScript",
+          "default": true
+        }
+      },
+      "interactive": false
+    },
+    "compatible_modules": ["tailwind", "i18n", "zustand", "forms", "testing"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src",
+        "src/components",
+        "src/screens",
+        "src/navigation",
+        "src/utils",
+        "src/assets"
+      ]
+    }
+  },
+  {
+    "id": "expo",
+    "name": "Expo",
+    "description": "Universal React platform with managed workflow",
+    "version": "50.0.0",
+    "type": "app",
+    "tags": ["react", "mobile", "expo", "cross-platform"],
+    "cli": {
+      "base_command": "npx create-expo-app",
+      "arguments": {
+        "template": {
+          "flag": "-t expo-template-typescript",
+          "description": "TypeScript template",
+          "default": true
+        }
+      },
+      "interactive": true,
+      "responses": [
+        {
+          "prompt": "What would you like to name your app?",
+          "use_project_name": true
+        }
+      ]
+    },
+    "compatible_modules": ["tailwind", "i18n", "zustand", "forms", "testing"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src",
+        "src/components",
+        "src/screens",
+        "src/navigation",
+        "src/utils",
+        "assets"
+      ]
+    }
+  }
+] 

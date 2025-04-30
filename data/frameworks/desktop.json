@@ -1,0 +1,84 @@
+[
+  {
+    "id": "tauri",
+    "name": "Tauri",
+    "description": "Build smaller, faster, and more secure desktop applications",
+    "version": "2.0.0",
+    "type": "desktop",
+    "tags": ["desktop", "rust", "cross-platform"],
+    "cli": {
+      "base_command": "npx tauri init",
+      "interactive": true,
+      "responses": [
+        {
+          "prompt": "What is your app name?",
+          "use_project_name": true
+        },
+        {
+          "prompt": "What should the window title be?",
+          "use_project_name": true
+        },
+        {
+          "prompt": "Where are your web assets (HTML/CSS/JS) located relative to the <current dir>?",
+          "response": "dist"
+        },
+        {
+          "prompt": "What is the URL of your dev server?",
+          "response": "http://localhost:3000"
+        },
+        {
+          "prompt": "What is your frontend dev command?",
+          "response": "npm run dev"
+        },
+        {
+          "prompt": "What is your frontend build command?",
+          "response": "npm run build"
+        }
+      ]
+    },
+    "compatible_modules": ["tailwind", "zustand", "forms"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src",
+        "src-tauri",
+        "src-tauri/src",
+        "src/components",
+        "src/lib",
+        "src/styles",
+        "public"
+      ]
+    }
+  },
+  {
+    "id": "electron",
+    "name": "Electron",
+    "description": "Build cross-platform desktop apps with JavaScript, HTML, and CSS",
+    "version": "28.0.0",
+    "type": "desktop",
+    "tags": ["desktop", "node", "cross-platform"],
+    "cli": {
+      "base_command": "npx create-electron-app",
+      "arguments": {
+        "template": {
+          "flag": "--template=typescript",
+          "description": "Use TypeScript",
+          "default": true
+        }
+      },
+      "interactive": false
+    },
+    "compatible_modules": ["tailwind", "zustand", "forms", "testing"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src",
+        "src/main",
+        "src/renderer",
+        "src/renderer/components",
+        "src/renderer/styles",
+        "assets"
+      ]
+    }
+  }
+] 

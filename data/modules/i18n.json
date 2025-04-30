@@ -1,0 +1,57 @@
+[
+  {
+    "id": "i18n",
+    "name": "Next.js Internationalization",
+    "description": "Adds internationalization support to Next.js",
+    "version": "1.0.0",
+    "category": "i18n",
+    "dependencies": [],
+    "incompatible_with": [],
+    "installation": {
+      "commands": [
+        "npm install next-intl"
+      ],
+      "file_operations": [
+        {
+          "operation": "create",
+          "path": "src/messages/en.json",
+          "content": "{\n  \"app\": {\n    \"title\": \"My Application\",\n    \"description\": \"This is my awesome application\"\n  },\n  \"nav\": {\n    \"home\": \"Home\",\n    \"about\": \"About\",\n    \"contact\": \"Contact\"\n  }\n}"
+        },
+        {
+          "operation": "create",
+          "path": "src/messages/fr.json",
+          "content": "{\n  \"app\": {\n    \"title\": \"Mon Application\",\n    \"description\": \"C'est mon application géniale\"\n  },\n  \"nav\": {\n    \"home\": \"Accueil\",\n    \"about\": \"À propos\",\n    \"contact\": \"Contact\"\n  }\n}"
+        },
+        {
+          "operation": "create",
+          "path": "src/lib/i18n.ts",
+          "content": "import {notFound} from 'next/navigation';\nimport {getRequestConfig} from 'next-intl/server';\n\nconst locales = ['en', 'fr'];\n\nexport default getRequestConfig(async ({locale}) => {\n  if (!locales.includes(locale as any)) notFound();\n\n  return {\n    messages: (await import(`../messages/${locale}.json`)).default\n  };\n});"
+        },
+        {
+          "operation": "create",
+          "path": "src/middleware.ts",
+          "content": "import createMiddleware from 'next-intl/middleware';\n\nexport default createMiddleware({\n  locales: ['en', 'fr'],\n  defaultLocale: 'en'\n});\n\nexport const config = {\n  matcher: ['/((?!api|_next|.*\\\\..*).*)'],\n};"
+        }
+      ]
+    },
+    "configuration": {
+      "options": [
+        {
+          "id": "locales",
+          "type": "multiselect",
+          "label": "Locales",
+          "description": "Languages to support",
+          "default": ["en", "fr"],
+          "choices": [
+            {"value": "en", "label": "English"},
+            {"value": "fr", "label": "French"},
+            {"value": "es", "label": "Spanish"},
+            {"value": "de", "label": "German"},
+            {"value": "ja", "label": "Japanese"},
+            {"value": "pt", "label": "Portuguese"}
+          ]
+        }
+      ]
+    }
+  }
+] 

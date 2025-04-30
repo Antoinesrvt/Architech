@@ -1,0 +1,45 @@
+[
+  {
+    "id": "auth",
+    "name": "NextAuth.js",
+    "description": "Authentication for Next.js",
+    "version": "4.22.1",
+    "category": "advanced",
+    "dependencies": [],
+    "incompatible_with": [],
+    "installation": {
+      "commands": [
+        "npm install next-auth"
+      ],
+      "file_operations": [
+        {
+          "operation": "create",
+          "path": "src/app/api/auth/[...nextauth]/route.ts",
+          "content": "import NextAuth from \"next-auth\";\nimport type { NextAuthOptions } from \"next-auth\";\nimport CredentialsProvider from \"next-auth/providers/credentials\";\n\nexport const authOptions: NextAuthOptions = {\n  providers: [\n    CredentialsProvider({\n      name: \"Credentials\",\n      credentials: {\n        email: { label: \"Email\", type: \"email\" },\n        password: { label: \"Password\", type: \"password\" }\n      },\n      async authorize(credentials) {\n        // This is where you would typically query your database\n        // to validate the credentials\n        if (credentials?.email === \"user@example.com\" && credentials?.password === \"password\") {\n          return { id: \"1\", name: \"User\", email: \"user@example.com\" };\n        }\n        return null;\n      }\n    })\n  ],\n  pages: {\n    signIn: \"/auth/signin\",\n    signOut: \"/auth/signout\",\n    error: \"/auth/error\",\n    verifyRequest: \"/auth/verify-request\",\n    newUser: \"/auth/new-user\"\n  },\n  session: {\n    strategy: \"jwt\"\n  },\n  callbacks: {\n    async session({ session, token }) {\n      return session;\n    },\n    async jwt({ token, user }) {\n      if (user) {\n        token.id = user.id;\n      }\n      return token;\n    }\n  }\n};\n\nconst handler = NextAuth(authOptions);\nexport { handler as GET, handler as POST };"
+        },
+        {
+          "operation": "create",
+          "path": "src/components/auth/SignInForm.tsx",
+          "content": "\"use client\";\n\nimport { useState } from \"react\";\nimport { signIn } from \"next-auth/react\";\nimport { useRouter } from \"next/navigation\";\n\nexport default function SignInForm() {\n  const router = useRouter();\n  const [email, setEmail] = useState(\"\");\n  const [password, setPassword] = useState(\"\");\n  const [error, setError] = useState(\"\");\n  const [isLoading, setIsLoading] = useState(false);\n\n  const handleSubmit = async (e: React.FormEvent) => {\n    e.preventDefault();\n    setIsLoading(true);\n    setError(\"\");\n\n    try {\n      const result = await signIn(\"credentials\", {\n        redirect: false,\n        email,\n        password,\n      });\n\n      if (result?.error) {\n        setError(result.error);\n      } else {\n        router.push(\"/\");\n        router.refresh();\n      }\n    } catch (error) {\n      setError(\"An unexpected error occurred. Please try again.\");\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  return (\n    <div className=\"max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md\">\n      <h2 className=\"text-2xl font-bold mb-6 text-center\">Sign In</h2>\n      \n      {error && (\n        <div className=\"mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded\">\n          {error}\n        </div>\n      )}\n      \n      <form onSubmit={handleSubmit}>\n        <div className=\"mb-4\">\n          <label htmlFor=\"email\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Email\n          </label>\n          <input\n            id=\"email\"\n            type=\"email\"\n            value={email}\n            onChange={(e) => setEmail(e.target.value)}\n            className=\"w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500\"\n            required\n          />\n        </div>\n        \n        <div className=\"mb-6\">\n          <label htmlFor=\"password\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Password\n          </label>\n          <input\n            id=\"password\"\n            type=\"password\"\n            value={password}\n            onChange={(e) => setPassword(e.target.value)}\n            className=\"w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500\"\n            required\n          />\n        </div>\n        \n        <button\n          type=\"submit\"\n          disabled={isLoading}\n          className=\"w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50\"\n        >\n          {isLoading ? \"Signing in...\" : \"Sign In\"}\n        </button>\n      </form>\n    </div>\n  );\n}"
+        }
+      ]
+    },
+    "configuration": {
+      "options": [
+        {
+          "id": "providers",
+          "type": "multiselect",
+          "label": "Authentication Providers",
+          "description": "Select authentication providers to include",
+          "default": ["credentials"],
+          "choices": [
+            {"value": "credentials", "label": "Email/Password"},
+            {"value": "google", "label": "Google"},
+            {"value": "github", "label": "GitHub"},
+            {"value": "discord", "label": "Discord"}
+          ]
+        }
+      ]
+    }
+  }
+] 

@@ -1,6 +1,6 @@
-import { Clock, Zap, X, Check, Code, FileCode, Folder, FolderOpen, ChevronRight, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Clock, Zap, X, Check, Code, FileCode, Folder, FolderOpen, ChevronRight, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { SectionProps } from './types';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 // New function to calculate total savings and ROI with The Architect
 const calculateSavings = (hoursPerProject: number, projectsPerYear: number, hourlyRate: number) => {
@@ -61,7 +61,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                 max="12"
                 value={projectsPerYear}
                 onChange={(e) => setProjectsPerYear(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer"
+                className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>1</span>
@@ -82,7 +82,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                 max="60"
                 value={hoursPerProject}
                 onChange={(e) => setHoursPerProject(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer"
+                className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>10</span>
@@ -103,7 +103,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                 max="200"
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer"
+                className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$50</span>
@@ -125,7 +125,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
               
               <div className="h-2 bg-gray-800 rounded-full mb-6 overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(100, roi / 10)}%` }}
                 ></div>
               </div>
@@ -181,178 +181,411 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
   );
 };
 
-// Add this new component just before the ComparisonColumns component
-
+// Enhanced ComparisonSlider component
 const ComparisonSlider = ({ isVisible }: { isVisible?: boolean }) => {
   const [position, setPosition] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
-  
-  // Handle drag events for slider
-  const handleMouseDown = () => setIsDragging(true);
-  const handleMouseUp = () => setIsDragging(false);
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      const container = e.currentTarget.getBoundingClientRect();
-      const newPosition = ((e.clientX - container.left) / container.width) * 100;
-      setPosition(Math.max(0, Math.min(100, newPosition)));
-    }
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !sliderRef.current) return;
+      const rect = sliderRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const newPosition = (x / rect.width) * 100;
+      setPosition(newPosition);
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = 'default';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchend', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchend', handleMouseUp);
+    };
+  }, []);
+
+  const handleMouseDown = () => {
+    isDragging.current = true;
+    document.body.style.cursor = 'ew-resize';
   };
-  
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!sliderRef.current) return;
     const touch = e.touches[0];
-    const container = e.currentTarget.getBoundingClientRect();
-    const newPosition = ((touch.clientX - container.left) / container.width) * 100;
-    setPosition(Math.max(0, Math.min(100, newPosition)));
+    const rect = sliderRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
+    const newPosition = (x / rect.width) * 100;
+    setPosition(newPosition);
   };
   
   return (
     <div 
-      className={`mt-16 px-4 transition-all duration-1000 ${
+      className={`mt-12 transition-all duration-1000 ${
         isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
       }`}
     >
-      <h3 className="text-xl font-bold text-white mb-6 text-center">
+      <h3 className="text-xl font-bold text-white mb-4 text-center">
         Compare Traditional Development vs. The Architect
       </h3>
       
+      <div className="text-center mb-8">
+        <p className="text-gray-300 max-w-2xl mx-auto">
+          Drag the slider to see how The Architect transforms the development process from weeks of manual setup to minutes of productive work.
+        </p>
+      </div>
+      
       <div 
-        className="relative w-full h-[400px] rounded-xl overflow-hidden border border-gray-800 select-none cursor-ew-resize"
+        ref={sliderRef}
+        className="relative w-full h-[500px] rounded-xl overflow-hidden shadow-2xl border border-gray-800 select-none cursor-col-resize"
         onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleMouseDown}
-        onTouchEnd={handleMouseUp}
         onTouchMove={handleTouchMove}
+        onTouchStart={() => {isDragging.current = true}}
       >
-        {/* Traditional (Before) side */}
-        <div 
-          className="absolute inset-0 bg-gradient-to-br from-red-900/20 to-gray-900"
-          style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
-        >
-          <div className="p-6 h-full flex flex-col">
+        {/* Traditional side */}
+        <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 to-gray-900 z-10">
+          <div className="absolute top-0 left-0 w-full h-full p-8 flex flex-col">
             <div className="flex items-center mb-4">
-              <Clock className="text-red-400 mr-2" size={20} />
-              <h4 className="text-lg font-medium text-white">Traditional Development</h4>
-              <div className="ml-auto px-3 py-1 rounded-full bg-red-900/50 text-red-400 text-sm font-medium">
+              <div className="p-2 rounded-full bg-red-900/40 text-red-400 mr-3">
+                <Clock size={22} />
+              </div>
+              <h4 className="text-xl font-bold text-white">Traditional Development</h4>
+              <div className="ml-auto px-4 py-1 rounded-full bg-red-900/50 text-red-400 text-sm font-medium">
                 3 Weeks
               </div>
             </div>
             
-            <div className="flex-1 flex flex-col space-y-4">
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-red-400 font-medium">Manual Technology Research</div>
-                  <p>Spend days researching technology options and compatibility.</p>
-                </div>
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800/80 p-5 mb-6">
+              <div className="flex items-center text-red-400 mb-3 font-medium">
+                <Clock size={18} className="mr-2" />
+                <span>Hours of Manual Configuration</span>
               </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-red-400 font-medium">Project Setup</div>
-                  <p>Configure build tools, linters, and project structure.</p>
-                </div>
+              <p className="text-gray-300 text-sm">
+                Developers spend up to 50 hours per project on repetitive setup tasks, including dependency configuration, project structure creation, and setting up development pipelines.
+              </p>
+            </div>
+            
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800/80 p-5 mb-2">
+              <div className="flex items-center text-red-400 mb-3 font-medium">
+                <Loader2 size={18} className="mr-2" />
+                <span>Pain Points</span>
               </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-red-400 font-medium">Boilerplate Code</div>
-                  <p>Write repetitive code patterns and configure tooling.</p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-red-400 font-medium">Testing & CI Setup</div>
-                  <p>Manually configure testing frameworks and CI/CD pipelines.</p>
-                </div>
-              </div>
+              <ul className="space-y-3 text-sm text-gray-300">
+                <li className="flex">
+                  <X size={16} className="text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span>Manual technology selection and compatibility research</span>
+                </li>
+                <li className="flex">
+                  <X size={16} className="text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span>Repetitive boilerplate code for every new project</span>
+                </li>
+                <li className="flex">
+                  <X size={16} className="text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span>Configuration errors and endless debugging cycles</span>
+                </li>
+                <li className="flex">
+                  <X size={16} className="text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span>Inconsistent architecture between projects</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="mt-auto text-center">
+              <p className="text-gray-400 text-sm">
+                <span className="text-red-400 font-medium">47%</span> of development time wasted on configuration
+              </p>
             </div>
           </div>
         </div>
         
-        {/* Architect (After) side */}
+        {/* Architect side */}
         <div 
-          className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-gray-900"
+          className="absolute inset-0 bg-gradient-to-br from-blue-900/30 to-gray-900 z-20"
           style={{ clipPath: `inset(0 0 0 ${position}%)` }}
         >
-          <div className="p-6 h-full flex flex-col">
+          <div className="absolute top-0 left-0 w-full h-full p-8 flex flex-col">
             <div className="flex items-center mb-4">
-              <Zap className="text-blue-400 mr-2" size={20} />
-              <h4 className="text-lg font-medium text-white">With The Architect</h4>
-              <div className="ml-auto px-3 py-1 rounded-full bg-blue-900/50 text-blue-400 text-sm font-medium">
+              <div className="p-2 rounded-full bg-blue-900/40 text-blue-400 mr-3">
+                <Zap size={22} />
+              </div>
+              <h4 className="text-xl font-bold text-white">With The Architect</h4>
+              <div className="ml-auto px-4 py-1 rounded-full bg-blue-900/50 text-blue-400 text-sm font-medium">
                 15 Minutes
               </div>
             </div>
             
-            <div className="flex-1 flex flex-col space-y-4">
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-blue-400 font-medium">Smart Recommendations</div>
-                  <p>AI-powered technology selection based on your requirements.</p>
-                </div>
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800/80 p-5 mb-6">
+              <div className="flex items-center text-blue-400 mb-3 font-medium">
+                <Zap size={18} className="mr-2" />
+                <span>Instant Project Generation</span>
               </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-blue-400 font-medium">Instant Setup</div>
-                  <p>Complete project structure generated in minutes.</p>
-                </div>
+              <p className="text-gray-300 text-sm">
+                The Architect generates a complete, production-ready project foundation in minutes based on your requirements, saving days of repetitive setup work.
+              </p>
+            </div>
+            
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800/80 p-5 mb-2">
+              <div className="flex items-center text-blue-400 mb-3 font-medium">
+                <Check size={18} className="mr-2" />
+                <span>Key Benefits</span>
               </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-blue-400 font-medium">Production-Ready</div>
-                  <p>Best practices and patterns built in from the start.</p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 flex-1">
-                <div className="text-sm text-gray-300">
-                  <div className="mb-2 text-blue-400 font-medium">Complete Solution</div>
-                  <p>Testing, CI/CD, and documentation included automatically.</p>
-                </div>
-              </div>
+              <ul className="space-y-3 text-sm text-gray-300">
+                <li className="flex">
+                  <Check size={16} className="text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-300">Intelligent technology selection based on requirements</span>
+                </li>
+                <li className="flex">
+                  <Check size={16} className="text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-300">Production-ready project structure generated instantly</span>
+                </li>
+                <li className="flex">
+                  <Check size={16} className="text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-300">Best practices and patterns built in automatically</span>
+                </li>
+                <li className="flex">
+                  <Check size={16} className="text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-300">Complete with documentation and CI/CD pipelines</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="mt-auto text-center">
+              <p className="text-gray-400 text-sm">
+                <span className="text-blue-400 font-medium">99.4%</span> time reduction in project setup
+              </p>
             </div>
           </div>
         </div>
         
-        {/* Slider control */}
+        {/* Slider handle */}
         <div 
-          className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize z-10 transform -translate-x-1/2"
+          className="absolute top-0 bottom-0 z-30 w-0.5 bg-white"
           style={{ left: `${position}%` }}
         >
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-            <div className="flex">
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg cursor-ew-resize"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              handleMouseDown();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              isDragging.current = true;
+            }}
+          >
+            <div className="flex items-center justify-center">
               <ArrowLeft size={12} className="text-gray-700" />
               <ArrowRight size={12} className="text-gray-700" />
             </div>
           </div>
         </div>
-        
-        {/* Before label */}
-        <div 
-          className="absolute top-6 left-6 bg-red-900/70 text-white text-sm font-medium px-3 py-1 rounded-full z-[5]"
-          style={{ opacity: position > 80 ? 0 : 1 }}
-        >
-          Before
-        </div>
-        
-        {/* After label */}
-        <div 
-          className="absolute top-6 right-6 bg-blue-900/70 text-white text-sm font-medium px-3 py-1 rounded-full z-[5]"
-          style={{ opacity: position < 20 ? 0 : 1 }}
-        >
-          After
-        </div>
       </div>
       
       <div className="text-center mt-4 text-gray-400 text-sm">
-        Drag the slider to compare traditional development with The Architect
+        <span className="px-3 py-1 rounded-full bg-gray-800 inline-block">Drag the slider to compare</span>
       </div>
     </div>
   );
 };
+
+// Enhanced ComparisonColumns component
+const ComparisonColumns = ({ isVisible }: { isVisible?: boolean }) => (
+  <div className={`mt-12 ${isVisible ? "opacity-100" : "opacity-0"} transition-opacity duration-1000`}>
+    <h3 className="text-xl font-bold text-white mb-4 text-center">
+      Traditional Development vs. The Architect
+    </h3>
+    
+    <div className="text-center mb-8">
+      <p className="text-gray-300 max-w-2xl mx-auto">
+        See how The Architect eliminates weeks of setup time and lets you focus on building what matters.
+      </p>
+    </div>
+    
+    <div className="grid md:grid-cols-2 gap-8 relative">
+      {/* Connecting arrow between columns */}
+      <div className="hidden md:flex absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 items-center">
+        <div className="w-16 h-14 bg-gray-900 rounded-xl border border-gray-800 shadow-lg flex items-center justify-center">
+          <div className="w-10 h-0.5 bg-gradient-to-r from-red-400 to-blue-400 relative">
+            <ArrowRight className="absolute -right-4 -top-2 text-blue-400" size={16} />
+          </div>
+        </div>
+      </div>
+
+      {/* Traditional Development */}
+      <div 
+        className={`rounded-xl overflow-hidden shadow-lg border border-red-900/40 transition-all duration-1000 ${
+          isVisible ? "opacity-100 transform translate-y-0" : "opacity-0 transform translate-y-8"
+        }`}
+      >
+        <div className="bg-gradient-to-br from-red-900/30 to-gray-900 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white flex items-center">
+              <div className="p-2 rounded-full bg-red-900/40 text-red-400 mr-3">
+                <Clock size={20} />
+              </div>
+              Traditional Process
+            </h3>
+            <div className="px-4 py-1 rounded-full bg-red-900/50 text-red-400 text-sm font-medium">
+              3 Weeks
+            </div>
+          </div>
+          
+          {/* Timeline */}
+          <div className="mb-6 relative pl-6 border-l border-red-800/50 space-y-6">
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-3 h-3 rounded-full bg-red-500 transform -translate-x-[0.6rem]"></div>
+              <div>
+                <h4 className="text-red-400 font-medium mb-1">Days 1-5: Research & Planning</h4>
+                <p className="text-sm text-gray-300">Research technology options, check compatibility, evaluate alternatives</p>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-3 h-3 rounded-full bg-red-500 transform -translate-x-[0.6rem]"></div>
+              <div>
+                <h4 className="text-red-400 font-medium mb-1">Days 6-12: Initial Configuration</h4>
+                <p className="text-sm text-gray-300">Setup dependencies, create project structure, configure build tools</p>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-3 h-3 rounded-full bg-red-500 transform -translate-x-[0.6rem]"></div>
+              <div>
+                <h4 className="text-red-400 font-medium mb-1">Days 13-21: Testing & Refinement</h4>
+                <p className="text-sm text-gray-300">Debug configuration issues, refine structure, document setup</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Stats & Pain Points */}
+          <div className="mt-8">
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800 p-4 mb-4">
+              <div className="flex items-center text-red-400 mb-2 font-medium">
+                <Loader2 size={16} className="mr-2" />
+                <span>Common Pain Points</span>
+              </div>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <X size={14} className="text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Manual technology selection and compatibility checking</span>
+                </li>
+                <li className="flex items-start">
+                  <X size={14} className="text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Repetitive boilerplate code creation</span>
+                </li>
+                <li className="flex items-start">
+                  <X size={14} className="text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Configuration errors and debugging cycles</span>
+                </li>
+                <li className="flex items-start">
+                  <X size={14} className="text-red-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Inconsistent architecture between projects</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="text-center py-3 rounded-lg bg-red-950/30 border border-red-900/30">
+              <p className="text-sm">
+                <span className="text-red-400 font-bold">47%</span>
+                <span className="text-gray-300"> of development time wasted on configuration</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* With The Architect */}
+      <div 
+        className={`rounded-xl overflow-hidden shadow-lg border border-blue-900/40 transition-all duration-1000 delay-300 ${
+          isVisible ? "opacity-100 transform translate-y-0" : "opacity-0 transform translate-y-8"
+        }`}
+      >
+        <div className="bg-gradient-to-br from-blue-900/30 to-gray-900 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white flex items-center">
+              <div className="p-2 rounded-full bg-blue-900/40 text-blue-400 mr-3">
+                <Zap size={20} />
+              </div>
+              With The Architect
+            </h3>
+            <div className="px-4 py-1 rounded-full bg-blue-900/50 text-blue-400 text-sm font-medium">
+              15 Minutes
+            </div>
+          </div>
+          
+          {/* Timeline */}
+          <div className="mb-6 relative pl-6 border-l border-blue-800/50 space-y-6">
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-3 h-3 rounded-full bg-blue-500 transform -translate-x-[0.6rem]"></div>
+              <div>
+                <h4 className="text-blue-400 font-medium mb-1">Minutes 1-5: Answer Requirements</h4>
+                <p className="text-sm text-gray-300">Tell The Architect about your project needs and goals</p>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-3 h-3 rounded-full bg-blue-500 transform -translate-x-[0.6rem]"></div>
+              <div>
+                <h4 className="text-blue-400 font-medium mb-1">Minutes 6-10: Review Recommendations</h4>
+                <p className="text-sm text-gray-300">Review and approve technology selections and project structure</p>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-3 h-3 rounded-full bg-blue-500 transform -translate-x-[0.6rem]"></div>
+              <div>
+                <h4 className="text-blue-400 font-medium mb-1">Minutes 11-15: Generate & Start</h4>
+                <p className="text-sm text-gray-300">Generate production-ready foundation and begin development</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Stats & Benefits */}
+          <div className="mt-8">
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800 p-4 mb-4">
+              <div className="flex items-center text-blue-400 mb-2 font-medium">
+                <Check size={16} className="mr-2" />
+                <span>Key Benefits</span>
+              </div>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <Check size={14} className="text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Intelligent technology selection based on requirements</span>
+                </li>
+                <li className="flex items-start">
+                  <Check size={14} className="text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Production-ready project structure immediately</span>
+                </li>
+                <li className="flex items-start">
+                  <Check size={14} className="text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Best practices and patterns built in automatically</span>
+                </li>
+                <li className="flex items-start">
+                  <Check size={14} className="text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-300">Complete with documentation and CI/CD pipelines</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="text-center py-3 rounded-lg bg-blue-950/30 border border-blue-900/30">
+              <p className="text-sm">
+                <span className="text-blue-400 font-bold">99.4%</span>
+                <span className="text-gray-300"> time reduction in project setup</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 // Now modify the Problem component to include the ComparisonSlider
 export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
@@ -430,7 +663,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
               {activeTab === 'after' && <WithArchitect isVisible={isVisible} />}
             </div>
 
-            {/* Before/After comparison - always visible on desktop */}
+            {/* Enhanced side-by-side comparison for desktop */}
             <div className="hidden md:block">
               <ComparisonColumns isVisible={isVisible} />
             </div>
@@ -476,24 +709,6 @@ const SectionHeading = () => (
         <span>State of DevOps Report</span>
       </div>
     </div>
-  </div>
-);
-
-const ComparisonColumns = ({ isVisible }: { isVisible?: boolean }) => (
-  <div className="grid md:grid-cols-2 gap-8 relative">
-    {/* Connection line between columns */}
-    <div className="hidden md:block absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-4">
-      <div className="h-0.5 w-full bg-gradient-to-r from-red-400 to-blue-400 relative">
-        <ArrowRight className="absolute -top-3 -right-5 text-blue-400" size={20} />
-        <ArrowLeft className="absolute -top-3 -left-5 text-red-400" size={20} />
-      </div>
-    </div>
-
-    {/* BEFORE column */}
-    <TraditionalDevelopment isVisible={isVisible} />
-
-    {/* AFTER column */}
-    <WithArchitect isVisible={isVisible} />
   </div>
 );
 

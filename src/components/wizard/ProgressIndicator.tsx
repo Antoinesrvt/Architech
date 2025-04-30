@@ -79,10 +79,10 @@ export default function ProgressIndicator({
               data-content={steps.includes(step) ? '✓' : (index + 1)}
             >
               {step === 'init' && 'Initializing'}
-              {step === 'framework' && 'Loading framework'}
-              {step === 'create' && 'Creating project'}
-              {step === 'structure' && 'Setting up structure'}
-              {step === 'modules' && 'Installing modules'}
+              {step === 'framework' && 'Loading CLI tool'}
+              {step === 'create' && 'Running CLI command'}
+              {step === 'structure' && 'Setting up directory structure'}
+              {step === 'modules' && 'Installing modules via CLI'}
               {step === 'complete' && 'Project ready'}
             </li>
           ))}

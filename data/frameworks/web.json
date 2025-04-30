@@ -1,0 +1,138 @@
+[
+  {
+    "id": "nextjs",
+    "name": "Next.js",
+    "description": "React framework for production-grade applications",
+    "version": "13.4.0",
+    "type": "web",
+    "tags": ["react", "frontend", "ssr", "ssg"],
+    "cli": {
+      "base_command": "npx create-next-app@latest",
+      "arguments": {
+        "typescript": {
+          "flag": "--typescript",
+          "description": "Use TypeScript",
+          "default": true
+        },
+        "eslint": {
+          "flag": "--eslint",
+          "description": "Use ESLint",
+          "default": true
+        },
+        "app_router": {
+          "flag": "--app",
+          "description": "Use App Router",
+          "default": true
+        },
+        "src_directory": {
+          "flag": "--src-dir",
+          "description": "Use src/ directory",
+          "default": true
+        },
+        "tailwind": {
+          "flag": "--tailwind",
+          "description": "Use Tailwind CSS",
+          "default": false
+        },
+        "import_alias": {
+          "flag": "--import-alias",
+          "description": "Import alias (default '@/')",
+          "default": "@/",
+          "value_type": "string"
+        }
+      },
+      "interactive": false
+    },
+    "compatible_modules": ["tailwind", "daisyui", "i18n", "zustand", "forms", "auth", "testing"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src/app",
+        "src/components",
+        "src/lib",
+        "src/styles",
+        "public"
+      ]
+    }
+  },
+  {
+    "id": "vite-react",
+    "name": "Vite + React",
+    "description": "Lightweight React setup with Vite",
+    "version": "4.3.0",
+    "type": "web",
+    "tags": ["react", "frontend", "spa", "vite"],
+    "cli": {
+      "base_command": "npm create vite@latest",
+      "arguments": {
+        "template": {
+          "position": 2,
+          "value": "react-ts",
+          "description": "Template to use",
+          "default": "react-ts"
+        }
+      },
+      "interactive": true,
+      "responses": [
+        {
+          "prompt": "Project name",
+          "use_project_name": true
+        }
+      ]
+    },
+    "compatible_modules": ["tailwind", "daisyui", "i18n", "zustand", "forms", "testing"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src/components",
+        "src/lib",
+        "src/styles",
+        "public"
+      ]
+    }
+  },
+  {
+    "id": "astro",
+    "name": "Astro",
+    "description": "Framework for content-focused websites",
+    "version": "2.5.0",
+    "type": "web",
+    "tags": ["content", "frontend", "ssr", "mpa"],
+    "cli": {
+      "base_command": "npm create astro@latest",
+      "interactive": true,
+      "responses": [
+        {
+          "prompt": "Where would you like to create your new project?",
+          "use_project_name": true
+        },
+        {
+          "prompt": "How would you like to start your new project?",
+          "response": "Empty"
+        },
+        {
+          "prompt": "Would you like to install dependencies?",
+          "response": "Yes"
+        },
+        {
+          "prompt": "Would you like to initialize a git repository?",
+          "response": "Yes"
+        },
+        {
+          "prompt": "Would you like to use TypeScript?",
+          "response": "Yes (strict)"
+        }
+      ]
+    },
+    "compatible_modules": ["tailwind", "daisyui", "i18n"],
+    "directory_structure": {
+      "enforced": true,
+      "directories": [
+        "src/components",
+        "src/layouts",
+        "src/pages",
+        "public"
+      ]
+    }
+  }
+] 

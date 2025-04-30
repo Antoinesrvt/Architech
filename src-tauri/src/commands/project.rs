@@ -8,7 +8,8 @@ use uuid::Uuid;
 use std::error::Error;
 use regex::Regex;
 
-use super::template::{Module, Framework};
+use super::command_runner::{run_command, run_interactive_command, create_file, modify_file, modify_import, emit_progress};
+use super::framework::{get_framework_by_id, get_module_by_id};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProjectConfig {
@@ -87,119 +88,22 @@ fn create_directory_structure(project_dir: &Path, directories: &[String]) -> Res
     Ok(())
 }
 
-// New function to apply a module to the project
-fn apply_module(project_dir: &Path, module: &Module, config: &serde_json::Value) -> Result<(), String> {
-    // Step 1: Execute installation commands
-    for cmd in &module.installation.commands {
-        // Parse command and arguments
-        let parts: Vec<&str> = cmd.split_whitespace().collect();
-        if parts.is_empty() {
-            continue;
-        }
-        
-        let command_name = parts[0];
-        let args = &parts[1..];
-        
-        let mut command = ProcessCommand::new(command_name);
-        command.args(args);
-        command.current_dir(project_dir);
-        
-        // Set timeout for the command (5 minutes)
-        // command.timeout(std::time::Duration::from_secs(300));
-        
-        let output = match command.output() {
-            Ok(output) => output,
-            Err(e) => return Err(format!("Failed to execute command '{}': {}", cmd, e)),
-        };
-            
-        if !output.status.success() {
-            return Err(format!(
-                "Command '{}' failed: {}",
-                cmd,
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
-    }
-    
-    // Step 2: Copy files
-    let app_dir = match tauri::api::path::app_dir(&tauri::Config::default()) {
-        Some(dir) => dir,
-        None => return Err("Failed to get app directory".to_string()),
+// Function to resolve module dependencies
+fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
+    // Get all available modules
+    let all_modules = match super::framework::block_on(super::framework::get_modules()) {
+        Ok(modules) => modules,
+        Err(e) => return Err(format!("Failed to get modules: {}", e)),
     };
     
-    for file_op in &module.installation.files {
-        let source_path = app_dir.join("template-files").join(&file_op.source);
-        let dest_path = project_dir.join(&file_op.destination);
-        
-        // Create parent directories if they don't exist
-        if let Some(parent) = dest_path.parent() {
-            match fs::create_dir_all(parent) {
-                Ok(_) => {},
-                Err(e) => return Err(format!("Failed to create directory '{}': {}", parent.display(), e)),
-            }
-        }
-        
-        // Handle file not found error
-        if !source_path.exists() {
-            return Err(format!("Source file '{}' not found", source_path.display()));
-        }
-        
-        // Copy the file
-        match fs::copy(&source_path, &dest_path) {
-            Ok(_) => {},
-            Err(e) => return Err(format!(
-                "Failed to copy file from '{}' to '{}': {}", 
-                source_path.display(), 
-                dest_path.display(), 
-                e
-            )),
-        }
-    }
-    
-    // Step 3: Apply transformations
-    for transform in &module.installation.transforms {
-        let file_path = project_dir.join(&transform.file);
-        
-        // Skip if file doesn't exist but don't fail
-        if !file_path.exists() {
-            println!("Warning: File '{}' not found for transformation", file_path.display());
-            continue;
-        }
-        
-        // Read file content
-        let content = match fs::read_to_string(&file_path) {
-            Ok(content) => content,
-            Err(e) => return Err(format!("Failed to read file '{}': {}", file_path.display(), e)),
-        };
-            
-        // Apply regex transformation
-        let regex = match Regex::new(&transform.pattern) {
-            Ok(regex) => regex,
-            Err(e) => return Err(format!("Invalid regex pattern '{}': {}", transform.pattern, e)),
-        };
-            
-        let new_content = regex.replace_all(&content, &transform.replacement).to_string();
-        
-        // Write transformed content back
-        match fs::write(&file_path, new_content) {
-            Ok(_) => {},
-            Err(e) => return Err(format!("Failed to write to file '{}': {}", file_path.display(), e)),
-        }
-    }
-    
-    Ok(())
-}
-
-// New function to build framework/module dependency graph
-fn resolve_module_dependencies(selected_modules: &[String], all_modules: &[Module]) -> Result<Vec<Module>, String> {
     let mut result = Vec::new();
     let mut processed = std::collections::HashSet::new();
     
     fn add_module_with_deps(
-        module_id: &str, 
-        all_modules: &[Module], 
-        result: &mut Vec<Module>,
-        processed: &mut std::collections::HashSet<String>
+        module_id: &str,
+        all_modules: &[super::framework::Module],
+        result: &mut Vec<super::framework::Module>,
+        processed: &mut std::collections::HashSet<String>,
     ) -> Result<(), String> {
         if processed.contains(module_id) {
             return Ok(());
@@ -208,7 +112,8 @@ fn resolve_module_dependencies(selected_modules: &[String], all_modules: &[Modul
         // Find module by id
         let module = all_modules.iter()
             .find(|m| m.id == module_id)
-            .ok_or_else(|| format!("Module '{}' not found", module_id))?;
+            .ok_or_else(|| format!("Module '{}' not found", module_id))?
+            .clone();
         
         // Add dependencies first
         for dep_id in &module.dependencies {
@@ -217,116 +122,135 @@ fn resolve_module_dependencies(selected_modules: &[String], all_modules: &[Modul
         
         // Add the module itself if not already added
         if !processed.contains(module_id) {
-            result.push(module.clone());
+            result.push(module);
             processed.insert(module_id.to_string());
         }
         
         Ok(())
     }
     
-    for module_id in selected_modules {
-        add_module_with_deps(module_id, all_modules, &mut result, &mut processed)?;
+    for module_id in selected_module_ids {
+        add_module_with_deps(module_id, &all_modules, &mut result, &mut processed)?;
     }
     
     Ok(result)
 }
 
-#[command]
-pub async fn generate_project(
-    config: ProjectConfig,
-    app_handle: tauri::AppHandle,
-) -> Result<String, String> {
-    // Step 0: Generate a unique ID for the project
-    let project_id = Uuid::new_v4().to_string();
-    
-    // Create project path
+async fn generate_project_with_cli(
+    config: &ProjectConfig,
+    app_handle: &tauri::AppHandle
+) -> Result<(), String> {
+    // Get the base path
     let base_path = Path::new(&config.path);
     let project_dir = base_path.join(&config.name);
     
-    // Validate project path
-    let validation = validate_project_config(config.clone()).await?;
-    if !validation.valid {
-        return Err(validation.errors.join(", "));
-    }
+    // Get framework details
+    let framework = get_framework_by_id(&config.framework)?;
     
     // Emit initial progress
-    emit_progress(&app_handle, "init", "Initializing project generation", 0.0);
+    emit_progress(app_handle, "init", "Initializing project generation", 0.0);
     
-    // Step 1: Get all modules from the database
-    emit_progress(&app_handle, "modules", "Loading modules", 0.05);
-    let all_modules = super::template::get_modules().await?;
-    
-    // Step 2: Get the selected framework from database
-    emit_progress(&app_handle, "framework", "Loading framework definition", 0.1);
-    let frameworks = super::template::get_frameworks().await?;
-    let framework = frameworks.iter()
-        .find(|t| t.id == config.framework)
-        .ok_or_else(|| format!("Framework '{}' not found", config.framework))?;
-        
-    // Step 3: Create a base project using the framework command
-    emit_progress(&app_handle, "create", "Creating base project", 0.15);
-    
-    // Extract base command from the framework
-    let mut base_cmd_parts = framework.base_command.split_whitespace().collect::<Vec<&str>>();
+    // Extract the base command and parse into individual parts
+    let base_cmd_parts: Vec<&str> = framework.cli.base_command.split_whitespace().collect();
     if base_cmd_parts.is_empty() {
         return Err("Invalid base command in framework".to_string());
     }
     
-    // Create the command
+    // Get the command name and arguments
     let cmd_name = base_cmd_parts[0];
-    let mut cmd_args = base_cmd_parts[1..].to_vec();
+    let mut cmd_args: Vec<&str> = base_cmd_parts[1..].to_vec();
     
-    // Add project name and configuration options
-    cmd_args.push(&config.name);
-    
-    if config.options.typescript {
-        cmd_args.push("--typescript");
-    }
-    
-    if config.options.app_router {
-        cmd_args.push("--app");
-    }
-    
-    if config.options.eslint {
-        cmd_args.push("--eslint");
-    }
-    
-    // Execute the command
-    let mut cmd = ProcessCommand::new(cmd_name);
-    cmd.args(cmd_args);
-    cmd.current_dir(base_path);
-    
-    println!("Executing command: {:?} {:?}", cmd_name, cmd_args);
-    
-    let output = match cmd.output() {
-        Ok(output) => output,
-        Err(e) => return Err(format!("Failed to execute command: {}", e)),
-    };
+    // Add project name as the last argument if it's not an interactive CLI
+    if !framework.cli.interactive {
+        // Add arguments based on the config
+        for (arg_name, arg_value) in &framework.cli.arguments {
+            if let Some(arg_obj) = arg_value.as_object() {
+                // Check if this argument has a flag
+                if let Some(flag) = arg_obj.get("flag").and_then(|f| f.as_str()) {
+                    // Check if the option is enabled in the project config
+                    let option_name = arg_name.to_string();
+                    let option_enabled = config.options.typescript && option_name == "typescript"
+                        || config.options.app_router && option_name == "app_router"
+                        || config.options.eslint && option_name == "eslint";
+                    
+                    if option_enabled {
+                        cmd_args.push(flag);
+                    }
+                }
+            }
+        }
         
-    if !output.status.success() {
-        return Err(format!(
-            "Command failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
+        // Add project name as the last argument
+        cmd_args.push(&config.name);
+        
+        // Execute the command
+        emit_progress(app_handle, "create", &format!("Creating {} project", framework.name), 0.2);
+        run_command(cmd_name, &cmd_args, base_path, None).await?;
+    } else {
+        // For interactive CLIs, we need to handle prompts and responses
+        emit_progress(app_handle, "create", &format!("Creating {} project with interactive CLI", framework.name), 0.2);
+        
+        // Prepare responses for interactive prompts
+        let mut responses: Vec<(&str, &str)> = Vec::new();
+        
+        for response_config in &framework.cli.responses {
+            let response_value = if response_config.use_project_name {
+                &config.name
+            } else {
+                &response_config.response
+            };
+            
+            responses.push((&response_config.prompt, response_value));
+        }
+        
+        // For position-based arguments, add them to cmd_args
+        for (arg_name, arg_value) in &framework.cli.arguments {
+            if let Some(arg_obj) = arg_value.as_object() {
+                if let (Some(position), Some(value)) = (
+                    arg_obj.get("position").and_then(|p| p.as_u64()),
+                    arg_obj.get("value").and_then(|v| v.as_str())
+                ) {
+                    // Ensure cmd_args has enough space
+                    while cmd_args.len() < position as usize {
+                        cmd_args.push("");
+                    }
+                    
+                    // Insert the value at the specified position
+                    cmd_args[position as usize - 1] = value; // Adjust for 0-based indexing
+                }
+            }
+        }
+        
+        // Add project name as a positional argument for some CLIs that need it
+        cmd_args.push(&config.name);
+        
+        // Execute the interactive command
+        run_interactive_command(cmd_name, &cmd_args, base_path, &responses).await?;
     }
     
     // Step 4: Enforce the directory structure from the framework definition
-    if framework.structure.enforced {
-        emit_progress(&app_handle, "structure", "Enforcing project structure", 0.3);
-        create_directory_structure(&project_dir, &framework.structure.directories)?;
+    if framework.directory_structure.enforced {
+        emit_progress(app_handle, "structure", "Enforcing project structure", 0.3);
+        
+        for dir in &framework.directory_structure.directories {
+            let dir_path = project_dir.join(dir);
+            fs::create_dir_all(&dir_path)
+                .map_err(|e| format!("Failed to create directory '{}': {}", dir_path.display(), e))?;
+        }
     }
     
     // Step 5: Resolve module dependencies
-    emit_progress(&app_handle, "dependencies", "Resolving module dependencies", 0.4);
+    emit_progress(app_handle, "dependencies", "Resolving module dependencies", 0.4);
+    
     let module_ids = config.modules.iter().map(|m| m.id.clone()).collect::<Vec<String>>();
-    let ordered_modules = resolve_module_dependencies(&module_ids, &all_modules)?;
+    let ordered_modules = resolve_module_dependencies(&module_ids)?;
     
     // Step 6: Install and configure each module
     let total_modules = ordered_modules.len();
     for (index, module) in ordered_modules.iter().enumerate() {
         let progress = 0.5 + (0.5 * (index as f32 / total_modules as f32));
         emit_progress(
-            &app_handle,
+            app_handle,
             "modules", 
             &format!("Installing module {} ({}/{})", module.name, index + 1, total_modules),
             progress
@@ -337,15 +261,45 @@ pub async fn generate_project(
             .find(|m| m.id == module.id)
             .map(|m| &m.options)
             .unwrap_or(&serde_json::json!({}));
+        
+        // Apply the module commands
+        for cmd in &module.installation.commands {
+            let parts: Vec<&str> = cmd.split_whitespace().collect();
+            if parts.is_empty() {
+                continue;
+            }
             
-        // Apply the module
-        apply_module(&project_dir, module, module_config)?;
+            let cmd_name = parts[0];
+            let cmd_args = &parts[1..];
+            
+            run_command(cmd_name, cmd_args, &project_dir, None).await?;
+        }
+        
+        // Apply file operations
+        for op in &module.installation.file_operations {
+            let file_path = project_dir.join(&op.path);
+            
+            match op.operation.as_str() {
+                "create" => {
+                    create_file(&file_path, &op.content)?;
+                },
+                "modify" => {
+                    modify_file(&file_path, &op.pattern, &op.replacement)?;
+                },
+                "modify_import" => {
+                    modify_import(&file_path, &op.action, &op.import)?;
+                },
+                _ => {
+                    println!("Warning: Unknown file operation: {}", op.operation);
+                }
+            }
+        }
     }
     
     // Final step: Mark as complete
-    emit_progress(&app_handle, "complete", "Project generation complete", 1.0);
+    emit_progress(app_handle, "complete", "Project generation complete", 1.0);
     
-    Ok(project_id)
+    Ok(())
 }
 
 fn emit_progress(app_handle: &tauri::AppHandle, step: &str, message: &str, progress: f32) {
@@ -384,4 +338,24 @@ pub async fn open_in_editor(path: String, editor: String) -> Result<(), String> 
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to open in editor: {}", e)),
     }
+}
+
+#[command]
+pub async fn generate_project(
+    config: ProjectConfig,
+    app_handle: tauri::AppHandle,
+) -> Result<String, String> {
+    // Generate unique ID for the project
+    let project_id = Uuid::new_v4().to_string();
+    
+    // Validate project config
+    let validation = validate_project_config(config.clone()).await?;
+    if !validation.valid {
+        return Err(validation.errors.join(", "));
+    }
+    
+    // Use the new CLI-based generation
+    generate_project_with_cli(&config, &app_handle).await?;
+    
+    Ok(project_id)
 } 

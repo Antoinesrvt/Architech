@@ -264,11 +264,13 @@ export const useProjectStore = create<ProjectState>()(
           options: {
             typescript: true,
             appRouter: true,
-            eslint: true
+            eslint: true,
+            cli_execution: true, // Flag indicating we're using CLI approach
+            verbose_logging: true // Generate detailed logs of CLI operations
           }
         };
         
-        // Call API to generate project
+        // Call API to generate project - this will use CLI tools
         const projectId = await frameworkService.generateProject(config);
         
         // Add to recent projects

@@ -1,37 +1,6 @@
 import { useFrameworkSelection } from '../hooks/useFrameworkSelection';
-import { Framework } from '@/lib/store/framework-store';
+import FrameworkCard from '../FrameworkCard';
 import { cn } from '@/lib/utils/cn';
-
-interface FrameworkCardProps {
-  framework: Framework;
-  selected: boolean;
-  onSelect: () => void;
-}
-
-function FrameworkCard({ framework, selected, onSelect }: FrameworkCardProps) {
-  return (
-    <div
-      className={cn(
-        "card bg-base-200 hover:bg-base-300 cursor-pointer transition-all transform hover:scale-[1.02] duration-300 border-2",
-        selected ? "border-primary shadow-lg" : "border-transparent"
-      )}
-      onClick={onSelect}
-    >
-      <div className="card-body">
-        <h3 className="card-title flex items-center">
-          {framework.name}
-          {selected && <span className="badge badge-primary ml-2">Selected</span>}
-        </h3>
-        <p className="text-sm opacity-70">{framework.description}</p>
-        <div className="flex flex-wrap gap-1 mt-2">
-          {framework.tags.map(tag => (
-            <span key={tag} className="badge badge-outline badge-sm">{tag}</span>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function FrameworkStep() {
   const { 
@@ -48,7 +17,7 @@ export function FrameworkStep() {
     <div className="space-y-6 animate-fadeIn">
       <h2 className="text-2xl font-bold">Select a Framework</h2>
       <p className="text-base-content/70">
-        Choose the type of framework you want to use for your project.
+        Our framework-first approach uses official CLI tools to create your project with the latest versions and best practices.
       </p>
 
       {/* Framework type selector */}
@@ -87,22 +56,26 @@ export function FrameworkStep() {
       )}
 
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {frameworksByType.map(framework => (
-            <FrameworkCard
-              key={framework.id}
-              framework={framework}
-              selected={framework.id === selectedFrameworkId}
-              onSelect={() => selectFramework(framework.id)}
-            />
-          ))}
-          
-          {frameworksByType.length === 0 && (
-            <div className="col-span-3 text-center py-8">
-              <p className="text-base-content/50">No frameworks available for this type.</p>
-            </div>
-          )}
-        </div>
+        <>
+
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {frameworksByType.map(framework => (
+              <FrameworkCard
+                key={framework.id}
+                framework={framework}
+                selected={framework.id === selectedFrameworkId}
+                onSelect={selectFramework}
+              />
+            ))}
+            
+            {frameworksByType.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-base-content/50">No frameworks available for this type.</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Selection summary */}

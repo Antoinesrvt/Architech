@@ -19,6 +19,7 @@ export function ModulesStep() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ModuleCategory>('all');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Get the selected framework
   const selectedFramework = selectedFrameworkId 
@@ -40,7 +41,9 @@ export function ModulesStep() {
       }
       
       // Filter by framework compatibility
-      if (selectedFramework && !selectedFramework.compatibleModules.includes(module.id)) {
+      if (selectedFramework && 
+          (!selectedFramework.compatible_modules || 
+           !selectedFramework.compatible_modules.includes(module.id))) {
         return false;
       }
       
@@ -77,7 +80,7 @@ export function ModulesStep() {
       // Check if this module is incompatible with any already selected module
       const incompatibleModules = modules
         .filter(m => selectedModuleIds.includes(m.id) && 
-          (m.incompatibleWith.includes(module.id) || module.incompatibleWith.includes(m.id)));
+          (m.incompatible_with.includes(module.id) || module.incompatible_with.includes(m.id)));
       
       if (incompatibleModules.length > 0) {
         return {
@@ -87,26 +90,30 @@ export function ModulesStep() {
       }
     }
     
-    return { can: true };
+    return { can: true, reason: '' };
   };
 
   // Handle module toggle
-  const handleModuleToggle = (module: Module) => {
-    const isSelected = selectedModuleIds.includes(module.id);
-    const toggle = canToggleModule(module, isSelected);
+  const handleModuleToggle = (moduleId: string, isSelected: boolean) => {
+    const module = modules.find(m => m.id === moduleId);
+    if (!module) return;
+    
+    const currentlySelected = selectedModuleIds.includes(moduleId);
+    const toggle = canToggleModule(module, currentlySelected);
     
     if (!toggle.can) {
       // Show error message
-      console.error(toggle.reason);
+      setErrorMessage(toggle.reason);
+      setTimeout(() => setErrorMessage(null), 5000);
       return;
     }
     
-    if (isSelected) {
+    if (currentlySelected) {
       // Remove module from selection
-      removeModule(module.id);
+      removeModule(moduleId);
     } else {
       // Add module to selection
-      addModule(module.id);
+      addModule(moduleId);
       
       // Also add all dependencies
       module.dependencies.forEach(depId => {
@@ -142,107 +149,163 @@ export function ModulesStep() {
     <div className="space-y-6 animate-fadeIn">
       <h2 className="text-2xl font-bold">Select Modules</h2>
       <p className="text-base-content/70">
-        Choose the modules you want to include in your project. 
+        Choose the modules you want to install in your project.
         {selectedFramework && (
-          <span> Showing modules compatible with <strong>{selectedFramework.name}</strong>.</span>
+          <span>
+            {" "}
+            Showing modules compatible with{" "}
+            <strong>{selectedFramework.name}</strong>.
+          </span>
         )}
       </p>
 
-      {/* Search and filter bar */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="form-control flex-grow">
-          <div className="input-group">
-            <input 
-              type="text" 
-              placeholder="Search modules..." 
-              className="input input-bordered w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Error message display */}
+      {errorMessage && (
+        <div className="alert alert-error animate-slideIn">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
-            <button className="btn btn-square">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-          </div>
+          </svg>
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* Search and filter bar */}
+
+      <div className="flex flex-col sm:flex-row gap-2 form-control flex-grow w-full">
+        <div className="input-group">
+          <input
+            type="text"
+            placeholder="Search modules..."
+            className="input input-bordered w-full"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button className="btn btn-square">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </button>
         </div>
       </div>
 
       {/* Category tabs */}
-      <div className="tabs tabs-boxed">
-        <button 
-          className={cn("tab", selectedCategory === 'all' && "tab-active")}
-          onClick={() => setSelectedCategory('all')}
+      <div className="tabs tabs-boxed overflow-x-auto">
+        <button
+          className={cn("tab", selectedCategory === "all" && "tab-active")}
+          onClick={() => setSelectedCategory("all")}
         >
           All ({countsByCategory.all || 0})
         </button>
-        <button 
-          className={cn("tab", selectedCategory === 'styling' && "tab-active")}
-          onClick={() => setSelectedCategory('styling')}
+        <button
+          className={cn("tab", selectedCategory === "styling" && "tab-active")}
+          onClick={() => setSelectedCategory("styling")}
         >
           Styling ({countsByCategory.styling || 0})
         </button>
-        <button 
-          className={cn("tab", selectedCategory === 'ui' && "tab-active")}
-          onClick={() => setSelectedCategory('ui')}
+        <button
+          className={cn("tab", selectedCategory === "ui" && "tab-active")}
+          onClick={() => setSelectedCategory("ui")}
         >
           UI ({countsByCategory.ui || 0})
         </button>
-        <button 
-          className={cn("tab", selectedCategory === 'state' && "tab-active")}
-          onClick={() => setSelectedCategory('state')}
+        <button
+          className={cn("tab", selectedCategory === "state" && "tab-active")}
+          onClick={() => setSelectedCategory("state")}
         >
           State ({countsByCategory.state || 0})
         </button>
-        <button 
-          className={cn("tab", selectedCategory === 'i18n' && "tab-active")}
-          onClick={() => setSelectedCategory('i18n')}
+        <button
+          className={cn("tab", selectedCategory === "i18n" && "tab-active")}
+          onClick={() => setSelectedCategory("i18n")}
         >
           i18n ({countsByCategory.i18n || 0})
         </button>
-        <button 
-          className={cn("tab", selectedCategory === 'forms' && "tab-active")}
-          onClick={() => setSelectedCategory('forms')}
+        <button
+          className={cn("tab", selectedCategory === "forms" && "tab-active")}
+          onClick={() => setSelectedCategory("forms")}
         >
           Forms ({countsByCategory.forms || 0})
         </button>
-        <button 
-          className={cn("tab", selectedCategory === 'testing' && "tab-active")}
-          onClick={() => setSelectedCategory('testing')}
+        <button
+          className={cn("tab", selectedCategory === "testing" && "tab-active")}
+          onClick={() => setSelectedCategory("testing")}
         >
           Testing ({countsByCategory.testing || 0})
         </button>
+        <button
+          className={cn("tab", selectedCategory === "advanced" && "tab-active")}
+          onClick={() => setSelectedCategory("advanced")}
+        >
+          Advanced ({countsByCategory.advanced || 0})
+        </button>
       </div>
 
-      {/* Modules grid */}
+      {/* Module cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(selectedCategory === 'all' ? filteredModules : modulesByCategory[selectedCategory]).map(module => (
+        {modulesByCategory[selectedCategory].map((module) => (
           <ModuleCard
             key={module.id}
             module={module}
             selected={selectedModuleIds.includes(module.id)}
-            onToggle={() => handleModuleToggle(module)}
+            onToggle={handleModuleToggle}
+            disabled={
+              !selectedFramework ||
+              !selectedFramework.compatible_modules ||
+              !selectedFramework.compatible_modules.includes(module.id)
+            }
           />
         ))}
-        
-        {filteredModules.length === 0 && (
-          <div className="col-span-3 text-center py-8">
-            <p className="text-base-content/50">No modules found matching your criteria.</p>
+
+        {modulesByCategory[selectedCategory].length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-base-content/50">
+              No modules available in this category.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Selected modules summary */}
+      {/* Selection summary */}
       {selectedModuleIds.length > 0 && (
-        <div className="alert alert-success shadow-lg transition-all duration-300">
-          <div>
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>
-              You've selected {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''}.
-            </span>
-          </div>
+        <div className="alert alert-success animate-fadeIn">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>
+            You've selected {selectedModuleIds.length} module(s). Click "Next"
+            to continue.
+          </span>
         </div>
       )}
     </div>

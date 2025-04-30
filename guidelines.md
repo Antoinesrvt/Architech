@@ -19,6 +19,44 @@ ArchiTech adopte une approche "framework-first" plutôt qu'une approche basée s
 
 - **Évolutivité**: Cette approche permet d'ajouter facilement de nouveaux frameworks et modules sans restructurer l'application.
 
+## Approche "Command Line First" (Nouveauté)
+
+ArchiTech a évolué vers une approche "Command Line First" qui présente des avantages significatifs:
+
+- **Toujours à jour**: En utilisant directement les outils CLI officiels (`create-next-app`, etc.), nous garantissons que les projets générés utilisent toujours les versions les plus récentes des frameworks et bibliothèques.
+
+- **Maintenance réduite**: Pas besoin de mettre à jour constamment des fichiers templates lorsque les outils sous-jacents changent.
+
+- **Empreinte minimale**: Réduction drastique de la taille de l'application en éliminant les assets statiques.
+
+- **Plus flexible**: Les outils CLI offrent souvent des options de configuration robustes qui peuvent être composées programmatiquement.
+
+- **Support officiel**: L'utilisation des outils CLI officiels assure la compatibilité et le respect des meilleures pratiques.
+
+Cette approche se base sur une structure de données JSON qui décrit:
+1. Les commandes CLI à exécuter
+2. Les arguments et options à passer
+3. Les opérations de fichiers post-installation nécessaires
+
+### Structure des données
+
+```
+/data
+  /frameworks    # Descriptions des frameworks et leurs commandes CLI
+    web.json     # Frameworks web (Next.js, Vite, etc.)
+    app.json     # Frameworks mobiles
+    desktop.json # Frameworks desktop
+  /modules
+    modules.json # Tous les modules avec leurs commandes d'installation et modifications
+```
+
+### Architecture d'exécution
+
+Le système utilise:
+1. Un exécuteur de commandes avancé qui gère les CLI interactives et non-interactives
+2. Des utilitaires de transformation de fichiers pour les opérations post-installation
+3. Une gestion intelligente des dépendances entre modules
+
 2. Environnement de Développement
 Prérequis Techniques
 	•	Node.js (v18+) 	•	Rust (édition 2021+) 	•	Git 	•	VS Code (recommandé avec extensions Tauri et React)
@@ -71,22 +109,113 @@ npm run tauri dev
 │   ├── Cargo.toml              # Configuration Rust
 │   └── tauri.conf.json         # Configuration Tauri
 │
-├── template-data/              # Définitions des frameworks et modules
-│   ├── frameworks/             # Définitions des frameworks
-│   │   ├── web.json            # Frameworks web (Next.js, Vite, etc.)
-│   │   ├── app.json            # Frameworks mobiles (Expo, Capacitor, etc.)
-│   │   └── desktop.json        # Frameworks desktop (Tauri, Electron, etc.)
-│   │
-│   └── modules/                # Définitions des modules
-│       ├── tailwind.json       # Module Tailwind
-│       ├── i18n.json           # Module i18n
-│       └── state.json          # Module state management
-│
-└── template-files/             # Fichiers de template à copier lors de la génération
-    ├── tailwind/               # Fichiers pour le module Tailwind
-    ├── i18n/                   # Fichiers pour le module i18n
-    └── state/                  # Fichiers pour le module state
- 3. Architecture Technique Spécifique
+└── modules/                # Définitions des modules
+    └── modules.json        # Tous les modules disponibles
+
+3. Architecture Technique Spécifique
+
+### Custom Hook Architecture
+
+Notre application utilise une architecture basée sur des hooks personnalisés pour une meilleure gestion d'état et une meilleure réutilisabilité du code :
+
+  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
+  const [isCompleted, setIsCompleted] = useState(false);
+
+  const goToNextStep = () => {
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(prev => prev + 1);
+      setVisitedSteps(prev => new Set([...prev, currentStepIndex + 1]));
+    }
+  };
+
+  // ... autres fonctions de navigation ...
+}
+```
+
+### Système d'Animation
+
+Nous avons implémenté un système d'animation robuste utilisant des keyframes CSS et des classes utilitaires :
+
+```css
+/* Animations globales */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+```
+
+### Flux du Wizard Amélioré
+
+Le wizard de création de projet a été restructuré pour offrir une meilleure expérience utilisateur :
+
+1. **Gestion d'État Isolée**
+   - Chaque étape gère son propre état via des hooks personnalisés
+   - État global géré via Zustand pour la persistance
+
+2. **Navigation Intelligente**
+   - Validation des étapes avant progression
+   - Historique des étapes visitées
+   - Indicateurs de progression visuels
+
+3. **Composants Modulaires**
+   - Chaque étape est un composant indépendant
+   - Réutilisation des composants UI de base
+   - Animations fluides entre les étapes
+
+### Structure des Composants
+
+```typescript
+// Structure recommandée pour les composants du wizard
+src/components/wizard/
+├── hooks/                    # Hooks personnalisés
+│   ├── useWizardNavigation.ts
+│   ├── useFrameworkSelection.ts
+│   └── useModuleSelection.ts
+├── steps/                    # Composants d'étape
+│   ├── BasicInfoStep.tsx
+│   ├── FrameworkStep.tsx
+│   ├── ModulesStep.tsx
+│   ├── ConfigurationStep.tsx
+│   └── SummaryStep.tsx
+├── ui/                       # Composants UI réutilisables
+│   ├── ProgressIndicator.tsx
+│   ├── ModuleCard.tsx
+│   └── FrameworkCard.tsx
+└── ProjectWizard.tsx         # Composant principal
+```
+
+### Bonnes Pratiques de Développement
+
+1. **Gestion d'État**
+   - Utiliser des hooks personnalisés pour la logique métier
+   - Isoler l'état local des composants
+   - Utiliser Zustand pour l'état global partagé
+
+2. **Performance**
+   - Implémenter le lazy loading pour les composants lourds
+   - Utiliser React.memo pour les composants purs
+   - Optimiser les re-rendus avec useMemo et useCallback
+
+3. **Accessibilité**
+   - Utiliser des rôles ARIA appropriés
+   - Gérer le focus pour la navigation au clavier
+   - Fournir des alternatives textuelles
+
+4. **Tests**
+   - Tester les hooks personnalisés avec @testing-library/react-hooks
+   - Tester les composants avec @testing-library/react
+   - Tester les animations avec @testing-library/jest-dom
+
 Interface Frontend/Backend
 1. Commandes Tauri
 Exposer les fonctionnalités Rust au frontend via les commandes Tauri:
@@ -203,35 +332,30 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   }
 }));
  4. Flux de Développement
-Phase 1: Fondation (Semaine 1)
+Phase 1: Fondation (Semaine 1) ✅
 Objectifs
-	•	Configuration du framework Tauri avec Next.js 	•	Structuration de l'interface utilisateur de base 	•	Mise en place de la communication frontend/backend
-Tâches
-	1.	Configuration de l'environnement [1j]
-	▪	Installer les dépendances nécessaires 	▪	Configurer TypeScript et ESLint 	▪	Mettre en place la structure de dossiers 	2.	Interface Utilisateur de Base [2j]
-	▪	Créer les layouts principaux avec DaisyUI 	▪	Implémenter la navigation entre sections 	▪	Mettre en place le thème clair/sombre 	3.	Communication Tauri [2j]
-	▪	Définir les premières commandes Rust 	▪	Créer la couche de service d'abstraction 	▪	Tester la communication bidirectionnelle
-Phase 2: Core Generator (Semaine 2)
+	•	Configuration du framework Tauri avec Next.js ✅
+	•	Structuration de l'interface utilisateur de base ✅
+	•	Mise en place de la communication frontend/backend ✅
+
+Phase 2: Core Generator (Semaine 2) ✅
 Objectifs
-	•	Implémentation de la logique de génération de projet en Rust 	•	Structure des templates et modules 	•	Manipulation de fichiers et exécution de commandes
-Tâches
-	1.	Moteur de Génération Rust [3j]
-	▪	Créer les structures de données pour templates et modules 	▪	Implémenter l'exécution de commandes shell 	▪	Développer les fonctions de manipulation de fichiers 	2.	Définition des Templates/Modules [2j]
-	▪	Structurer les fichiers JSON de définition 	▪	Créer les premiers templates Next.js 	▪	Définir les modules de base (Tailwind, etc.)
-Phase 3: Assistant de Création (Semaine 3)
+	•	Implémentation de la logique de génération de projet en Rust ✅
+	•	Structure des templates et modules ✅
+	•	Manipulation de fichiers et exécution de commandes ✅
+
+Phase 3: Assistant de Création (Semaine 3) 🔄
 Objectifs
-	•	Développement de l'assistant de création de projet en plusieurs étapes 	•	Intégration complète avec la logique de génération 	•	Interface utilisateur riche et réactive
-Tâches
-	1.	Flux de l'Assistant [3j]
-	▪	Mettre en place le wizard multi-étapes 	▪	Créer les formulaires pour chaque étape 	▪	Implémenter la navigation entre étapes 	2.	Sélection et Configuration [2j]
-	▪	Développer l'interface de sélection de template 	▪	Créer l'interface de sélection et configuration des modules 	▪	Implémenter la visualisation du résumé
-Phase 4: Modules et Templates (Semaine 4)
+	•	Développement de l'assistant de création de projet en plusieurs étapes 🔄
+	•	Intégration complète avec la logique de génération 🔄
+	•	Interface utilisateur riche et réactive ✅
+
+Phase 4: Modules et Templates (Semaine 4) 🔄
 Objectifs
-	•	Implémentation des modules spécifiques 	•	Création des templates spécialisés 	•	Tests et validation du processus complet
-Tâches
-	1.	Modules Fonctionnels [3j]
-	▪	Implémenter le module d'internationalisation (next-intl) 	▪	Développer le module de gestion d'état (Zustand) 	▪	Créer le module de formulaires (React Hook Form) 	2.	Templates Spécialisés [2j]
-	▪	Créer le template SaaS 	▪	Développer le template Dashboard 	▪	Implémenter le template Marketing
+	•	Implémentation des modules spécifiques 🔄
+	•	Création des templates spécialisés 🔄
+	•	Tests et validation du processus complet 🔄
+
 Phase 5: Finition (1 semaine supplémentaire si nécessaire)
 Objectifs
 	•	Amélioration de l'expérience utilisateur 	•	Correction des problèmes identifiés 	•	Préparation de la démo
@@ -288,106 +412,66 @@ fn create_base_project(config: &ProjectConfig) -> Result<(), String> {
  Interface React pour le Wizard
 Créer un assistant en plusieurs étapes avec une expérience fluide:
  // src/components/wizard/ProjectWizard.tsx
-import { useState } from 'react';
-import { useProjectStore } from '@/lib/store/project-store';
-import { BasicInfoStep, FrameworkConfigStep, ModulesStep, ConfigurationStep, SummaryStep } from './steps';
+import { useEffect } from 'react';
+import { useWizardNavigation } from './hooks/useWizardNavigation';
+import { useFrameworkSelection } from './hooks/useFrameworkSelection';
+import { BasicInfoStep } from './steps/BasicInfoStep';
+import { FrameworkStep } from './steps/FrameworkStep';
+import { ModulesStep } from './steps/ModulesStep';
+import { ConfigurationStep } from './steps/ConfigurationStep';
+import { SummaryStep } from './steps/SummaryStep';
+import { ProgressIndicator } from './ui/ProgressIndicator';
+
+const steps = [
+  { title: 'Informations de base', component: BasicInfoStep },
+  { title: 'Framework', component: FrameworkStep },
+  { title: 'Modules', component: ModulesStep },
+  { title: 'Configuration', component: ConfigurationStep },
+  { title: 'Résumé', component: SummaryStep },
+];
 
 export function ProjectWizard() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const { isLoading, error, generateProject } = useProjectStore();
-  
-  const steps = [
-    { title: 'Informations de base', component: BasicInfoStep },
-    { title: 'Configuration Next.js', component: FrameworkConfigStep },
-    { title: 'Sélection des Modules', component: ModulesStep },
-    { title: 'Configuration des Modules', component: ConfigurationStep },
-    { title: 'Résumé et Génération', component: SummaryStep },
-  ];
-  
-  const CurrentStepComponent = steps[currentStep].component;
-  
-  const goToNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-  
-  const goToPreviousStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-  
-  const handleGenerate = async () => {
-    try {
-      const result = await generateProject();
-      // Gérer le succès, peut-être naviguer vers une page de succès
-    } catch (error) {
-      // Gérer l'erreur
-    }
-  };
-  
+  const {
+    currentStepIndex,
+    visitedSteps,
+    progress,
+    goToNextStep,
+    goToPreviousStep,
+    goToStep,
+    canGoNext,
+    canGoPrevious,
+  } = useWizardNavigation(steps);
+
+  const {
+    frameworksByType,
+    selectedFrameworkId,
+    selectedType,
+    loading: frameworksLoading,
+    error: frameworksError,
+    setSelectedType,
+    selectFramework,
+  } = useFrameworkSelection();
+
+  const CurrentStepComponent = steps[currentStepIndex].component;
+
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <ul className="steps steps-horizontal w-full">
-          {steps.map((step, index) => (
-            <li
-              key={index}
-              className={`step ${index <= currentStep ? 'step-primary' : ''}`}
-              onClick={() => index < currentStep && setCurrentStep(index)}
-            >
-              {step.title}
-            </li>
-          ))}
-        </ul>
-      </div>
-      
-      <div className="card bg-base-200 shadow-xl">
+      <ProgressIndicator
+        steps={steps}
+        currentStepIndex={currentStepIndex}
+        visitedSteps={visitedSteps}
+        onStepClick={goToStep}
+      />
+
+      <div className="card bg-base-200 shadow-xl animate-fadeIn">
         <div className="card-body">
-          <CurrentStepComponent />
-          
-          {error && (
-            <div className="alert alert-error mt-4">
-              <span>{error}</span>
-            </div>
-          )}
-          
-          <div className="card-actions justify-end mt-6">
-            {currentStep > 0 && (
-              <button
-                className="btn btn-outline"
-                onClick={goToPreviousStep}
-                disabled={isLoading}
-              >
-                Précédent
-              </button>
-            )}
-            
-            {currentStep < steps.length - 1 ? (
-              <button
-                className="btn btn-primary"
-                onClick={goToNextStep}
-                disabled={isLoading}
-              >
-                Suivant
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary"
-                onClick={handleGenerate}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="loading loading-spinner"></span>
-                    Génération en cours...
-                  </>
-                ) : (
-                  'Générer le Projet'
-                )}
-              </button>
-            )}
+          <div className="animate-slideUp">
+            <CurrentStepComponent
+              onNext={goToNextStep}
+              onPrevious={goToPreviousStep}
+              canGoNext={canGoNext}
+              canGoPrevious={canGoPrevious}
+            />
           </div>
         </div>
       </div>
@@ -562,3 +646,35 @@ Après le POC, les développements prioritaires seront:
 	▪	API pour templates et modules 	▪	Système d'analyse et d'amélioration continue 	▪	Authentification et personnalisation 	2.	Intelligence Avancée
 	▪	Recommandations basées sur l'usage 	▪	Détection de patterns dans les projets 	▪	Génération de code contextuelle 	3.	Marketplace de Modules
 	▪	Système de contribution communautaire 	▪	Mécanismes de notation et d'évaluation 	▪	Possibilités de monétisation
+
+## Architecture Technique
+
+```mermaid
+graph TD
+    A[Frontend Next.js] --> B[ProjectWizard]
+    B --> C[Custom Hooks]
+    C --> D[useWizardNavigation]
+    C --> E[useFrameworkSelection]
+    C --> F[useModuleSelection]
+    
+    B --> G[Step Components]
+    G --> H[BasicInfoStep]
+    G --> I[FrameworkStep]
+    G --> J[ModulesStep]
+    G --> K[ConfigurationStep]
+    G --> L[SummaryStep]
+    
+    B --> M[UI Components]
+    M --> N[ProgressIndicator]
+    M --> O[ModuleCard]
+    M --> P[FrameworkCard]
+    
+    A --> Q[State Management]
+    Q --> R[Zustand Store]
+    Q --> S[Local State]
+    
+    A --> T[Backend Tauri]
+    T --> U[Project Generation]
+    T --> V[File Operations]
+    T --> W[System Commands]
+```

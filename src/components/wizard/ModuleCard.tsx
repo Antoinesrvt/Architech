@@ -60,15 +60,15 @@ export default function ModuleCard({
       <div className="card-body p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center">
-            <input 
+            {/* <input 
               type="checkbox" 
               className="checkbox checkbox-primary mr-3" 
               checked={selected} 
               readOnly
               disabled={disabled}
-            />
+            /> */}
             <div>
-              <h3 className="font-bold">{module.name}</h3>
+              <h3 className="font-bold">{module.name} <span className="text-xs opacity-70">v{module.version}</span></h3>
               <p className="text-sm opacity-70">{module.description}</p>
             </div>
           </div>
@@ -94,13 +94,17 @@ export default function ModuleCard({
           </div>
         </div>
 
+        {/* CLI Commands Display */}
+        {module.installation.commands.length > 0 && (
+          <div className="mt-2 bg-base-200 rounded-md p-2 font-mono text-xs overflow-x-auto whitespace-nowrap">
+            $ {module.installation.commands[0]}
+            {module.installation.commands.length > 1 && "..."}
+          </div>
+        )}
+
         {expanded && (
           <div className="mt-4 text-sm space-y-3 border-t pt-3">
-            <div>
-              <h4 className="font-medium">Version</h4>
-              <p>{module.version}</p>
-            </div>
-            
+            {/* Dependencies */}
             {module.dependencies.length > 0 && (
               <div>
                 <h4 className="font-medium">Dependencies</h4>
@@ -112,23 +116,58 @@ export default function ModuleCard({
               </div>
             )}
             
-            {module.incompatibleWith.length > 0 && (
+            {/* Incompatible with */}
+            {module.incompatible_with.length > 0 && (
               <div>
                 <h4 className="font-medium">Incompatible with</h4>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {module.incompatibleWith.map(inc => (
+                  {module.incompatible_with.map(inc => (
                     <span key={inc} className="badge badge-error badge-sm">{inc}</span>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Full CLI Commands */}
+            {module.installation.commands.length > 1 && (
+              <div>
+                <h4 className="font-medium">Installation Commands</h4>
+                <div className="bg-base-200 rounded p-2 font-mono text-xs mt-1">
+                  {module.installation.commands.map((cmd, index) => (
+                    <div key={index} className="whitespace-nowrap overflow-x-auto">$ {cmd}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* File Operations */}
+            {module.installation.file_operations.length > 0 && (
+              <div>
+                <h4 className="font-medium">File Operations</h4>
+                <div className="space-y-1 mt-1">
+                  {module.installation.file_operations.map((op, index) => (
+                    <div key={index} className="text-xs">
+                      <span className={`inline-block rounded px-1 mr-1 ${
+                        op.operation === 'create' ? 'bg-success/20 text-success' :
+                        op.operation === 'modify' ? 'bg-warning/20 text-warning' :
+                        'bg-info/20 text-info'
+                      }`}>
+                        {op.operation}
+                      </span>
+                      <span className="font-mono">{op.path}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Configuration Options */}
             {module.configuration.options.length > 0 && (
               <div>
                 <h4 className="font-medium">Configuration Options</h4>
                 <ul className="list-disc list-inside">
                   {module.configuration.options.map(opt => (
-                    <li key={opt.name}>{opt.name}: {opt.description}</li>
+                    <li key={opt.id} className="text-xs">{opt.label}: {opt.description}</li>
                   ))}
                 </ul>
               </div>

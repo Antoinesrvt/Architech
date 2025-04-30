@@ -34,17 +34,12 @@ export default function FrameworkCard({ framework, selected = false, onSelect }:
         
         <div className="mt-4">
           <div className="text-xs text-base-content/50">Type: {framework.type}</div>
+          {framework.cli && (
+            <div className="text-xs font-mono mt-1 text-base-content/50">
+              CLI: {framework.cli.base_command}
+            </div>
+          )}
         </div>
-        
-        {framework.screenshot && (
-          <figure className="mt-4">
-            <img
-              src={framework.screenshot}
-              alt={`${framework.name} preview`}
-              className="rounded-lg w-full h-32 object-cover"
-            />
-          </figure>
-        )}
         
         <div className="card-actions justify-end mt-4">
           <button 

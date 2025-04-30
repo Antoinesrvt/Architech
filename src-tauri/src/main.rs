@@ -16,6 +16,7 @@ fn main() {
             add_project,
             edit_project,
             delete_project,
+            get_frameworks,
             get_templates,
             get_modules,
             validate_project_config,

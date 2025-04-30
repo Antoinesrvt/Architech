@@ -7,10 +7,8 @@ import { ConfigurationStep } from './steps/ConfigurationStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { useProjectStore } from '@/lib/store/project-store';
 import { cn } from '@/lib/utils/cn';
-import { useRouter } from 'next/navigation';
 
 export function ProjectWizard() {
-  const router = useRouter();
   const { 
     generateProject, 
     isLoading, 
@@ -18,10 +16,18 @@ export function ProjectWizard() {
     currentDraftId, 
     createDraft, 
     saveDraft,
-    deleteDraft,
     resetWizardState
   } = useProjectStore();
   
+  // Define wizard steps
+  const steps: WizardStep[] = [
+    { id: 'basic', title: 'Project Info', component: BasicInfoStep },
+    { id: 'framework', title: 'Select Framework', component: FrameworkStep },
+    { id: 'modules', title: 'Choose Modules', component: ModulesStep },
+    { id: 'config', title: 'Configuration', component: ConfigurationStep },
+    { id: 'summary', title: 'Review & Generate', component: SummaryStep },
+  ];
+
   // Create or use existing draft
   useEffect(() => {
     if (!currentDraftId) {
@@ -41,15 +47,6 @@ export function ProjectWizard() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [saveDraft]);
-
-  // Define wizard steps
-  const steps: WizardStep[] = [
-    { id: 'basic', title: 'Project Info', component: BasicInfoStep },
-    { id: 'framework', title: 'Select Framework', component: FrameworkStep },
-    { id: 'modules', title: 'Choose Modules', component: ModulesStep },
-    { id: 'config', title: 'Configuration', component: ConfigurationStep },
-    { id: 'summary', title: 'Review & Generate', component: SummaryStep },
-  ];
 
   // Initialize wizard navigation
   const { 
@@ -87,19 +84,6 @@ export function ProjectWizard() {
 
   // Component for the current step
   const CurrentStepComponent = currentStep.component;
-  
-  // Navigation handlers
-  const handleKeepDraft = () => {
-    saveDraft();
-    router.push('/');
-  };
-
-  const handleDiscardDraft = () => {
-    if (currentDraftId) {
-      deleteDraft(currentDraftId);
-    }
-    router.push('/');
-  };
 
   return (
     <div className="py-6 relative animate-fadeIn">
@@ -111,14 +95,18 @@ export function ProjectWizard() {
         />
       </div>
 
-      {/* Page title with back button */}
-      <div className="flex items-center mb-6 mt-2">
-        <label htmlFor="back-confirmation-modal" className="btn btn-ghost btn-sm mr-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </label>
+      {/* Header */}
+      <div className="mb-4">
         <h1 className="text-2xl font-bold">Create New Project</h1>
+      </div>
+
+      {/* CLI-first approach callout */}
+      <div className="alert alert-info mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>
+          <h3 className="font-bold">Command-Line First Approach</h3>
+          <div className="text-xs">We use the official CLI tools of each framework to ensure you get the latest versions and best practices.</div>
+        </div>
       </div>
 
       {/* Step indicators */}
@@ -210,33 +198,6 @@ export function ProjectWizard() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Back Confirmation Modal using DaisyUI */}
-      <input type="checkbox" id="back-confirmation-modal" className="modal-toggle" />
-      <div className="modal" role="dialog">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Return to Dashboard?</h3>
-          <p className="py-4">What would you like to do with your current progress?</p>
-          <div className="modal-action flex flex-col sm:flex-row gap-2">
-            <button 
-              className="btn btn-primary flex-1"
-              onClick={handleKeepDraft}
-            >
-              Save as Draft
-            </button>
-            <button 
-              className="btn btn-error flex-1"
-              onClick={handleDiscardDraft}
-            >
-              Discard
-            </button>
-            <label htmlFor="back-confirmation-modal" className="btn btn-ghost flex-1">
-              Cancel
-            </label>
-          </div>
-        </div>
-        <label className="modal-backdrop" htmlFor="back-confirmation-modal"></label>
       </div>
     </div>
   );

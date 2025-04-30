@@ -14,30 +14,56 @@ const mockFrameworks: Framework[] = [
     id: "nextjs",
     name: "Next.js",
     description: "React framework for production-grade applications",
-    version: "1.0.0",
+    version: "13.4.0",
     type: "web",
     tags: ["react", "frontend", "ssr", "ssg"],
-    screenshot: undefined,
-    baseCommand: "npx create-next-app@latest",
-    compatibleModules: ["tailwind", "daisyui", "i18n", "zustand", "forms", "auth", "testing"],
-    structure: {
+    cli: {
+      base_command: "npx create-next-app@latest",
+      arguments: {
+        typescript: {
+          flag: "--typescript",
+          default: true
+        },
+        appRouter: {
+          flag: "--app",
+          default: true
+        }
+      },
+      interactive: false
+    },
+    compatible_modules: ["tailwind", "daisyui", "i18n", "zustand", "forms", "auth", "testing"],
+    directory_structure: {
       enforced: true,
-      directories: ["src", "public", "components"]
+      directories: ["src", "public", "app", "components", "lib"]
     }
   },
   {
     id: "vite-react",
     name: "Vite + React",
     description: "Lightweight React setup with Vite",
-    version: "1.0.0",
+    version: "4.3.2",
     type: "web",
     tags: ["react", "frontend", "spa", "vite"],
-    screenshot: undefined,
-    baseCommand: "npm create vite@latest",
-    compatibleModules: ["tailwind", "daisyui", "i18n", "zustand", "forms", "testing"],
-    structure: {
+    cli: {
+      base_command: "npm create vite@latest",
+      arguments: {
+        template: {
+          flag: "--template react-ts",
+          default: true
+        }
+      },
+      interactive: true,
+      responses: [
+        {
+          prompt: "Project name",
+          use_project_name: true
+        }
+      ]
+    },
+    compatible_modules: ["tailwind", "daisyui", "i18n", "zustand", "forms", "testing"],
+    directory_structure: {
       enforced: true,
-      directories: ["src", "public"]
+      directories: ["src", "public", "src/components", "src/assets"]
     }
   }
 ];
@@ -48,28 +74,43 @@ const mockModules: Module[] = [
     id: "tailwind",
     name: "Tailwind CSS",
     description: "A utility-first CSS framework",
-    version: "1.0.0",
+    version: "3.3.2",
     category: "styling",
     dependencies: [],
-    incompatibleWith: [],
+    incompatible_with: [],
     installation: {
       commands: ["npm install -D tailwindcss postcss autoprefixer", "npx tailwindcss init -p"],
-      files: [
+      file_operations: [
         {
-          source: "tailwind/tailwind.config.js",
-          destination: "tailwind.config.js"
+          operation: "create",
+          path: "tailwind.config.js",
+          content: "module.exports = {\n  content: ['./src/**/*.{js,jsx,ts,tsx}'],\n  theme: {\n    extend: {},\n  },\n  plugins: [],\n}"
+        },
+        {
+          operation: "create",
+          path: "src/styles/globals.css",
+          content: "@tailwind base;\n@tailwind components;\n@tailwind utilities;"
+        },
+        {
+          operation: "modify",
+          path: "src/app/layout.tsx",
+          pattern: "import",
+          replacement: "import '../styles/globals.css';\nimport"
         }
-      ],
-      transforms: []
+      ]
     },
     configuration: {
       options: [
         {
-          name: "darkMode",
+          id: "darkMode",
           type: "select",
+          label: "Dark Mode",
           description: "Dark mode configuration",
           default: "class",
-          options: ["media", "class"]
+          choices: [
+            { value: "media", label: "System Preference" },
+            { value: "class", label: "Manual Toggle" }
+          ]
         }
       ]
     }
@@ -78,16 +119,16 @@ const mockModules: Module[] = [
     id: "daisyui",
     name: "DaisyUI",
     description: "Component library for Tailwind CSS",
-    version: "1.0.0",
+    version: "3.1.0",
     category: "ui",
     dependencies: ["tailwind"],
-    incompatibleWith: [],
+    incompatible_with: [],
     installation: {
       commands: ["npm install daisyui"],
-      files: [],
-      transforms: [
+      file_operations: [
         {
-          file: "tailwind.config.js",
+          operation: "modify",
+          path: "tailwind.config.js",
           pattern: "plugins: \\[.*\\]",
           replacement: "plugins: [require(\"daisyui\")]"
         }
@@ -96,11 +137,16 @@ const mockModules: Module[] = [
     configuration: {
       options: [
         {
-          name: "themes",
+          id: "themes",
           type: "select",
+          label: "Themes",
           description: "DaisyUI themes to include",
           default: "light",
-          options: ["light", "dark", "corporate"]
+          choices: [
+            { value: "light", label: "Light Theme" },
+            { value: "dark", label: "Dark Theme" },
+            { value: "corporate", label: "Corporate Theme" }
+          ]
         }
       ]
     }
@@ -109,14 +155,13 @@ const mockModules: Module[] = [
     id: "recharts",
     name: "Recharts",
     description: "Redefined chart library built with React and D3",
-    version: "1.0.0",
+    version: "2.7.2",
     category: "ui",
     dependencies: [],
-    incompatibleWith: [],
+    incompatible_with: [],
     installation: {
       commands: ["npm install recharts"],
-      files: [],
-      transforms: []
+      file_operations: []
     },
     configuration: {
       options: []

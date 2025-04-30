@@ -8,13 +8,36 @@ export interface Framework {
   version: string;
   type: string;
   tags: string[];
-  screenshot?: string;
-  baseCommand: string;
-  compatibleModules: string[];
-  structure: {
-    enforced: boolean;
-    directories: string[];
-  };
+  cli: FrameworkCli;
+  compatible_modules: string[];
+  directory_structure: DirectoryStructure;
+}
+
+export interface FrameworkCli {
+  base_command: string;
+  arguments?: Record<string, CliArgument>;
+  interactive: boolean;
+  responses?: CliResponse[];
+}
+
+export interface CliArgument {
+  flag?: string;
+  position?: number;
+  value?: string;
+  description?: string;
+  default?: any;
+  value_type?: string;
+}
+
+export interface CliResponse {
+  prompt: string;
+  response?: string;
+  use_project_name?: boolean;
+}
+
+export interface DirectoryStructure {
+  enforced: boolean;
+  directories: string[];
 }
 
 export interface Module {
@@ -22,36 +45,44 @@ export interface Module {
   name: string;
   description: string;
   version: string;
-  category: 'styling' | 'state' | 'i18n' | 'testing' | 'ui' | 'forms' | 'advanced';
+  category: string;
   dependencies: string[];
-  incompatibleWith: string[];
-  installation: {
-    commands: string[];
-    files: FileOperation[];
-    transforms: Transform[];
-  };
-  configuration: {
-    options: ModuleOption[];
-  };
+  incompatible_with: string[];
+  installation: ModuleInstallation;
+  configuration: ModuleConfiguration;
 }
 
-export interface ModuleOption {
-  name: string;
-  type: 'boolean' | 'string' | 'select';
-  description: string;
-  default?: string | boolean | string[];
-  options?: string[];
+export interface ModuleInstallation {
+  commands: string[];
+  file_operations: FileOperation[];
 }
 
 export interface FileOperation {
-  source: string;
-  destination: string;
+  operation: string;
+  path: string;
+  content?: string;
+  pattern?: string;
+  replacement?: string;
+  action?: string;
+  import?: string;
 }
 
-export interface Transform {
-  file: string;
-  pattern: string;
-  replacement: string;
+export interface ModuleConfiguration {
+  options: ModuleOption[];
+}
+
+export interface ModuleOption {
+  id: string;
+  type: string;
+  label: string;
+  description: string;
+  default: any;
+  choices?: OptionChoice[];
+}
+
+export interface OptionChoice {
+  value: string;
+  label: string;
 }
 
 interface FrameworkState {

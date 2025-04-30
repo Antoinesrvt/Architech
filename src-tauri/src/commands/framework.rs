@@ -1,9 +1,9 @@
 use serde::{Serialize, Deserialize};
 use tauri::command;
-use tauri::async_runtime::block_on;
 use std::fs;
 use std::error::Error;
 use dirs;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Framework {
@@ -287,28 +287,20 @@ pub async fn get_modules() -> Result<Vec<Module>, String> {
 }
 
 // Helper function to get a specific framework by ID
-pub fn get_framework_by_id(id: &str) -> Result<Framework, String> {
-    match block_on(get_frameworks()) {
-        Ok(frameworks) => {
-            frameworks.into_iter()
-                .find(|f| f.id == id)
-                .ok_or_else(|| format!("Framework with ID '{}' not found", id))
-        },
-        Err(e) => Err(e),
-    }
+pub async fn get_framework_by_id(id: &str) -> Result<Framework, String> {
+    let frameworks = get_frameworks().await?;
+    frameworks.into_iter()
+        .find(|f| f.id == id)
+        .ok_or_else(|| format!("Framework with ID '{}' not found", id))
 }
 
 // Helper function to get a specific module by ID
 #[allow(dead_code)]
-pub fn get_module_by_id(id: &str) -> Result<Module, String> {
-    match block_on(get_modules()) {
-        Ok(modules) => {
-            modules.into_iter()
-                .find(|m| m.id == id)
-                .ok_or_else(|| format!("Module with ID '{}' not found", id))
-        },
-        Err(e) => Err(e),
-    }
+pub async fn get_module_by_id(id: &str) -> Result<Module, String> {
+    let modules = get_modules().await?;
+    modules.into_iter()
+        .find(|m| m.id == id)
+        .ok_or_else(|| format!("Module with ID '{}' not found", id))
 }
 
 // For backward compatibility: rename of get_frameworks

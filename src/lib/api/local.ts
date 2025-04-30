@@ -321,4 +321,15 @@ export class LocalFrameworkService implements FrameworkService {
       return null;
     }
   }
+
+  async openInFolder(path: string): Promise<boolean> {
+    try {
+      // Use shell plugin to open the folder
+      await safeInvoke<void>('open_in_folder', { path });
+      return true;
+    } catch (error) {
+      console.error('Failed to open folder:', error);
+      return false;
+    }
+  }
 } 

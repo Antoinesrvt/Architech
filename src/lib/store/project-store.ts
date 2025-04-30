@@ -54,6 +54,8 @@ interface ProjectState {
   // Project generation state
   isLoading: boolean;
   error: string | null;
+  setIsLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   
   // Save tracking
   lastSaved: Date | null;
@@ -193,6 +195,8 @@ export const useProjectStore = create<ProjectState>()(
     // Generation state
     isLoading: false,
     error: null,
+    setIsLoading: (loading) => set({ isLoading: loading }),
+    setError: (error) => set({ error }),
     
     // Actions
     setProjectName: (name) => {

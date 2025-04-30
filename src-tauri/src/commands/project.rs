@@ -87,9 +87,9 @@ fn create_directory_structure(project_dir: &Path, directories: &[String]) -> Res
 }
 
 // Function to resolve module dependencies
-fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
+async fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
     // Get all available modules
-    let all_modules = match async_runtime::block_on(super::framework::get_modules()) {
+    let all_modules = match super::framework::get_modules().await {
         Ok(modules) => modules,
         Err(e) => return Err(format!("Failed to get modules: {}", e)),
     };
@@ -143,7 +143,7 @@ async fn generate_project_with_cli(
     let project_dir = base_path.join(&config.name);
     
     // Get framework details
-    let framework = get_framework_by_id(&config.framework)?;
+    let framework = get_framework_by_id(&config.framework).await?;
     
     // Emit initial progress
     emit_progress(app_handle, "init", "Initializing project generation", 0.0);
@@ -189,16 +189,16 @@ async fn generate_project_with_cli(
         emit_progress(app_handle, "create", &format!("Creating {} project with interactive CLI", framework.name), 0.2);
         
         // Prepare responses for interactive prompts
-        let mut responses: Vec<(&str, &str)> = Vec::new();
+        let mut responses = Vec::new();
         
         for response_config in &framework.cli.responses {
             let response_value = if response_config.use_project_name {
-                &config.name
+                config.name.clone()
             } else {
-                &response_config.response
+                response_config.response.clone()
             };
             
-            responses.push((&response_config.prompt, response_value));
+            responses.push((response_config.prompt.clone(), response_value));
         }
         
         // For position-based arguments, add them to cmd_args
@@ -222,8 +222,9 @@ async fn generate_project_with_cli(
         // Add project name as a positional argument for some CLIs that need it
         cmd_args.push(&config.name);
         
-        // Execute the interactive command
-        run_interactive_command(cmd_name, &cmd_args, base_path, &responses).await?;
+        // Execute the interactive command - converting responses to Option<Vec<(String, String)>>
+        let env_responses = Some(responses);
+        run_interactive_command(cmd_name, &cmd_args, base_path, env_responses).await?;
     }
     
     // Step 4: Enforce the directory structure from the framework definition
@@ -241,7 +242,7 @@ async fn generate_project_with_cli(
     emit_progress(app_handle, "dependencies", "Resolving module dependencies", 0.4);
     
     let module_ids = config.modules.iter().map(|m| m.id.clone()).collect::<Vec<String>>();
-    let ordered_modules = resolve_module_dependencies(&module_ids)?;
+    let ordered_modules = resolve_module_dependencies(&module_ids).await?;
     
     // Step 6: Install and configure each module
     let total_modules = ordered_modules.len();

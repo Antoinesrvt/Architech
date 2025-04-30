@@ -40,6 +40,7 @@ export interface FrameworkService {
   generateProject(config: ProjectConfig): Promise<string>;
   listenToProgress(callback: (progress: GenerationProgress) => void): () => void;
   openInEditor(path: string, editor?: string): Promise<boolean>;
+  openInFolder(path: string): Promise<boolean>;
   browseForDirectory(): Promise<string | null>;
 }
 

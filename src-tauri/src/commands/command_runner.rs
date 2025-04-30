@@ -1,7 +1,6 @@
 use std::process::{Command, Output, Stdio};
 use std::path::Path;
 use std::fs;
-use std::io::{self, Write};
 use std::io::Read;
 use regex::Regex;
 use tauri::AppHandle;
@@ -14,10 +13,69 @@ pub async fn run_command(
     working_dir: &Path,
     env_vars: Option<Vec<(String, String)>>
 ) -> Result<Output, String> {
-    println!("Running command: {} {:?}", command, args);
+    let path = working_dir;
     
+    // Create the command
+    println!("Running command: {} {:?} in {}", command, args, working_dir.display());
     let mut cmd = Command::new(command);
-    cmd.args(args).current_dir(working_dir);
+    cmd.args(args)
+       .current_dir(path)
+       .stdout(Stdio::piped())
+       .stderr(Stdio::piped());
+       
+    // Add environment variables if provided
+    if let Some(vars) = env_vars {
+        for (key, value) in vars {
+            cmd.env(key, value);
+        }
+    }
+    
+    match cmd.output() {
+        Ok(output) => {
+            // Log stdout and stderr
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            
+            if !stdout.is_empty() {
+                println!("Command stdout: {}", stdout);
+            }
+            
+            if !stderr.is_empty() {
+                println!("Command stderr: {}", stderr);
+            }
+            
+            if output.status.success() {
+                println!("Command completed successfully");
+            } else {
+                let error_msg = format!("Command exited with non-zero status: {}", output.status);
+                println!("{}", error_msg);
+            }
+            
+            Ok(output)
+        },
+        Err(e) => {
+            let error_msg = format!("Failed to execute command: {}", e);
+            println!("{}", error_msg);
+            Err(error_msg)
+        }
+    }
+}
+
+/// Runs an interactive command asynchronously with the given arguments and working directory
+pub async fn run_interactive_command(
+    command: &str, 
+    args: &[&str], 
+    working_dir: &Path,
+    env_vars: Option<Vec<(String, String)>>
+) -> Result<(), String> {
+    println!("Running interactive command: {} {:?} in {}", command, args, working_dir.display());
+    
+    // Create the command
+    let mut cmd = Command::new(command);
+    cmd.args(args)
+       .current_dir(working_dir)
+       .stdout(Stdio::piped())
+       .stderr(Stdio::piped());
     
     // Add environment variables if provided
     if let Some(vars) = env_vars {
@@ -26,84 +84,95 @@ pub async fn run_command(
         }
     }
     
-    // Run the command
-    match cmd.output() {
-        Ok(output) => {
-            if !output.status.success() {
-                let error = String::from_utf8_lossy(&output.stderr).to_string();
-                return Err(format!("Command failed: {}", error));
+    match cmd.spawn() {
+        Ok(mut child) => {
+            let stdout = child.stdout.take().expect("Failed to capture stdout");
+            let stderr = child.stderr.take().expect("Failed to capture stderr");
+            
+            let mut reader = std::io::BufReader::new(stdout);
+            let mut err_reader = std::io::BufReader::new(stderr);
+            
+            let mut buffer = [0; 1024];
+            let mut err_buffer = [0; 1024];
+            
+            loop {
+                // Check if child process has exited
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        if !status.success() {
+                            let error_msg = format!("Command exited with non-zero status: {}", status);
+                            println!("{}", error_msg);
+                            return Err(error_msg);
+                        }
+                        break;
+                    },
+                    Ok(None) => {}, // Child still running
+                    Err(e) => {
+                        let error_msg = format!("Error checking child process status: {}", e);
+                        println!("{}", error_msg);
+                        return Err(error_msg);
+                    }
+                }
+                
+                // Read from stdout
+                if let Ok(n) = reader.read(&mut buffer) {
+                    if n > 0 {
+                        let output = String::from_utf8_lossy(&buffer[..n]).to_string();
+                        println!("{}", output);
+                    }
+                }
+                
+                // Read from stderr
+                if let Ok(n) = err_reader.read(&mut err_buffer) {
+                    if n > 0 {
+                        let output = String::from_utf8_lossy(&err_buffer[..n]).to_string();
+                        println!("{}", output);
+                    }
+                }
+                
+                // Small sleep to prevent tight CPU loops
+                std::thread::sleep(std::time::Duration::from_millis(10));
             }
-            Ok(output)
+            
+            // Wait for the child process to finish if it hasn't already
+            match child.wait() {
+                Ok(status) => {
+                    if status.success() {
+                        let success_msg = "Command completed successfully";
+                        println!("{}", success_msg);
+                        Ok(())
+                    } else {
+                        let error_msg = format!("Command exited with non-zero status: {}", status);
+                        println!("{}", error_msg);
+                        Err(error_msg)
+                    }
+                },
+                Err(e) => {
+                    let error_msg = format!("Failed to wait for command: {}", e);
+                    println!("{}", error_msg);
+                    Err(error_msg)
+                },
+            }
         },
-        Err(e) => Err(format!("Failed to execute command: {}", e)),
+        Err(e) => {
+            let error_msg = format!("Failed to spawn command: {}", e);
+            println!("{}", error_msg);
+            Err(error_msg)
+        },
     }
 }
 
-/// Runs an interactive command, handling stdin/stdout for automated interactions
-pub async fn run_interactive_command(
-    command: &str,
-    args: &[&str],
-    working_dir: &Path,
-    responses: &[(&str, &str)]
-) -> Result<(), String> {
-    println!("Running interactive command: {} {:?}", command, args);
+/// Emit progress events to the frontend
+pub fn emit_progress(app_handle: &AppHandle, step: &str, message: &str, progress: f32) {
+    let payload = serde_json::json!({
+        "step": step,
+        "message": message,
+        "progress": progress,
+    });
     
-    // Create command with piped stdin/stdout
-    let mut cmd = Command::new(command);
-    cmd.args(args)
-        .current_dir(working_dir)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    
-    // Spawn the command
-    let mut child = match cmd.spawn() {
-        Ok(child) => child,
-        Err(e) => return Err(format!("Failed to execute command: {}", e)),
-    };
-    
-    // Get handles to stdin and stdout
-    let mut stdin = child.stdin.take().expect("Failed to open stdin");
-    let mut stdout = io::BufReader::new(child.stdout.take().expect("Failed to open stdout"));
-    
-    // Buffer for reading stdout
-    let mut buffer = [0; 1024];
-    
-    // Process each expected prompt and provide the response
-    for (prompt, response) in responses {
-        // Read until we find the prompt
-        let mut found_prompt = false;
-        let mut output_str = String::new();
-        
-        while !found_prompt {
-            match stdout.read(&mut buffer) {
-                Ok(0) => break, // EOF
-                Ok(n) => {
-                    let chunk = String::from_utf8_lossy(&buffer[0..n]);
-                    output_str.push_str(&chunk);
-                    
-                    // Check if our prompt is in the output
-                    if output_str.contains(prompt) {
-                        found_prompt = true;
-                    }
-                },
-                Err(e) => return Err(format!("Error reading from stdout: {}", e)),
-            }
-        }
-        
-        // Write our response
-        if found_prompt {
-            writeln!(stdin, "{}", response).map_err(|e| format!("Failed to write to stdin: {}", e))?;
-        }
-    }
-    
-    // Wait for the process to complete
-    let status = child.wait().map_err(|e| format!("Error waiting for command to complete: {}", e))?;
-    
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("Command failed with exit code: {:?}", status.code()))
+    // In Tauri v2, we use the emit method from the Emitter trait
+    if let Err(e) = app_handle.emit("generation-progress", payload) {
+        println!("Failed to emit progress event: {}", e);
     }
 }
 
@@ -179,13 +248,4 @@ pub fn modify_import(path: &Path, action: &str, import: &str) -> Result<(), Stri
     
     fs::write(path, new_content)
         .map_err(|e| format!("Failed to write to file '{}': {}", path.display(), e))
-}
-
-/// Emit progress events to the frontend
-pub fn emit_progress(app_handle: &AppHandle, step: &str, message: &str, progress: f32) {
-    let _ = app_handle.emit("generation-progress", serde_json::json!({
-        "step": step,
-        "message": message,
-        "progress": progress,
-    }));
 } 

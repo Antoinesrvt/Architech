@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
 import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
-import ProgressIndicator from '../ProgressIndicator';
 import CommandPreview from '../CommandPreview';
-import { GenerationProgress } from '@/lib/api/types';
 import { WizardStepProps } from '../types';
 import WizardCard from '../WizardCard';
+import { GenerationPage } from './GenerationPage';
 
 export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBackToDashboard }: WizardStepProps) {
   const { frameworks, modules } = useFrameworkStore();
@@ -24,10 +23,7 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
     saveDraft
   } = useProjectStore();
 
-  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
-  const [currentStep, setCurrentStep] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [showGenerationPage, setShowGenerationPage] = useState(false);
 
   // Get the selected framework
   const selectedFramework = selectedFrameworkId 
@@ -37,50 +33,25 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
   // Get the selected modules
   const selectedModules = modules.filter(module => selectedModuleIds.includes(module.id));
 
-  // Set up progress listener
-  useEffect(() => {
-    const unsubscribe = frameworkService.listenToProgress((progress) => {
-      setCurrentStep(progress.step);
-      setGenerationProgress(progress);
-    });
-    
-    return () => unsubscribe();
-  }, []);
-
-  // Handle project generation
-  const handleGenerateProject = async () => {
-    setError(null);
-    setSuccess(false);
-    
-    try {
-      // Generate project using the store method
-      await generateProject();
-      setSuccess(true);
-    } catch (err) {
-      console.error('Project generation failed:', err);
-      setError(err instanceof Error ? err.message : String(err));
-    }
+  // Start generation and show the generation page
+  const handleStartGeneration = () => {
+    saveDraft();
+    setShowGenerationPage(true);
   };
 
-  // Handle opening the project in an editor
-  const handleOpenInEditor = async () => {
-    if (!projectPath || !projectName) return;
-    
-    try {
-      await frameworkService.openInEditor(`${projectPath}/${projectName}`);
-    } catch (error) {
-      console.error('Failed to open in editor:', error);
-      setError('Failed to open project in editor');
-    }
-  };
+  // If we're showing the generation page, render that instead
+  if (showGenerationPage) {
+    return <GenerationPage onBackToDashboard={onBackToDashboard} />;
+  }
 
   return (
     <WizardCard
       title="Project Summary"
       description="Review your project configuration and the CLI commands that will be executed."
       canGoPrevious={canGoPrevious}
-      canGoNext={false}
+      canGoNext={true}
       onPrevious={onPrevious}
+      onNext={handleStartGeneration}
       onBackToDashboard={onBackToDashboard}
       isFormValid={true}
       isLoading={isLoading}
@@ -89,16 +60,10 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
       onSave={() => saveDraft()}
       stepNumber={5}
       totalSteps={5}
-      nextButtonText="Generate"
+      nextButtonText="Generate Project"
     >
       <div className="space-y-6">
-        <div className="alert alert-info mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <div>
-            <h3 className="font-bold">Command-Line First Approach</h3>
-            <div className="text-xs">We'll use official CLI tools to create your project with the latest versions</div>
-          </div>
-        </div>
+ 
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Project Details Section */}
@@ -213,61 +178,6 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
             </div>
           </div>
         </div>
-
-        {/* Generation Progress */}
-        {isLoading && (
-          <div className="card bg-base-300 shadow-sm">
-            <div className="card-body">
-              <h3 className="card-title">Generating Project</h3>
-              <ProgressIndicator 
-                progress={generationProgress} 
-                isComplete={success}
-                error={error || projectError}
-              />
-              {generationProgress && (
-                <p className="text-center mt-2">{generationProgress.message}</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {(error || projectError) && !isLoading && (
-          <div className="alert alert-error">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>{error || projectError}</span>
-          </div>
-        )}
-
-        {/* Success Message */}
-        {success && (
-          <div className="alert alert-success">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>Project generated successfully!</span>
-            <button 
-              className="btn btn-sm btn-primary"
-              onClick={handleOpenInEditor}
-            >
-              Open in Editor
-            </button>
-          </div>
-        )}
-
-        {/* Generate Button */}
-        {!isLoading && !success && (
-          <div className="flex justify-center mt-8">
-            <button 
-              className="btn btn-primary btn-lg animate-pulse"
-              onClick={handleGenerateProject}
-              disabled={!selectedFrameworkId || isLoading}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Generate Project
-            </button>
-          </div>
-        )}
       </div>
     </WizardCard>
   );

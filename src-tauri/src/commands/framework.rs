@@ -106,29 +106,47 @@ pub struct OptionChoice {
 fn read_json_from_data<T: for<'de> serde::Deserialize<'de>>(file_path: &str) -> Result<Vec<T>, Box<dyn Error>> {
     // Use current dir as a fallback
     let current_dir = std::env::current_dir().unwrap_or_default();
+    println!("Current directory: {}", current_dir.display());
     let mut paths = Vec::new();
     
     // Try standard directories for resources
     // 1. Use the resources directory (next to the executable)
     if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())) {
-        paths.push(exe_dir.join("resources").join("data").join(file_path));
+        let resource_path = exe_dir.join("resources").join("data").join(file_path);
+        println!("Checking executable resources path: {}", resource_path.display());
+        paths.push(resource_path);
     }
     
     // 2. Use the app config directory
     if let Some(config_dir) = dirs::config_dir() {
         let app_name = tauri::Config::default().identifier.clone();
-        paths.push(config_dir.join(app_name).join("data").join(file_path));
+        let config_path = config_dir.join(app_name).join("data").join(file_path);
+        println!("Checking config directory path: {}", config_path.display());
+        paths.push(config_path);
     }
     
-    // 3. Current directory fallback
-    paths.push(current_dir.join("data").join(file_path));
+    // 3. Look for a parent directory in dev mode
+    // When running in dev mode, the current directory might be src-tauri
+    // So we need to check one level up
+    let parent_dir = current_dir.parent().unwrap_or(&current_dir);
+    let parent_path = parent_dir.join("data").join(file_path);
+    println!("Checking parent directory path: {}", parent_path.display());
+    paths.push(parent_path);
+    
+    // 4. Current directory fallback
+    let current_path = current_dir.join("data").join(file_path);
+    println!("Checking current directory path: {}", current_path.display());
+    paths.push(current_path);
     
     for path in paths {
+        println!("Attempting to read from: {}", path.display());
         if path.exists() {
-            println!("Reading from path: {}", path.display());
+            println!("Found file at path: {}", path.display());
             let content = fs::read_to_string(&path)?;
             let data: Vec<T> = serde_json::from_str(&content)?;
             return Ok(data);
+        } else {
+            println!("File not found at: {}", path.display());
         }
     }
     

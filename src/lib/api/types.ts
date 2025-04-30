@@ -10,8 +10,10 @@ export interface ProjectConfig {
   modules: ModuleConfig[];
   options: {
     typescript: boolean;
-    appRouter: boolean;
+    app_router: boolean;
     eslint: boolean;
+    cli_execution?: boolean;
+    verbose_logging?: boolean;
   };
 }
 

@@ -8,3 +8,6 @@ export * from './EarlyAccess';
 export * from './Footer';
 export * from './types';
 export * from './hooks';
+export * from './Testimonials';
+export * from './testimonialData';
+export * from './SectionWrapper';

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Menu, X, Braces } from 'lucide-react';
-import { NavItem } from './types';
+import { NavItem, SectionProps } from './types';
 
 interface HeaderProps {
   scrolled: boolean;
-  activeSection: string;
-  scrollToSection: (sectionId: string) => void;
+  activeSection: string | null;
+  scrollToSection: (section: string) => void;
 }
 
 const navItems: NavItem[] = [
@@ -23,49 +23,50 @@ export const Header = ({ scrolled, activeSection, scrollToSection }: HeaderProps
   
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-gray-900/90 backdrop-blur-sm shadow-md py-3"
-          : "bg-transparent py-5"
+          ? "bg-gray-900/90 backdrop-blur-md py-4 shadow-lg"
+          : "bg-transparent py-6"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center">
-          <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-            <Braces size={18} className="text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">
-            The Architect
-          </span>
-        </div>
+        <button
+          onClick={() => scrollToSection("hero")}
+          className={`text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600 transition-all duration-300 transform hover:scale-105`}
+        >
+          The Architect
+        </button>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
+        {/* Nav items - hidden on mobile */}
+        <nav className="hidden md:flex items-center space-x-1">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => scrollToSection(item.id)}
-              className={`text-sm transition-colors ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 relative group ${
                 activeSection === item.id
-                  ? "text-blue-400 font-medium"
-                  : "text-gray-300 hover:text-white"
+                  ? "text-white"
+                  : "text-gray-400 hover:text-white"
               }`}
             >
               {item.name}
+              <span 
+                className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-600 transform origin-left transition-transform duration-300 rounded-full ${
+                  activeSection === item.id ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`}
+              ></span>
             </button>
           ))}
         </nav>
 
-        {/* CTA Button */}
-        <div className="hidden md:block">
-          <button
-            onClick={() => scrollToSection("access")}
-            className="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all"
-          >
-            Get Early Access
-          </button>
-        </div>
+        {/* CTA button */}
+        <button
+          onClick={() => scrollToSection("access")}
+          className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-700 to-indigo-700 text-white text-sm font-medium transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-lg hover:shadow-purple-900/30 hover:from-purple-600 hover:to-indigo-600 active:translate-y-0 active:shadow-none"
+        >
+          Early Access
+        </button>
 
         {/* Mobile menu button */}
         <button

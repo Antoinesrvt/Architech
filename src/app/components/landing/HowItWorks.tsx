@@ -1,50 +1,39 @@
 import { Search, Cpu, Code, CheckCircle, ArrowRight, Layout, Server, Database, Shield } from 'lucide-react';
 import { useStepAnimation } from './hooks';
 import { ProcessStep, SectionProps, TechItem } from './types';
+import { SectionWrapper } from './SectionWrapper';
 
 export const HowItWorks = ({ sectionRef, isVisible, scrollToSection }: SectionProps) => {
   const { activeStep, setActiveStep } = useStepAnimation(isVisible || false);
 
   return (
-    <section
-      ref={sectionRef}
+    <SectionWrapper
+      sectionRef={sectionRef}
+      isVisible={isVisible}
+      scrollToSection={scrollToSection}
       id="how-it-works"
       className="py-24 bg-gradient-to-b from-gray-900 to-gray-950"
+      heading={{
+        title: "How The Architect Works",
+        titleClasses: "text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600",
+        subtitle: "A simple three-step process that transforms the development workflow."
+      }}
     >
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Section heading */}
-        <SectionHeading />
+      {/* Process steps */}
+      <ProcessSteps 
+        activeStep={activeStep} 
+        isVisible={isVisible} 
+      />
 
-        {/* Process steps */}
-        <ProcessSteps 
-          activeStep={activeStep} 
-          isVisible={isVisible} 
-        />
-
-        {/* Interactive process visualization */}
-        <ProcessVisualization 
-          activeStep={activeStep} 
-          setActiveStep={setActiveStep} 
-          isVisible={isVisible} 
-        />
-      </div>
-    </section>
+      {/* Interactive process visualization */}
+      <ProcessVisualization 
+        activeStep={activeStep} 
+        setActiveStep={setActiveStep} 
+        isVisible={isVisible} 
+      />
+    </SectionWrapper>
   );
 };
-
-const SectionHeading = () => (
-  <div className="text-center mb-16">
-    <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-      <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
-        How The Architect Works
-      </span>
-    </h2>
-    <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-      A simple three-step process that transforms the development
-      workflow.
-    </p>
-  </div>
-);
 
 const ProcessSteps = ({ 
   activeStep, 
@@ -86,7 +75,7 @@ const ProcessSteps = ({
   return (
     <div className="grid md:grid-cols-3 gap-8 mb-16 relative">
       {/* Connection lines */}
-      <div className="hidden md:block absolute top-16 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-green-500 z-0"></div>
+      <div className="hidden md:block absolute top-16 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-green-500 z-0" aria-hidden="true"></div>
 
       {steps.map((step, index) => {
         const isActive = activeStep === index;
@@ -101,6 +90,7 @@ const ProcessSteps = ({
                 : "opacity-0 translate-y-8"
             } ${isActive ? "scale-105" : "scale-100"}`}
             style={{ transitionDelay: `${index * 100}ms` }}
+            aria-hidden={!isVisible}
           >
             <div
               className={`p-6 rounded-xl ${step.bgColor} border ${
@@ -108,9 +98,12 @@ const ProcessSteps = ({
               } h-full transition-all duration-300 ${
                 isActive ? "shadow-lg shadow-blue-900/20" : ""
               }`}
+              role="region"
+              aria-label={`Step ${index + 1}: ${step.title}`}
+              tabIndex={isActive ? 0 : -1}
             >
               {/* Step number */}
-              <div className="w-10 h-10 rounded-full bg-gray-900 border-2 border-gray-700 flex items-center justify-center mb-6 mx-auto">
+              <div className="w-10 h-10 rounded-full bg-gray-900 border-2 border-gray-700 flex items-center justify-center mb-6 mx-auto" aria-hidden="true">
                 <span
                   className={`font-bold ${
                     isActive ? step.color : "text-gray-400"
@@ -123,6 +116,7 @@ const ProcessSteps = ({
               {/* Step icon */}
               <div
                 className={`w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center ${step.bgColor} ${step.borderColor} border`}
+                aria-hidden="true"
               >
                 <StepIcon size={32} className={step.color} />
               </div>
@@ -138,7 +132,7 @@ const ProcessSteps = ({
 
             {/* Connection arrow */}
             {index < 2 && (
-              <div className="hidden md:block absolute top-1/3 -right-4 z-20">
+              <div className="hidden md:block absolute top-1/3 -right-4 z-20" aria-hidden="true">
                 <ArrowRight size={24} className="text-gray-600" />
               </div>
             )}
@@ -174,13 +168,14 @@ const ProcessVisualization = ({
           ? "opacity-100 transform translate-y-0"
           : "opacity-0 transform translate-y-16"
       }`}
+      aria-hidden={!isVisible}
     >
       {/* Visualization header */}
       <div className="flex items-center justify-between mb-8">
         <h3 className="text-xl font-medium text-white">
           Interactive Demonstration
         </h3>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2" role="tablist" aria-label="Process steps">
           {[0, 1, 2].map((index) => (
             <button
               key={index}
@@ -191,6 +186,9 @@ const ProcessVisualization = ({
               }`}
               onClick={() => setActiveStep(index)}
               aria-label={`Step ${index + 1}`}
+              aria-selected={activeStep === index}
+              role="tab"
+              tabIndex={activeStep === index ? 0 : -1}
             ></button>
           ))}
         </div>
@@ -199,7 +197,7 @@ const ProcessVisualization = ({
       {/* Step content visualization */}
       <div className="flex flex-col md:flex-row">
         {/* Left panel: Input */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-4" role="tabpanel" aria-labelledby={`step-${activeStep + 1}`}>
           {activeStep === 0 && (
             <RequirementsInput />
           )}
@@ -230,6 +228,7 @@ const ProcessVisualization = ({
           onClick={() =>
             setActiveStep((prev) => (prev < 2 ? prev + 1 : 0))
           }
+          aria-label={activeStep === 2 ? "Start again" : "Continue to next step"}
         >
           {activeStep === 2 ? "Start Again" : "Next Step"}
         </button>
@@ -239,7 +238,7 @@ const ProcessVisualization = ({
 };
 
 const RequirementsInput = () => (
-  <div className="bg-gray-950 rounded-lg p-4 border border-gray-800 font-mono text-xs text-gray-300">
+  <div className="bg-gray-950 rounded-lg p-4 border border-gray-800 font-mono text-xs text-gray-300" role="document" aria-label="Developer requirements">
     <div className="text-blue-400 mb-2">
       // Developer Requirements
     </div>
@@ -267,7 +266,7 @@ const RequirementsInput = () => (
 );
 
 const TechnologyAnalysis = ({ technologies }: { technologies: TechItem[] }) => (
-  <div className="bg-gray-950 rounded-lg p-4 border border-gray-800">
+  <div className="bg-gray-950 rounded-lg p-4 border border-gray-800" role="document" aria-label="Technology analysis">
     <div className="text-purple-400 mb-4 font-mono text-xs">
       // Technology Graph Analysis
     </div>
@@ -282,6 +281,7 @@ const TechnologyAnalysis = ({ technologies }: { technologies: TechItem[] }) => (
             <TechIcon
               size={18}
               className="text-purple-400 mr-2"
+              aria-hidden="true"
             />
             <span className="text-gray-300 text-sm">
               {tech.name}
@@ -308,7 +308,7 @@ const GenerationComplete = () => {
   ];
 
   return (
-    <div className="bg-gray-950 rounded-lg p-4 border border-gray-800">
+    <div className="bg-gray-950 rounded-lg p-4 border border-gray-800" role="document" aria-label="Generation complete">
       <div className="text-green-400 mb-4 font-mono text-xs">
         // Generation Complete
       </div>
@@ -321,6 +321,7 @@ const GenerationComplete = () => {
             <CheckCircle
               size={16}
               className="text-green-400 mr-2 flex-shrink-0"
+              aria-hidden="true"
             />
             <span className="text-sm">{item}</span>
           </div>
@@ -335,6 +336,8 @@ const OutputPanel = ({ activeStep }: { activeStep: number }) => (
     className={`bg-gray-950 rounded-lg border overflow-hidden transition-all duration-500 ${
       activeStep === 2 ? "border-green-900/50" : "border-gray-800"
     }`}
+    role="region"
+    aria-label="Output preview"
   >
     <div className="bg-gray-900 px-4 py-2 flex items-center justify-between">
       <div className="text-gray-300 font-medium flex items-center">
@@ -347,6 +350,7 @@ const OutputPanel = ({ activeStep }: { activeStep: number }) => (
               ? "text-purple-400"
               : "text-green-400"
           }`}
+          aria-hidden="true"
         />
         Project Preview
       </div>
@@ -376,6 +380,7 @@ const OutputPanel = ({ activeStep }: { activeStep: number }) => (
               <Search
                 size={32}
                 className="text-blue-400 animate-pulse"
+                aria-hidden="true"
               />
             </div>
             <div className="text-gray-400">
@@ -392,6 +397,7 @@ const OutputPanel = ({ activeStep }: { activeStep: number }) => (
               <Cpu
                 size={32}
                 className="text-purple-400 animate-pulse"
+                aria-hidden="true"
               />
             </div>
             <div className="text-gray-400">
@@ -404,7 +410,7 @@ const OutputPanel = ({ activeStep }: { activeStep: number }) => (
       {activeStep === 2 && (
         <div className="font-mono text-xs text-gray-400 space-y-2">
           <div className="flex items-center text-green-400">
-            <CheckCircle size={12} className="mr-2" />
+            <CheckCircle size={12} className="mr-2" aria-hidden="true" />
             <span>Project ready! Generated in 15 seconds.</span>
           </div>
           <div className="ml-4 space-y-1">

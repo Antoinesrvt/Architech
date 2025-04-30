@@ -24,7 +24,7 @@ const mockFrameworks: Framework[] = [
           flag: "--typescript",
           default: true
         },
-        appRouter: {
+        app_router: {
           flag: "--app",
           default: true
         }

@@ -21,7 +21,7 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
   // State for framework options (though they're fixed for now)
   const [frameworkOptions, setFrameworkOptions] = useState({
     typescript: true,
-    appRouter: true,
+    app_router: true,
     eslint: true
   });
 

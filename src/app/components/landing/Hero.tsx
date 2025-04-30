@@ -1,7 +1,11 @@
-import { ChevronDown, Clock, Code, Shield } from 'lucide-react';
+import { ChevronDown, Clock, Code, Shield, PlayCircle } from 'lucide-react';
 import { SectionProps } from './types';
+import { useState } from 'react';
+import VideoDemo from './videodemo';
 
 export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
+  const [showDemo, setShowDemo] = useState(false);
+  
   return (
     <section
       ref={sectionRef}
@@ -28,52 +32,62 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         {/* Main heading with animated gradient text */}
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-4">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
-            Build Beyond Boilerplate
+            From Weeks To <span className="text-white">Minutes</span>
           </span>
         </h1>
 
         {/* Subheading */}
         <p className="mt-6 text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl">
-          The Architect generates production-ready foundations in minutes,
-          eliminating weeks of configuration. Focus on what matters—creating
-          features, not configuring infrastructure.
+          The Architect generates production-ready foundations in 15 minutes,
+          eliminating <span className="text-white font-medium">30+ hours</span> of configuration work. 
+          Build what matters—unique features, not boilerplate.
         </p>
 
+        {/* Video demo mockup */}
+        {/* <VideoDemo setShowDemo={setShowDemo} /> */}
+
         {/* CTA section */}
-        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
           <button
-            onClick={() => scrollToSection("access")}
-            className="px-8 py-4 rounded-lg bg-purple-700 hover:bg-purple-600 text-white font-medium text-lg transition-all duration-300 flex items-center shadow-lg shadow-purple-900/40"
+            onClick={() => scrollToSection('access')}
+            className="px-6 py-3 bg-gradient-to-r from-purple-700 to-indigo-700 rounded-lg text-white font-medium shadow-lg shadow-purple-900/20 transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-xl hover:shadow-purple-900/30 hover:from-purple-600 hover:to-indigo-600 active:translate-y-0 active:shadow-md"
           >
             Get Early Access
           </button>
           <button
-            onClick={() => scrollToSection("howItWorks")}
-            className="flex items-center mt-4 sm:mt-0 text-gray-300 hover:text-white transition-colors"
+            onClick={() => scrollToSection('howItWorks')}
+            className="px-6 py-3 bg-gray-800/80 rounded-lg text-white font-medium transition-all duration-300 group relative overflow-hidden"
           >
-            <span>See how it works</span>
-            <ChevronDown size={16} className="ml-1" />
+            <span className="relative z-10">See How It Works</span>
+            <span className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
           </button>
         </div>
 
         {/* Social proof */}
-        <div className="mt-12 text-gray-400 flex items-center">
-          <div className="flex -space-x-2 mr-3">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className={`w-8 h-8 rounded-full bg-gradient-to-br border-2 border-gray-800 ${
-                  i % 2 === 0
-                    ? "from-blue-500 to-purple-600"
-                    : "from-purple-600 to-pink-500"
-                }`}
-              ></div>
-            ))}
+        <div className="mt-12 text-gray-400 flex flex-col items-center mb-8">
+          <div className="flex items-center">
+            <div className="flex -space-x-2 mr-3">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-8 h-8 rounded-full bg-gradient-to-br border-2 border-gray-800 ${
+                    i % 2 === 0
+                      ? "from-blue-500 to-purple-600"
+                      : "from-purple-600 to-pink-500"
+                  }`}
+                ></div>
+              ))}
+            </div>
+            <span>
+              <span className="font-semibold text-white">342+</span> developers 
+              already waiting
+            </span>
           </div>
-          <span>
-            <span className="font-semibold text-white">342+</span> developers
-            already waiting
-          </span>
+          {/* <div className="mt-4 px-6 py-2 bg-gray-900/40 backdrop-blur-sm rounded-full border border-gray-800">
+            <span className="text-sm">
+              <span className="text-green-400">★★★★★</span> Rated <span className="font-semibold text-white">4.9/5</span> by beta testers
+            </span>
+          </div> */}
         </div>
       </div>
 
@@ -86,6 +100,45 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
           <div className="w-1 h-3 bg-gray-400 rounded-full animate-bounce"></div>
         </div>
       </div>
+      
+      {/* Demo modal */}
+      {showDemo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowDemo(false)}>
+          <div className="w-full max-w-4xl aspect-video bg-black relative" onClick={e => e.stopPropagation()}>
+            <button 
+              className="absolute -top-10 right-0 text-white hover:text-purple-400 transition-colors"
+              onClick={() => setShowDemo(false)}
+            >
+              Close preview
+            </button>
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-white text-center max-w-lg">
+                <div className="mb-4 flex justify-center">
+                  <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center justify-center border border-purple-500/50">
+                    <Code size={30} className="text-purple-400" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-medium mb-2">The Architect in Action</h3>
+                <p className="text-gray-400 mb-6">
+                  In this demo, you'll see how The Architect turns a simple project description into a complete, production-ready application foundation in under a minute.
+                </p>
+                <div className="w-full h-12 bg-gray-800 rounded-lg overflow-hidden mb-4 relative">
+                  <div className="absolute inset-0 flex items-center px-4">
+                    <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="w-2/3 h-full bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors">
+                    Get notified when full demo is released
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
@@ -115,7 +168,7 @@ const FeatureHighlights = () => {
         {features.map((feature, index) => {
           const FeatureIcon = feature.icon;
           return (
-            <div key={index} className="bg-gray-900/40 backdrop-blur-sm p-4 rounded-lg border border-gray-800 flex items-center">
+            <div key={index} className="bg-gray-900/40 backdrop-blur-sm p-4 rounded-lg border border-gray-800 flex items-center transform hover:translate-y-[-2px] hover:bg-gray-900/60 hover:border-gray-700 transition-all duration-300">
               <FeatureIcon size={24} className="text-blue-400 mr-3 flex-shrink-0" />
               <div>
                 <div className="text-white font-medium">{feature.title}</div>

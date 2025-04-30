@@ -288,12 +288,15 @@ export const useProjectStore = create<ProjectState>()(
           })),
           options: {
             typescript: true,
-            appRouter: true,
+            app_router: true, // Using app_router to match backend expectations
             eslint: true,
-            cli_execution: true, // Flag indicating we're using CLI approach
-            verbose_logging: true // Generate detailed logs of CLI operations
+            cli_execution: true,
+            verbose_logging: true
           }
         };
+        
+        // Log the config for debugging
+        console.log('Project generation config:', JSON.stringify(config, null, 2));
         
         // Call API to generate project - this will use CLI tools
         const projectId = await frameworkService.generateProject(config);
@@ -320,9 +323,19 @@ export const useProjectStore = create<ProjectState>()(
         
         return projectId;
       } catch (error) {
+        console.error('Project generation error:', error);
+        
+        // Provide a more helpful error message
+        let errorMessage = error instanceof Error ? error.message : String(error);
+        
+        // Special handling for known errors
+        if (errorMessage.includes('app_router')) {
+          errorMessage = 'There was an issue with the Next.js App Router configuration. Please try again.';
+        }
+        
         set({ 
           isLoading: false, 
-          error: error instanceof Error ? error.message : String(error)
+          error: errorMessage
         });
         return Promise.reject(error);
       }

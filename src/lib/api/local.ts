@@ -309,7 +309,15 @@ export class LocalFrameworkService implements FrameworkService {
       });
       return path;
     } catch (error) {
+      // Log the error for debugging
       console.error('Failed to browse for directory:', error);
+      
+      // If this is a "No directory selected" error, return null instead of throwing
+      if (error instanceof Error && error.message.includes('No directory selected')) {
+        return null;
+      }
+      
+      // For other errors, still return null but log it
       return null;
     }
   }

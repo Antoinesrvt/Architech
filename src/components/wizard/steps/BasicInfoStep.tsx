@@ -42,7 +42,8 @@ export function BasicInfoStep() {
 
   // Handle project name change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
+    // Always convert to lowercase to prevent capitalization issues
+    const name = e.target.value.toLowerCase();
     setProjectName(name);
     
     setFormErrors(prev => ({
@@ -71,9 +72,20 @@ export function BasicInfoStep() {
           path: '',
         }));
         saveDraft();
+      } else {
+        // Silently handle the case where no directory was selected
+        // User might have just closed the dialog
+        console.log('No directory was selected');
       }
     } catch (error) {
       console.error('Failed to browse for directory:', error);
+      // Only show an error if it's not simply a "No directory selected" error
+      if (String(error).indexOf('No directory selected') === -1) {
+        setFormErrors(prev => ({
+          ...prev,
+          path: `Error selecting directory: ${error}`,
+        }));
+      }
     } finally {
       setIsSelectingPath(false);
     }

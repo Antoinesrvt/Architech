@@ -207,196 +207,155 @@ export default function CommandPreview({
         </div>
       </div>
 
-      <div className="mockup-code bg-neutral/90 text-neutral-content relative shadow-md overflow-hidden border border-base-300">
+      {/* Mac-style terminal */}
+      <div className="overflow-hidden border border-slate-500/30 rounded-lg shadow-lg">
         {/* Terminal header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center px-4 py-1 bg-neutral-focus text-neutral-content/80 text-xs">
-          <div className="flex space-x-1 mr-2">
-            <div className="w-3 h-3 rounded-full bg-error"></div>
-            <div className="w-3 h-3 rounded-full bg-warning"></div>
-            <div className="w-3 h-3 rounded-full bg-success"></div>
+        <div className="bg-slate-700 p-2 flex items-center">
+          <div className="flex space-x-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
           </div>
-          <div className="flex-1 text-center font-sans opacity-70">terminal</div>
+          <div className="flex-1 text-center text-xs text-white/70 font-sans">terminal</div>
         </div>
 
-        {/* Main content with extra padding for header */}
-        <div className="pt-6">
-          {/* Fancy highlight effect */}
-          <div className="absolute top-6 left-0 right-0 h-1 bg-gradient-to-r from-primary via-secondary to-accent"></div>
-          
-          <pre 
-            data-prefix="$" 
-            className={cn(
-              "transition-all duration-300 hover:bg-neutral-focus",
-              activeLineIndex >= 0 ? "bg-neutral-focus/50" : ""
-            )}
-          >
-            <code>
-              <span className="text-primary font-bold">npx</span> 
-              <span className="text-info">{formatFrameworkCommand().replace(/^npx /, '')}</span>
-            </code>
-          </pre>
-          
-          <pre 
-            data-prefix=">" 
-            className={cn(
-              "text-success animate-slideIn animation-delay-100",
-              activeLineIndex >= 1 ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-            )}
-          >
-            <code>Creating project...</code>
-          </pre>
-          
-          <pre 
-            data-prefix=">" 
-            className={cn(
-              "text-success",
-              activeLineIndex >= 2 ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-            )}
-          >
-            <code>Framework installed!</code>
-          </pre>
-          
-          {modules.length > 0 && (
-            <pre 
-              data-prefix="#" 
-              className={cn(
-                "text-warning",
-                activeLineIndex >= 3 ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-              )}
-            >
-              <code>Installing modules...</code>
-            </pre>
+        {/* Gradient divider */}
+        <div className="h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+
+        {/* Terminal content */}
+        <div className="bg-slate-800 text-white p-4 space-y-1 font-mono text-xs sm:text-sm overflow-x-auto">
+          <div className="flex">
+            <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+            <span className="flex-1">
+              <span className="text-cyan-400">npx</span> 
+              <span className="text-green-400">{formatFrameworkCommand().replace(/^npx /, '')}</span>
+            </span>
+          </div>
+
+          {activeLineIndex >= 1 && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+              <span className="text-green-400">Creating project...</span>
+            </div>
           )}
-          
+
+          {activeLineIndex >= 2 && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+              <span className="text-green-400">Framework installed!</span>
+            </div>
+          )}
+
+          {modules.length > 0 && activeLineIndex >= 3 && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">#</span>
+              <span className="text-yellow-400">Installing modules...</span>
+            </div>
+          )}
+
           {/* Module installation commands */}
           {expanded && modules.map((module, index) => (
             <div key={`module-${module.id}`}>
               {module.installation.commands.map((command, cmdIndex) => (
-                <pre 
-                  key={`cmd-${index}-${cmdIndex}`}
-                  data-prefix="$"
-                  className={cn(
-                    "transition-all duration-300 hover:bg-neutral-focus",
-                    activeLineIndex >= 4 + index + cmdIndex ? "bg-neutral-focus/30" : "",
-                    activeLineIndex < 4 + index + cmdIndex ? "opacity-0 h-0 overflow-hidden" : "opacity-100"
-                  )}
-                >
-                  <code>
-                    {command.startsWith('npm') ? (
-                      <>
-                        <span className="text-primary font-bold">npm</span> 
-                        <span className="text-cyan-400">{command.replace(/^npm /, '')}</span>
-                      </>
-                    ) : command.startsWith('npx') ? (
-                      <>
-                        <span className="text-primary font-bold">npx</span> 
-                        <span className="text-cyan-400">{command.replace(/^npx /, '')}</span>
-                      </>
-                    ) : (
-                      command
-                    )}
-                  </code>
-                </pre>
+                activeLineIndex >= 4 + index + cmdIndex && (
+                  <div 
+                    key={`cmd-${index}-${cmdIndex}`}
+                    className="flex"
+                  >
+                    <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+                    <span>
+                      {command.startsWith('npm') ? (
+                        <>
+                          <span className="text-cyan-400">npm</span> 
+                          <span className="text-green-400">{command.replace(/^npm /, '')}</span>
+                        </>
+                      ) : command.startsWith('npx') ? (
+                        <>
+                          <span className="text-cyan-400">npx</span> 
+                          <span className="text-green-400">{command.replace(/^npx /, '')}</span>
+                        </>
+                      ) : (
+                        <span className="text-white">{command}</span>
+                      )}
+                    </span>
+                  </div>
+                )
               ))}
             </div>
           ))}
           
+          {/* Simplified view for collapsed state */}
           {!expanded && modules.length > 0 && (
-            <pre 
-              data-prefix="$"
-              className="bg-neutral-focus/30"
-            >
-              <code>
-                <span className="text-primary font-bold">{modules.length > 0 ? 'npm' : 'npx'}</span> 
-                <span className="text-cyan-400">install {modules.map(m => m.id).join(' ')}</span>
-                {modules.length > 2 && <span className="text-warning"> // ...and more</span>}
-              </code>
-            </pre>
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+              <span>
+                <span className="text-cyan-400">{modules.length > 0 ? 'npm' : 'npx'}</span> 
+                <span className="text-green-400">install {modules.map(m => m.id).join(' ')}</span>
+                {modules.length > 2 && <span className="text-yellow-400"> // ...and more</span>}
+              </span>
+            </div>
           )}
           
+          {/* Modules installed message */}
           {modules.length > 0 && activeLineIndex > 3 + getModuleCommands().length && (
-            <pre 
-              data-prefix=">" 
-              className={cn(
-                "text-success",
-                activeLineIndex >= 4 + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-              )}
-            >
-              <code>All modules installed!</code>
-            </pre>
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+              <span className="text-green-400">All modules installed!</span>
+            </div>
           )}
           
-          {/* File operations summary */}
-          {totalFileOps > 0 && (
-            <>
-              <pre 
-                data-prefix="#" 
-                className={cn(
-                  "text-warning",
-                  activeLineIndex >= 5 + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-                )}
-              >
-                <code>Applying file operations...</code>
-              </pre>
-              
-              {fileOperations.create > 0 && (
-                <pre 
-                  data-prefix="$" 
-                  className={cn(
-                    "bg-neutral-focus/30",
-                    activeLineIndex >= 6 + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-                  )}
-                >
-                  <code>Creating {fileOperations.create} file(s)...</code>
-                </pre>
-              )}
-              
-              {fileOperations.modify > 0 && (
-                <pre 
-                  data-prefix="$" 
-                  className={cn(
-                    "bg-neutral-focus/30",
-                    activeLineIndex >= 7 + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-                  )}
-                >
-                  <code>Modifying {fileOperations.modify} file(s)...</code>
-                </pre>
-              )}
-              
-              {fileOperations.other > 0 && (
-                <pre 
-                  data-prefix="$" 
-                  className={cn(
-                    "bg-neutral-focus/30",
-                    activeLineIndex >= 8 + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-                  )}
-                >
-                  <code>Other operations: {fileOperations.other}</code>
-                </pre>
-              )}
-              
-              <pre 
-                data-prefix=">" 
-                className={cn(
-                  "text-success",
-                  activeLineIndex >= 9 + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-                )}
-              >
-                <code>File operations complete!</code>
-              </pre>
-            </>
+          {/* File operations */}
+          {totalFileOps > 0 && activeLineIndex >= 5 + getModuleCommands().length && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">#</span>
+              <span className="text-yellow-400">Applying file operations...</span>
+            </div>
+          )}
+          
+          {fileOperations.create > 0 && activeLineIndex >= 6 + getModuleCommands().length && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+              <span className="text-white">Creating {fileOperations.create} file(s)...</span>
+            </div>
+          )}
+          
+          {fileOperations.modify > 0 && activeLineIndex >= 7 + getModuleCommands().length && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+              <span className="text-white">Modifying {fileOperations.modify} file(s)...</span>
+            </div>
+          )}
+          
+          {fileOperations.other > 0 && activeLineIndex >= 8 + getModuleCommands().length && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+              <span className="text-white">Other operations: {fileOperations.other}</span>
+            </div>
+          )}
+          
+          {totalFileOps > 0 && activeLineIndex >= 9 + getModuleCommands().length && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+              <span className="text-green-400">File operations complete!</span>
+            </div>
           )}
           
           {/* Project ready */}
-          <pre 
-            data-prefix=">" 
-            className={cn(
-              "text-success",
-              activeLineIndex >= (totalFileOps > 0 ? 10 : 5) + getModuleCommands().length ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-            )}
-          >
-            <code>Project ready! 🚀</code>
-          </pre>
+          {activeLineIndex >= (totalFileOps > 0 ? 10 : 5) + getModuleCommands().length && (
+            <div className="flex">
+              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+              <span className="text-green-400">Project ready! 🚀</span>
+            </div>
+          )}
+          
+          {/* Cursor */}
+          <div className="flex">
+            <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+            <span className="relative">
+              <span className="invisible">_</span>
+              <span className="absolute top-0 left-0 w-2 h-4 bg-white/70 animate-pulse"></span>
+            </span>
+          </div>
         </div>
       </div>
 

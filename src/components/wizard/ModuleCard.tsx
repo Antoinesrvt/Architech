@@ -60,13 +60,13 @@ export default function ModuleCard({
       <div className="card-body p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center">
-            {/* <input 
+            <input 
               type="checkbox" 
               className="checkbox checkbox-primary mr-3" 
               checked={selected} 
               readOnly
               disabled={disabled}
-            /> */}
+            />
             <div>
               <h3 className="font-bold">{module.name} <span className="text-xs opacity-70">v{module.version}</span></h3>
               <p className="text-sm opacity-70">{module.description}</p>
@@ -74,6 +74,11 @@ export default function ModuleCard({
           </div>
           
           <div className="flex gap-2">
+            {module.logo && (
+              <div className="w-10 h-10 rounded bg-base-200 flex items-center justify-center">
+                <img src={module.logo} alt={module.name} className="w-8 h-8 object-contain" />
+              </div>
+            )}
             <span className={`badge ${getCategoryColor(module.category)}`}>
               {module.category}
             </span>

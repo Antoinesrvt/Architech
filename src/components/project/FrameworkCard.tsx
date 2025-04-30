@@ -41,6 +41,16 @@ export default function FrameworkCard({ framework, selected = false, onSelect }:
           )}
         </div>
         
+        {framework.logo && (
+          <figure className="mt-4">
+            <img
+              src={framework.logo}
+              alt={`${framework.name} logo`}
+              className="rounded-lg h-20 object-contain mx-auto"
+            />
+          </figure>
+        )}
+        
         <div className="card-actions justify-end mt-4">
           <button 
             className="btn btn-primary btn-sm"

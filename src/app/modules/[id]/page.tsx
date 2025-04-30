@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/layouts/MainLayout";
 import { useFrameworkStore } from "@/lib/store";
-import { Module, FileOperation, Transform, ModuleOption } from "@/lib/store/framework-store";
+import { Module, FileOperation, ModuleOption } from "@/lib/store/framework-store";
 import { frameworkService } from "@/lib/api";
 
 // // This function is required for Next.js static site generation with dynamic routes
@@ -195,7 +195,7 @@ export default function ModuleDetailPage() {
                 </div>
                 
                 {/* File operations */}
-                {module.installation.files.length > 0 && (
+                {module.installation.file_operations.length > 0 && (
                   <div className="mt-6">
                     <h3 className="font-bold text-lg">File Operations</h3>
                     <p className="text-base-content/70 text-sm">
@@ -205,43 +205,15 @@ export default function ModuleDetailPage() {
                       <table className="table table-zebra w-full">
                         <thead>
                           <tr>
-                            <th>Destination</th>
-                            <th>Source</th>
+                            <th>Path</th>
+                            <th>Operation</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {module.installation.files.map((file: FileOperation, index: number) => (
+                          {module.installation.file_operations.map((file: FileOperation, index: number) => (
                             <tr key={index}>
-                              <td className="font-mono text-sm">{file.destination}</td>
-                              <td className="font-mono text-sm">{file.source}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Transformations */}
-                {module.installation.transforms.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="font-bold text-lg">Code Transformations</h3>
-                    <p className="text-base-content/70 text-sm">
-                      This module will modify the following files:
-                    </p>
-                    <div className="overflow-x-auto mt-2">
-                      <table className="table table-zebra w-full">
-                        <thead>
-                          <tr>
-                            <th>File</th>
-                            <th>Change Type</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {module.installation.transforms.map((transform: Transform, index: number) => (
-                            <tr key={index}>
-                              <td className="font-mono text-sm">{transform.file}</td>
-                              <td>Pattern replacement</td>
+                              <td className="font-mono text-sm">{file.path}</td>
+                              <td className="font-mono text-sm">{file.operation}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -278,7 +250,7 @@ export default function ModuleDetailPage() {
             </div>
             
             {/* Incompatibilities */}
-            {module.incompatibleWith.length > 0 && (
+            {module.incompatible_with.length > 0 && (
               <div className="card bg-base-100 shadow-lg">
                 <div className="card-body">
                   <h2 className="card-title text-error">Incompatibilities</h2>
@@ -286,7 +258,7 @@ export default function ModuleDetailPage() {
                     This module cannot be used with:
                   </p>
                   <div className="space-y-2 mt-2">
-                    {module.incompatibleWith.map((inc: string) => (
+                    {module.incompatible_with.map((inc: string) => (
                       <div key={inc} className="flex items-center p-2 bg-error/10 text-error rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -306,8 +278,8 @@ export default function ModuleDetailPage() {
                   <h2 className="card-title">Configuration Options</h2>
                   <div className="space-y-4 mt-2">
                     {module.configuration.options.map((option: ModuleOption) => (
-                      <div key={option.name} className="border-b pb-3 last:border-0">
-                        <h3 className="font-bold">{option.name}</h3>
+                      <div key={option.id} className="border-b pb-3 last:border-0">
+                        <h3 className="font-bold">{option.label}</h3>
                         <p className="text-base-content/70 text-sm">{option.description}</p>
                         <div className="mt-1 flex flex-wrap gap-1">
                           <span className="badge badge-sm">{option.type}</span>
@@ -319,12 +291,12 @@ export default function ModuleDetailPage() {
                             </span>
                           )}
                         </div>
-                        {option.options && option.options.length > 0 && (
+                        {option.choices && option.choices.length > 0 && (
                           <div className="mt-2">
                             <p className="text-xs font-medium">Available options:</p>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {option.options.map((opt: string) => (
-                                <span key={opt} className="badge badge-sm badge-outline">{opt}</span>
+                              {option.choices.map((choice) => (
+                                <span key={choice.value} className="badge badge-sm badge-outline">{choice.label}</span>
                               ))}
                             </div>
                           </div>

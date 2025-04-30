@@ -11,6 +11,7 @@ export interface Framework {
   cli: FrameworkCli;
   compatible_modules: string[];
   directory_structure: DirectoryStructure;
+  logo?: string;
 }
 
 export interface FrameworkCli {
@@ -50,6 +51,7 @@ export interface Module {
   incompatible_with: string[];
   installation: ModuleInstallation;
   configuration: ModuleConfiguration;
+  logo?: string;
 }
 
 export interface ModuleInstallation {

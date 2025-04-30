@@ -67,13 +67,13 @@ export default function FrameworkCard({
       <div className="card-body p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {/* <input 
+            <input 
               type="radio" 
               className="radio radio-primary" 
               checked={selected} 
               readOnly
               disabled={disabled}
-            /> */}
+            />
             <div>
               <h3 className="font-bold text-lg">{framework.name} <span className="text-xs opacity-70">v{framework.version}</span></h3>
               <p className="text-sm opacity-70">{framework.description}</p>
@@ -81,6 +81,11 @@ export default function FrameworkCard({
           </div>
           
           <div className="flex gap-2 items-start">
+            {framework.logo && (
+              <div className="w-12 h-12 rounded bg-base-200 flex items-center justify-center">
+                <img src={framework.logo} alt={framework.name} className="w-10 h-10 object-contain" />
+              </div>
+            )}
             <span className={`badge ${getTypeColor(framework.type)}`}>
               {framework.type}
             </span>

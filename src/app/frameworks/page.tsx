@@ -146,11 +146,11 @@ export default function FrameworksPage() {
                 onClick={() => handleFrameworkClick(framework.id)}
               >
                 <figure className="h-40 bg-gradient-to-br from-primary/5 to-secondary/5">
-                  {framework.screenshot ? (
+                  {framework.logo ? (
                     <img
-                      src={framework.screenshot}
+                      src={framework.logo}
                       alt={framework.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain p-4"
                     />
                   ) : (
                     <div className="flex items-center justify-center w-full h-full">

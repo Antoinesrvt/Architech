@@ -29,10 +29,10 @@ export function ConfigurationStep() {
   const selectedModules = modules.filter(module => selectedModuleIds.includes(module.id));
 
   // Handle configuration change for a module option
-  const handleConfigChange = (moduleId: string, optionName: string, value: any) => {
+  const handleConfigChange = (moduleId: string, optionId: string, value: any) => {
     setModuleConfiguration(moduleId, {
       ...moduleConfigurations[moduleId],
-      [optionName]: value,
+      [optionId]: value,
     });
   };
 
@@ -46,7 +46,7 @@ export function ConfigurationStep() {
 
   // Render different input types based on option type
   const renderOptionInput = (module: Module, option: ModuleOption) => {
-    const currentValue = moduleConfigurations[module.id]?.[option.name] ?? option.default;
+    const currentValue = moduleConfigurations[module.id]?.[option.id] ?? option.default;
     
     switch (option.type) {
       case 'boolean':
@@ -57,9 +57,9 @@ export function ConfigurationStep() {
                 type="checkbox"
                 className="toggle toggle-primary"
                 checked={!!currentValue}
-                onChange={(e) => handleConfigChange(module.id, option.name, e.target.checked)}
+                onChange={(e) => handleConfigChange(module.id, option.id, e.target.checked)}
               />
-              <span className="label-text ml-2">{option.description}</span>
+              <span className="label-text ml-2">{option.label || option.description}</span>
             </label>
           </div>
         );
@@ -68,15 +68,15 @@ export function ConfigurationStep() {
         return (
           <div className="form-control w-full">
             <label className="label">
-              <span className="label-text">{option.description}</span>
+              <span className="label-text">{option.label || option.description}</span>
             </label>
             <select
               className="select select-bordered w-full"
               value={currentValue as string}
-              onChange={(e) => handleConfigChange(module.id, option.name, e.target.value)}
+              onChange={(e) => handleConfigChange(module.id, option.id, e.target.value)}
             >
-              {option.options?.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
+              {option.choices?.map(choice => (
+                <option key={choice.value} value={choice.value}>{choice.label}</option>
               ))}
             </select>
           </div>
@@ -87,13 +87,13 @@ export function ConfigurationStep() {
         return (
           <div className="form-control w-full">
             <label className="label">
-              <span className="label-text">{option.description}</span>
+              <span className="label-text">{option.label || option.description}</span>
             </label>
             <input
               type="text"
               className="input input-bordered w-full"
               value={currentValue as string}
-              onChange={(e) => handleConfigChange(module.id, option.name, e.target.value)}
+              onChange={(e) => handleConfigChange(module.id, option.id, e.target.value)}
             />
           </div>
         );

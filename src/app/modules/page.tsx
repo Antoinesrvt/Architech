@@ -60,7 +60,7 @@ export default function ModulesPage() {
     
     // Populate the map
     frameworks.forEach(framework => {
-      framework.compatibleModules.forEach(moduleId => {
+      framework.compatible_modules.forEach((moduleId: string) => {
         if (!usageMap.has(moduleId)) {
           usageMap.set(moduleId, new Set());
         }

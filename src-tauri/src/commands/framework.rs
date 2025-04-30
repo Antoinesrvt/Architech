@@ -2,8 +2,8 @@ use serde::{Serialize, Deserialize};
 use tauri::command;
 use tauri::async_runtime::block_on;
 use std::fs;
-use std::path::Path;
 use std::error::Error;
+use dirs;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Framework {
@@ -104,22 +104,24 @@ pub struct OptionChoice {
 }
 
 fn read_json_from_data<T: for<'de> serde::Deserialize<'de>>(file_path: &str) -> Result<Vec<T>, Box<dyn Error>> {
-    // Try to find the file in both resource and app directories
-    let resource_dir = tauri::api::path::resource_dir(&tauri::Config::default());
-    let app_dir = tauri::api::path::app_dir(&tauri::Config::default());
-    
+    // Use current dir as a fallback
+    let current_dir = std::env::current_dir().unwrap_or_default();
     let mut paths = Vec::new();
     
-    if let Some(dir) = &resource_dir {
-        paths.push(dir.join("data").join(file_path));
+    // Try standard directories for resources
+    // 1. Use the resources directory (next to the executable)
+    if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())) {
+        paths.push(exe_dir.join("resources").join("data").join(file_path));
     }
     
-    if let Some(dir) = &app_dir {
-        paths.push(dir.join("data").join(file_path));
+    // 2. Use the app config directory
+    if let Some(config_dir) = dirs::config_dir() {
+        let app_name = tauri::Config::default().identifier.clone();
+        paths.push(config_dir.join(app_name).join("data").join(file_path));
     }
     
-    // Current directory fallback
-    paths.push(Path::new("data").join(file_path).to_path_buf());
+    // 3. Current directory fallback
+    paths.push(current_dir.join("data").join(file_path));
     
     for path in paths {
         if path.exists() {

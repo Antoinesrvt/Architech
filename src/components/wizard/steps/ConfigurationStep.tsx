@@ -167,7 +167,7 @@ export function ConfigurationStep() {
               {module.configuration?.options?.length > 0 ? (
                 <div className="space-y-4">
                   {module.configuration.options.map(option => (
-                    <div key={option.name}>
+                    <div key={option.id}>
                       {renderOptionInput(module, option)}
                     </div>
                   ))}

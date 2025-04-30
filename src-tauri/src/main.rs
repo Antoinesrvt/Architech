@@ -12,19 +12,22 @@ mod commands;
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            get_projects,
-            add_project,
-            edit_project,
-            delete_project,
+            // Framework/Module commands
             get_frameworks,
             get_templates,
             get_modules,
+            
+            // Project commands
             validate_project_config,
             generate_project,
-            get_system_info,
+            
+            // System commands
             browse_directory,
             open_in_editor,
         ])
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

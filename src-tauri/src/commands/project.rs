@@ -1,17 +1,14 @@
 use serde::{Serialize, Deserialize};
 use tauri::command;
-use tauri::Manager;
-use std::process::{Command as ProcessCommand};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::fs;
 use uuid::Uuid;
-use std::error::Error;
-use regex::Regex;
 
 use super::command_runner::{run_command, run_interactive_command, create_file, modify_file, modify_import, emit_progress};
-use super::framework::{get_framework_by_id, get_module_by_id};
+use super::framework::get_framework_by_id;
+use tauri::async_runtime;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectConfig {
     pub name: String,
     pub path: String,
@@ -20,13 +17,13 @@ pub struct ProjectConfig {
     pub options: ProjectOptions,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ModuleConfig {
     pub id: String,
     pub options: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectOptions {
     pub typescript: bool,
     pub app_router: bool,
@@ -91,7 +88,7 @@ fn create_directory_structure(project_dir: &Path, directories: &[String]) -> Res
 // Function to resolve module dependencies
 fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
     // Get all available modules
-    let all_modules = match super::framework::block_on(super::framework::get_modules()) {
+    let all_modules = match async_runtime::block_on(super::framework::get_modules()) {
         Ok(modules) => modules,
         Err(e) => return Err(format!("Failed to get modules: {}", e)),
     };
@@ -204,7 +201,7 @@ async fn generate_project_with_cli(
         }
         
         // For position-based arguments, add them to cmd_args
-        for (arg_name, arg_value) in &framework.cli.arguments {
+        for (_arg_name, arg_value) in &framework.cli.arguments {
             if let Some(arg_obj) = arg_value.as_object() {
                 if let (Some(position), Some(value)) = (
                     arg_obj.get("position").and_then(|p| p.as_u64()),
@@ -257,7 +254,7 @@ async fn generate_project_with_cli(
         );
         
         // Find the module config from the user selections
-        let module_config = config.modules.iter()
+        let _module_config = config.modules.iter()
             .find(|m| m.id == module.id)
             .map(|m| &m.options)
             .unwrap_or(&serde_json::json!({}));
@@ -300,44 +297,6 @@ async fn generate_project_with_cli(
     emit_progress(app_handle, "complete", "Project generation complete", 1.0);
     
     Ok(())
-}
-
-fn emit_progress(app_handle: &tauri::AppHandle, step: &str, message: &str, progress: f32) {
-    let _ = app_handle.emit_all("generation-progress", GenerationProgress {
-        step: step.to_string(),
-        message: message.to_string(),
-        progress,
-    });
-}
-
-#[command]
-pub async fn browse_directory(title: String) -> Result<String, String> {
-    let options = tauri::api::dialog::FileDialogBuilder::new()
-        .set_title(&title)
-        .set_directory_only(true);
-        
-    match options.pick_folder() {
-        Some(path) => {
-            let path_str = path.to_string_lossy().to_string();
-            Ok(path_str)
-        },
-        None => Err("No directory selected".to_string()),
-    }
-}
-
-#[command]
-pub async fn open_in_editor(path: String, editor: String) -> Result<(), String> {
-    // Default to 'code' (VS Code) if empty
-    let editor_command = if editor.trim().is_empty() { "code" } else { &editor };
-    
-    let result = ProcessCommand::new(editor_command)
-        .arg(path)
-        .spawn();
-        
-    match result {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to open in editor: {}", e)),
-    }
 }
 
 #[command]

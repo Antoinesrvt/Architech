@@ -1,10 +1,11 @@
 use std::process::{Command, Output, Stdio};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::fs;
 use std::io::{self, Write};
+use std::io::Read;
 use regex::Regex;
-use tauri::async_runtime::{block_on, spawn};
 use tauri::AppHandle;
+use tauri::Emitter;
 
 /// Runs a command asynchronously with the given arguments and working directory
 pub async fn run_command(
@@ -182,7 +183,7 @@ pub fn modify_import(path: &Path, action: &str, import: &str) -> Result<(), Stri
 
 /// Emit progress events to the frontend
 pub fn emit_progress(app_handle: &AppHandle, step: &str, message: &str, progress: f32) {
-    let _ = app_handle.emit_all("generation-progress", serde_json::json!({
+    let _ = app_handle.emit("generation-progress", serde_json::json!({
         "step": step,
         "message": message,
         "progress": progress,

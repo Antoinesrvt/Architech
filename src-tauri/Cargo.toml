@@ -20,12 +20,13 @@ tauri-build = { version = "2.0.0", features = [] }
 [dependencies]
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
-tauri = { version = "2.0.0", features = ["devtools"] }
+tauri = { version = "2.5.1", features = ["devtools"] }
 tauri-plugin-opener = "2.0.0"
 tauri-plugin-dialog = "2.0.0"
 tauri-plugin-shell = "2.0.0"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 regex = "1.10.2"
+dirs = "6.0.0"
 
 [features]
 # by default Tauri runs in production mode

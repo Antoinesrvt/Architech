@@ -174,14 +174,23 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
   // Check if we're in a Tauri environment
   const isTauri = window && (window as any).__TAURI__;
   
+  // Debug logging
+  console.log(`Invoking ${command} with args:`, args);
+  
   if (isTauri) {
     try {
+      let result;
+      
       // Try the core.invoke approach first (newer Tauri versions)
       if ((window as any).__TAURI__.core?.invoke) {
-        return await (window as any).__TAURI__.core.invoke(command, args);
+        result = await (window as any).__TAURI__.core.invoke(command, args);
+      } else {
+        // Try the direct invoke from import
+        result = await invoke(command, args);
       }
-      // Try the direct invoke from import
-      return await invoke(command, args);
+      
+      console.log(`${command} result:`, result);
+      return result;
     } catch (error) {
       console.error(`Error invoking ${command}:`, error);
       throw error;
@@ -297,7 +306,7 @@ export class LocalFrameworkService implements FrameworkService {
 
   async getProjectStatus(projectId: string): Promise<ProjectGenerationState> {
     try {
-      return await safeInvoke<ProjectGenerationState>('get_project_status', { project_id: projectId });
+      return await safeInvoke<ProjectGenerationState>('get_project_status', { projectId });
     } catch (error) {
       console.error('Failed to get project status:', error);
       throw error;
@@ -306,7 +315,7 @@ export class LocalFrameworkService implements FrameworkService {
 
   async getProjectLogs(projectId: string): Promise<string[]> {
     try {
-      return await safeInvoke<string[]>('get_project_logs', { project_id: projectId });
+      return await safeInvoke<string[]>('get_project_logs', { projectId });
     } catch (error) {
       console.error('Failed to get project logs:', error);
       throw error;
@@ -315,7 +324,7 @@ export class LocalFrameworkService implements FrameworkService {
 
   async cancelProjectGeneration(projectId: string): Promise<void> {
     try {
-      await safeInvoke<void>('cancel_project_generation', { project_id: projectId });
+      await safeInvoke<void>('cancel_project_generation', { projectId });
     } catch (error) {
       console.error('Failed to cancel project generation:', error);
       throw error;

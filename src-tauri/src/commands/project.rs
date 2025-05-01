@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use tauri::command;
 use std::path::Path;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectConfig {
@@ -28,6 +29,12 @@ pub struct ProjectOptions {
 pub struct ValidationResult {
     pub valid: bool,
     pub errors: Vec<String>,
+}
+
+// Command parameter structs
+#[derive(Deserialize)]
+pub struct ProjectIdParam {
+    pub projectId: String,
 }
 
 #[command]
@@ -130,31 +137,31 @@ pub async fn generate_project(
 
 #[command]
 pub async fn get_project_status(
-    project_id: String,
+    param: ProjectIdParam,
     state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<crate::state::ProjectGenerationState, String> {
-    state.get_project(&project_id)
+    state.get_project(&param.projectId)
 }
 
 #[command]
 pub async fn get_project_logs(
-    project_id: String,
+    param: ProjectIdParam,
     state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<Vec<String>, String> {
-    let project = state.get_project(&project_id)?;
+    let project = state.get_project(&param.projectId)?;
     Ok(project.logs)
 }
 
 #[command]
 pub async fn cancel_project_generation(
-    project_id: String,
+    param: ProjectIdParam,
     state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<(), String> {
     // Get project state
     let mut projects = state.projects.lock().map_err(|e| format!("Failed to lock projects state: {}", e))?;
     
     // Check if project exists
-    if let Some(project) = projects.get_mut(&project_id) {
+    if let Some(project) = projects.get_mut(&param.projectId) {
         // Mark as cancelled - this will stop future tasks from running
         project.status = crate::state::TaskStatus::Failed("Generation cancelled by user".to_string());
         
@@ -167,6 +174,6 @@ pub async fn cancel_project_generation(
         
         Ok(())
     } else {
-        Err(format!("Project not found: {}", project_id))
+        Err(format!("Project not found: {}", param.projectId))
     }
 } 

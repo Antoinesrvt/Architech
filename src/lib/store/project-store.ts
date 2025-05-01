@@ -337,8 +337,15 @@ export const useProjectStore = create<ProjectState>()(
         // Setup listeners for this generation
         get().setupGenerationListeners();
         
-        // Get initial status
-        await get().getGenerationStatus();
+        // Get initial status after a short delay to allow backend to initialize
+        setTimeout(async () => {
+          try {
+            await get().getGenerationStatus();
+            await get().getGenerationLogs();
+          } catch (error) {
+            console.error('Failed to get initial status/logs:', error);
+          }
+        }, 500);
         
         // Add to recent projects
         const newProject: RecentProject = {
@@ -389,7 +396,21 @@ export const useProjectStore = create<ProjectState>()(
         return status;
       } catch (error) {
         console.error('Failed to get generation status:', error);
-        // Don't set error state here to avoid interrupting the UI
+        // Don't immediately set error state to avoid interrupting the UI
+        // We'll retry on the next poll interval
+        
+        // But if we've been failing repeatedly, we should update the UI
+        if (get().isLoading) {
+          // After 5 seconds of failing, give up and show error
+          setTimeout(() => {
+            if (get().isLoading) {
+              set({ 
+                isLoading: false,
+                error: error instanceof Error ? error.message : String(error)
+              });
+            }
+          }, 5000);
+        }
       }
     },
     

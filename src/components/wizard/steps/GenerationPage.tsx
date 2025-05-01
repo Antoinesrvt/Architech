@@ -59,11 +59,15 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       clearInterval(pollInterval);
     }
 
-    // Poll every 2 seconds
+    // Get initial status immediately
+    getGenerationStatus();
+    getGenerationLogs();
+
+    // Poll every 1 second instead of 2
     const interval = setInterval(async () => {
       await getGenerationStatus();
       await getGenerationLogs();
-    }, 2000);
+    }, 1000);
 
     setPollInterval(interval);
     
@@ -171,7 +175,8 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       return 'Initializing...';
     }
     
-    const currentTask = generationState.tasks[generationState.current_task];
+    const currentTask = generationState.tasks && generationState.current_task ? 
+      generationState.tasks[generationState.current_task] : null;
     return currentTask ? currentTask.name : 'Processing...';
   };
 
@@ -198,7 +203,16 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   };
 
   const renderTaskList = () => {
-    if (!generationState || !generationState.tasks) return null;
+    if (!generationState || !generationState.tasks || Object.keys(generationState.tasks).length === 0) {
+      return (
+        <div className="mt-4 space-y-2">
+          <h4 className="font-medium">Generation Tasks</h4>
+          <div className="p-4 text-center bg-base-300 rounded-lg">
+            <p className="text-sm opacity-75">Waiting for tasks to initialize...</p>
+          </div>
+        </div>
+      );
+    }
     
     // Sort tasks by status: running first, then pending, then completed, then failed
     const sortedTasks = Object.values(generationState.tasks).sort((a, b) => {
@@ -334,6 +348,17 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                   style={{ width: `${getProgressPercentage()}%` }}
                 />
               </div>
+
+              {/* Initial Loading State */}
+              {isLoading && !generationState && (
+                <div className="flex flex-col items-center justify-center p-4">
+                  <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+                  <h3 className="font-bold text-lg">Starting Project Generation</h3>
+                  <p className="text-center text-sm opacity-75">
+                    Initializing task runner, please wait...
+                  </p>
+                </div>
+              )}
 
               {/* Current Action */}
               {generationState && isLoading && !isGenerationSuccessful() && !isGenerationFailed() && (

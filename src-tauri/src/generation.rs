@@ -121,6 +121,16 @@ impl ProjectGenerator {
         // Project directory
         let project_dir = Path::new(&config.path).join(&config.name);
         
+        // Get all modules with their dependencies resolved
+        let module_ids = config.modules.iter().map(|m| m.id.clone()).collect::<Vec<String>>();
+        let ordered_modules = crate::commands::project::resolve_module_dependencies(&module_ids).await?;
+        
+        // Log the resolved modules
+        self.app_state.add_log(project_id, &format!("Resolved {} modules with dependencies", ordered_modules.len()))?;
+        for module in &ordered_modules {
+            self.app_state.add_log(project_id, &format!("- {} ({})", module.name, module.id))?;
+        }
+        
         // Create tasks with the correct dependencies
         
         // Task 1: Create Project Directory
@@ -159,14 +169,11 @@ impl ProjectGenerator {
         };
         self.app_state.add_task(project_id, structure_task)?;
         
-        // Get the modules
-        let module_ids = config.modules.iter().map(|m| m.id.clone()).collect::<Vec<String>>();
-        let ordered_modules = crate::commands::project::resolve_module_dependencies(&module_ids).await?;
+        // Create module dependency map - we'll use this to ensure each module's dependencies are installed first
+        let mut module_task_ids = std::collections::HashMap::new();
         
-        // Create a task for each module
-        let mut previous_module_task_id = structure_task_id.clone();
-        
-        for module in ordered_modules {
+        // First pass: Create a task for each module but make all depend on the structure task for now
+        for module in &ordered_modules {
             let module_task_id = format!("module_{}_{}", module.id, Uuid::new_v4());
             let module_task = GenerationTask {
                 id: module_task_id.clone(),
@@ -174,23 +181,73 @@ impl ProjectGenerator {
                 description: format!("Installing and configuring the {} module", module.name),
                 status: TaskStatus::Pending,
                 progress: 0.0,
-                dependencies: vec![previous_module_task_id.clone()],
+                // Start with just depending on directory structure
+                dependencies: vec![structure_task_id.clone()],
             };
-            self.app_state.add_task(project_id, module_task)?;
+            self.app_state.add_task(project_id, module_task.clone())?;
             
-            // Update for next module dependency
-            previous_module_task_id = module_task_id;
+            // Store the task ID for this module
+            module_task_ids.insert(module.id.clone(), module_task_id.clone());
         }
         
-        // Add final cleanup task
+        // Second pass: Update dependencies for each module based on their actual dependencies
+        for module in &ordered_modules {
+            if let Some(task_id) = module_task_ids.get(&module.id) {
+                // Get current task
+                if let Ok(project) = self.app_state.get_project(project_id) {
+                    if let Some(mut task) = project.tasks.get(task_id).cloned() {
+                        // Start with framework structure dependency
+                        let mut deps = vec![structure_task_id.clone()];
+                        
+                        // Add dependencies for each module dependency
+                        for dep_id in &module.dependencies {
+                            if let Some(dep_task_id) = module_task_ids.get(dep_id) {
+                                deps.push(dep_task_id.clone());
+                            }
+                        }
+                        
+                        // Update the task dependencies
+                        task.dependencies = deps;
+                        
+                        // Update the task in the state
+                        let mut projects = self.app_state.projects.lock().map_err(|e| format!("Failed to lock projects: {}", e))?;
+                        if let Some(project) = projects.get_mut(project_id) {
+                            project.tasks.insert(task_id.clone(), task);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Log the created tasks with their dependencies
+        if let Ok(project) = self.app_state.get_project(project_id) {
+            self.app_state.add_log(project_id, "Created the following generation tasks:")?;
+            for task in project.tasks.values() {
+                let deps = task.dependencies.iter()
+                    .filter_map(|dep_id| project.tasks.get(dep_id).map(|t| t.name.clone()))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                
+                self.app_state.add_log(project_id, &format!("- {} (depends on: {})", task.name, deps))?;
+            }
+        }
+        
+        // Add final cleanup task - it depends on all module tasks
         let cleanup_task_id = format!("cleanup_{}", Uuid::new_v4());
+        let module_task_ids_vec: Vec<String> = module_task_ids.values().cloned().collect();
+        
         let cleanup_task = GenerationTask {
             id: cleanup_task_id.clone(),
             name: "Project Cleanup".to_string(),
             description: "Performing final cleanup and optimization".to_string(),
             status: TaskStatus::Pending,
             progress: 0.0,
-            dependencies: vec![previous_module_task_id.clone()],
+            dependencies: if !module_task_ids_vec.is_empty() {
+                module_task_ids_vec
+            } else {
+                // If no modules, depend on structure task
+                vec![structure_task_id.clone()]
+            },
         };
         self.app_state.add_task(project_id, cleanup_task)?;
         
@@ -539,7 +596,7 @@ impl ProjectGenerator {
     // Module setup implementation
     async fn setup_module(
         module_id: &str,
-        _config: &crate::commands::project::ProjectConfig,
+        config: &crate::commands::project::ProjectConfig,
         project_dir: &Path,
         app_handle: AppHandle
     ) -> Result<(), String> {
@@ -551,6 +608,32 @@ impl ProjectGenerator {
         
         // Log
         app_handle.emit("log-message", format!("Setting up module: {}", module.name)).unwrap();
+        
+        // Ensure that package.json exists if needed for npm operations
+        let package_json_path = project_dir.join("package.json");
+        if !package_json_path.exists() && !module.installation.commands.is_empty() {
+            let has_npm_commands = module.installation.commands.iter()
+                .any(|cmd| cmd.starts_with("npm") || cmd.starts_with("npx"));
+                
+            if has_npm_commands {
+                app_handle.emit("log-message", "Creating package.json before npm operations").unwrap();
+                let default_package = r#"{
+  "name": "project",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}"#;
+                
+                if let Err(e) = fs::write(&package_json_path, default_package) {
+                    app_handle.emit("log-message", format!("Warning: Failed to create package.json: {}", e)).unwrap();
+                } else {
+                    // Allow time for the file system to register the new file
+                    sleep(Duration::from_millis(500)).await;
+                }
+            }
+        }
         
         // Process each command
         for (i, cmd) in module.installation.commands.iter().enumerate() {
@@ -566,18 +649,46 @@ impl ProjectGenerator {
             let cmd_name = parts[0];
             let cmd_args = &parts[1..];
             
-            // Execute command
-            match ProjectGenerator::execute_command(cmd_name, cmd_args, project_dir).await {
-                Ok(result) => {
-                    if !result.success {
-                        app_handle.emit("log-message", format!("Command failed: {}", result.stderr)).unwrap();
-                        // Log but continue - we don't want to fail the whole process for a single command
+            // Add retry logic for commands that might fail due to timing issues
+            let max_retries = 3;
+            let mut success = false;
+            
+            for attempt in 1..=max_retries {
+                match ProjectGenerator::execute_command(cmd_name, cmd_args, project_dir).await {
+                    Ok(result) => {
+                        if result.success {
+                            success = true;
+                            break;
+                        } else {
+                            let error_msg = format!("Command failed (attempt {}/{}): {}", attempt, max_retries, result.stderr);
+                            app_handle.emit("log-message", &error_msg).unwrap();
+                            
+                            if attempt == max_retries {
+                                app_handle.emit("log-message", "All attempts failed, continuing with next command").unwrap();
+                            } else {
+                                // Wait longer between retries
+                                sleep(Duration::from_secs(1)).await;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        let error_msg = format!("Command execution error (attempt {}/{}): {}", attempt, max_retries, e);
+                        app_handle.emit("log-message", &error_msg).unwrap();
+                        
+                        if attempt == max_retries {
+                            app_handle.emit("log-message", "All attempts failed, continuing with next command").unwrap();
+                        } else {
+                            // Wait longer between retries
+                            sleep(Duration::from_secs(1)).await;
+                        }
                     }
-                },
-                Err(e) => {
-                    app_handle.emit("log-message", format!("Command execution error: {}", e)).unwrap();
-                    // Continue with next command
                 }
+            }
+            
+            // If all retries failed but this is a critical command, we might want to fail the entire module setup
+            if !success && (cmd.contains("npm install") || cmd.contains("npx") || cmd.contains("npm i")) {
+                app_handle.emit("log-message", "Critical command failed after all retries").unwrap();
+                // We'll still try the file operations, but log a warning
             }
             
             // Add a delay between commands to ensure file system consistency
@@ -604,19 +715,37 @@ impl ProjectGenerator {
             // Apply operation
             match op.operation.as_str() {
                 "create" => {
-                    // Slightly different API than our previous implementation
-                    if let Err(e) = fs::write(&file_path, &op.content) {
-                        app_handle.emit("log-message", format!("Failed to create file: {}", e)).unwrap();
+                    // Check if file already exists before attempting to create
+                    if file_path.exists() {
+                        app_handle.emit("log-message", format!("File already exists, skipping: {}", file_path.display())).unwrap();
+                    } else {
+                        if let Err(e) = fs::write(&file_path, &op.content) {
+                            app_handle.emit("log-message", format!("Failed to create file: {}", e)).unwrap();
+                        } else {
+                            app_handle.emit("log-message", format!("Created file: {}", file_path.display())).unwrap();
+                        }
                     }
                 },
                 "modify" => {
-                    if let Err(e) = modify_file(&file_path, &op.pattern, &op.replacement) {
-                        app_handle.emit("log-message", format!("Failed to modify file: {}", e)).unwrap();
+                    if !file_path.exists() {
+                        app_handle.emit("log-message", format!("File does not exist, cannot modify: {}", file_path.display())).unwrap();
+                    } else {
+                        if let Err(e) = modify_file(&file_path, &op.pattern, &op.replacement) {
+                            app_handle.emit("log-message", format!("Failed to modify file: {}", e)).unwrap();
+                        } else {
+                            app_handle.emit("log-message", format!("Modified file: {}", file_path.display())).unwrap();
+                        }
                     }
                 },
                 "modify_import" => {
-                    if let Err(e) = modify_import(&file_path, &op.action, &op.import) {
-                        app_handle.emit("log-message", format!("Failed to modify import: {}", e)).unwrap();
+                    if !file_path.exists() {
+                        app_handle.emit("log-message", format!("File does not exist, cannot modify imports: {}", file_path.display())).unwrap();
+                    } else {
+                        if let Err(e) = modify_import(&file_path, &op.action, &op.import) {
+                            app_handle.emit("log-message", format!("Failed to modify import: {}", e)).unwrap();
+                        } else {
+                            app_handle.emit("log-message", format!("Modified imports in: {}", file_path.display())).unwrap();
+                        }
                     }
                 },
                 _ => {
@@ -628,6 +757,7 @@ impl ProjectGenerator {
             sleep(Duration::from_millis(100)).await;
         }
         
+        app_handle.emit("log-message", format!("Module {} setup completed", module.name)).unwrap();
         Ok(())
     }
     

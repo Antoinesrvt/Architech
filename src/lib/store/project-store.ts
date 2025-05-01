@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { frameworkService } from '@/lib/api';
-import { ProjectGenerationState, TaskResult } from '@/lib/api/local';
+import { ProjectGenerationState, TaskResult, TaskStatusHelpers } from '@/lib/api/local';
 
 export interface RecentProject {
   id: string;
@@ -22,6 +22,10 @@ export interface ProjectDraft {
   moduleIds: string[];
   moduleConfigurations?: Record<string, Record<string, any>>;
   lastUpdated: string;
+  generationId?: string | null;
+  generationStatus?: string;
+  generationProgress?: number;
+  generationError?: string | null;
 }
 
 interface ModuleConfig {
@@ -287,7 +291,7 @@ export const useProjectStore = create<ProjectState>()(
     },
     
     generateProject: async () => {
-      const { projectName, projectPath, selectedFrameworkId, selectedModuleIds, moduleConfigurations } = get();
+      const { projectName, projectPath, selectedFrameworkId, selectedModuleIds, moduleConfigurations, currentDraftId } = get();
       
       // Validate required fields
       if (!projectName) {
@@ -304,6 +308,9 @@ export const useProjectStore = create<ProjectState>()(
         set({ error: 'Framework selection is required' });
         return Promise.reject('Framework selection is required');
       }
+      
+      // Ensure we have a draft to track generation
+      const draftId = currentDraftId || get().createDraft();
       
       // Reset any previous generation state
       get().resetGenerationState();
@@ -334,6 +341,28 @@ export const useProjectStore = create<ProjectState>()(
         const projectId = await frameworkService.generateProject(config);
         set({ currentGenerationId: projectId });
         
+        // Update the draft with generation info
+        set((state) => ({
+          drafts: state.drafts.map(draft => 
+            draft.id === draftId
+              ? {
+                  ...draft,
+                  name: projectName || 'Untitled Project',
+                  path: projectPath,
+                  frameworkId: selectedFrameworkId,
+                  moduleIds: selectedModuleIds,
+                  moduleConfigurations: moduleConfigurations,
+                  lastUpdated: new Date().toISOString(),
+                  generationId: projectId,
+                  generationStatus: 'Running',
+                  generationProgress: 0,
+                  generationError: null
+                }
+              : draft
+          ),
+          lastSaved: new Date()
+        }));
+        
         // Setup listeners for this generation
         get().setupGenerationListeners();
         
@@ -347,24 +376,6 @@ export const useProjectStore = create<ProjectState>()(
           }
         }, 500);
         
-        // Add to recent projects
-        const newProject: RecentProject = {
-          id: projectId,
-          name: projectName,
-          path: `${projectPath}/${projectName}`,
-          framework: selectedFrameworkId,
-          createdAt: new Date().toISOString(),
-          lastOpenedAt: new Date().toISOString()
-        };
-        
-        get().addProject(newProject);
-        
-        // If we have a current draft, delete it after starting generation
-        const { currentDraftId } = get();
-        if (currentDraftId) {
-          get().deleteDraft(currentDraftId);
-        }
-        
         return projectId;
       } catch (error) {
         console.error('Project generation error:', error);
@@ -372,10 +383,21 @@ export const useProjectStore = create<ProjectState>()(
         // Provide a more helpful error message
         let errorMessage = error instanceof Error ? error.message : String(error);
         
-        set({ 
+        // Update the draft with the error
+        set((state) => ({
+          drafts: state.drafts.map(draft => 
+            draft.id === draftId
+              ? {
+                  ...draft,
+                  generationStatus: 'Failed',
+                  generationError: errorMessage
+                }
+              : draft
+          ),
           isLoading: false, 
           error: errorMessage
-        });
+        }));
+        
         return Promise.reject(error);
       }
     },
@@ -388,25 +410,84 @@ export const useProjectStore = create<ProjectState>()(
         const status = await frameworkService.getProjectStatus(currentGenerationId);
         set({ generationState: status });
         
+        // Find draft with this generation ID
+        const drafts = get().drafts;
+        const draftWithGeneration = drafts.find(d => d.generationId === currentGenerationId);
+        
+        if (draftWithGeneration) {
+          // Update draft with generation progress
+          set((state) => ({
+            drafts: state.drafts.map(draft => 
+              draft.id === draftWithGeneration.id
+                ? {
+                    ...draft,
+                    generationStatus: status.status,
+                    generationProgress: status.progress,
+                    generationError: TaskStatusHelpers.isFailed(status.status) 
+                      ? TaskStatusHelpers.getReason(status.status) || 'Generation failed'
+                      : null
+                  }
+                : draft
+            )
+          }));
+          
+          // If generation completed successfully, create the project
+          if (status.status === 'Completed') {
+            // Create the project from the draft
+            const newProject: RecentProject = {
+              id: currentGenerationId,
+              name: status.name,
+              path: `${status.path}/${status.name}`,
+              framework: status.framework,
+              createdAt: new Date().toISOString(),
+              lastOpenedAt: new Date().toISOString()
+            };
+            
+            // Add to recent projects
+            get().addProject(newProject);
+            
+            // Delete the draft
+            get().deleteDraft(draftWithGeneration.id);
+          }
+        }
+        
         // Update loading state based on generation status
-        if (status.status === 'Completed' || status.status.startsWith('Failed')) {
+        if (status.status === 'Completed' || TaskStatusHelpers.isFailed(status.status)) {
           set({ isLoading: false });
         }
         
         return status;
       } catch (error) {
         console.error('Failed to get generation status:', error);
-        // Don't immediately set error state to avoid interrupting the UI
-        // We'll retry on the next poll interval
         
         // But if we've been failing repeatedly, we should update the UI
         if (get().isLoading) {
           // After 5 seconds of failing, give up and show error
           setTimeout(() => {
             if (get().isLoading) {
+              const errorMsg = error instanceof Error ? error.message : String(error);
+              
+              // Update any draft with this generation ID
+              const drafts = get().drafts;
+              const draftWithGeneration = drafts.find(d => d.generationId === currentGenerationId);
+              
+              if (draftWithGeneration) {
+                set((state) => ({
+                  drafts: state.drafts.map(draft => 
+                    draft.id === draftWithGeneration.id
+                      ? {
+                          ...draft,
+                          generationStatus: 'Failed',
+                          generationError: errorMsg
+                        }
+                      : draft
+                  )
+                }));
+              }
+              
               set({ 
                 isLoading: false,
-                error: error instanceof Error ? error.message : String(error)
+                error: errorMsg
               });
             }
           }, 5000);
@@ -434,11 +515,50 @@ export const useProjectStore = create<ProjectState>()(
       
       try {
         await frameworkService.cancelProjectGeneration(currentGenerationId);
+        
+        // Find draft with this generation ID
+        const drafts = get().drafts;
+        const draftWithGeneration = drafts.find(d => d.generationId === currentGenerationId);
+        
+        if (draftWithGeneration) {
+          // Update draft with cancelled status
+          set((state) => ({
+            drafts: state.drafts.map(draft => 
+              draft.id === draftWithGeneration.id
+                ? {
+                    ...draft,
+                    generationStatus: 'Cancelled',
+                    generationError: 'Generation cancelled by user'
+                  }
+                : draft
+            )
+          }));
+        }
+        
         set({ isLoading: false });
         // Immediately update status to reflect cancellation
         await get().getGenerationStatus();
       } catch (error) {
         console.error('Failed to cancel generation:', error);
+        
+        // Update draft with error status
+        const drafts = get().drafts;
+        const draftWithGeneration = drafts.find(d => d.generationId === currentGenerationId);
+        
+        if (draftWithGeneration) {
+          set((state) => ({
+            drafts: state.drafts.map(draft => 
+              draft.id === draftWithGeneration.id
+                ? {
+                    ...draft,
+                    generationStatus: 'Failed',
+                    generationError: 'Failed to cancel generation'
+                  }
+                : draft
+            )
+          }));
+        }
+        
         set({ 
           isLoading: false,
           error: 'Failed to cancel project generation' 
@@ -447,6 +567,8 @@ export const useProjectStore = create<ProjectState>()(
     },
     
     setupGenerationListeners: () => {
+      const { currentGenerationId } = get();
+      
       // Set up event listeners for task updates, completion, and failure
       const unlistenTaskUpdates = frameworkService.listenToTaskUpdates((result: TaskResult) => {
         console.log('Task update received:', result);
@@ -458,6 +580,33 @@ export const useProjectStore = create<ProjectState>()(
       const unlistenComplete = frameworkService.listenToGenerationComplete((projectId: string) => {
         console.log('Generation completed:', projectId);
         if (projectId === get().currentGenerationId) {
+          // Find draft with this generation ID
+          const drafts = get().drafts;
+          const draftWithGeneration = drafts.find(d => d.generationId === projectId);
+          
+          if (draftWithGeneration) {
+            // Create project from the draft
+            get().getGenerationStatus().then(status => {
+              if (status) {
+                // Create the project from the draft
+                const newProject: RecentProject = {
+                  id: projectId,
+                  name: status.name,
+                  path: `${status.path}/${status.name}`,
+                  framework: status.framework,
+                  createdAt: new Date().toISOString(),
+                  lastOpenedAt: new Date().toISOString()
+                };
+                
+                // Add to recent projects
+                get().addProject(newProject);
+                
+                // Delete the draft
+                get().deleteDraft(draftWithGeneration.id);
+              }
+            });
+          }
+          
           set({ isLoading: false });
           get().getGenerationStatus();
           get().getGenerationLogs();
@@ -467,6 +616,25 @@ export const useProjectStore = create<ProjectState>()(
       const unlistenFailed = frameworkService.listenToGenerationFailed(({ projectId, reason }) => {
         console.log('Generation failed:', projectId, reason);
         if (projectId === get().currentGenerationId) {
+          // Find draft with this generation ID
+          const drafts = get().drafts;
+          const draftWithGeneration = drafts.find(d => d.generationId === projectId);
+          
+          if (draftWithGeneration) {
+            // Update draft with failed status
+            set((state) => ({
+              drafts: state.drafts.map(draft => 
+                draft.id === draftWithGeneration.id
+                  ? {
+                      ...draft,
+                      generationStatus: 'Failed',
+                      generationError: reason
+                    }
+                  : draft
+              )
+            }));
+          }
+          
           set({ 
             isLoading: false,
             error: `Generation failed: ${reason}`

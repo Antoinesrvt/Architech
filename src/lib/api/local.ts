@@ -174,8 +174,8 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
   // Check if we're in a Tauri environment
   const isTauri = window && (window as any).__TAURI__;
   
-  // Debug logging
-  console.log(`Invoking ${command} with args:`, args);
+  // Debug logging - better format for readability
+  console.log(`Invoking ${command} with args:`, JSON.stringify(args, null, 2));
   
   if (isTauri) {
     try {
@@ -189,10 +189,12 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
         result = await invoke(command, args);
       }
       
-      console.log(`${command} result:`, result);
+      console.log(`${command} result:`, typeof result === 'object' ? JSON.stringify(result, null, 2) : result);
       return result;
     } catch (error) {
       console.error(`Error invoking ${command}:`, error);
+      console.error(`Args were:`, JSON.stringify(args, null, 2));
+      console.error(`Command context:`, { command, commandType: typeof command, argsType: typeof args });
       throw error;
     }
   } else {
@@ -205,6 +207,23 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
       return mockFrameworks as T;
     } else if (command === 'get_modules') {
       return mockModules as T;
+    } else if (command === 'get_project_status') {
+      // Mock project status
+      return {
+        id: '123',
+        path: '/mock/path',
+        name: 'mock-project',
+        framework: 'nextjs',
+        tasks: {
+          '1': { id: '1', name: 'Task 1', description: 'Mock task', status: 'Completed', progress: 1.0, dependencies: [] }
+        },
+        current_task: null,
+        progress: 1.0,
+        status: 'Completed',
+        logs: ['Mock log 1', 'Mock log 2']
+      } as T;
+    } else if (command === 'get_project_logs') {
+      return ['Mock log 1', 'Mock log 2'] as T;
     } else {
       console.warn(`Mock for command ${command} not implemented`);
       return {} as T;
@@ -226,13 +245,43 @@ export interface ProjectGenerationState {
 }
 
 // Generation task status
-export enum TaskStatus {
-  Pending = 'Pending',
-  Running = 'Running',
-  Completed = 'Completed',
-  Failed = 'Failed',
-  Skipped = 'Skipped'
-}
+export type TaskStatus = 
+  | 'Pending'
+  | 'Running'
+  | 'Completed'
+  | string; // For "Failed: reason" and "Skipped: reason" formats
+
+// Constants for task status values
+export const TASK_STATUS = {
+  PENDING: 'Pending',
+  RUNNING: 'Running',
+  COMPLETED: 'Completed',
+} as const;
+
+// Helper methods for TaskStatus
+export const TaskStatusHelpers = {
+  isFailed: (status: TaskStatus): boolean => {
+    return typeof status === 'string' && status.startsWith('Failed:');
+  },
+  isSkipped: (status: TaskStatus): boolean => {
+    return typeof status === 'string' && status.startsWith('Skipped:');
+  },
+  getReason: (status: TaskStatus): string | null => {
+    if (typeof status !== 'string') {
+      return null;
+    }
+    
+    if (status.startsWith('Failed:')) {
+      return status.substring('Failed:'.length).trim();
+    }
+    
+    if (status.startsWith('Skipped:')) {
+      return status.substring('Skipped:'.length).trim();
+    }
+    
+    return null;
+  }
+};
 
 // Generation task
 export interface GenerationTask {
@@ -306,27 +355,28 @@ export class LocalFrameworkService implements FrameworkService {
 
   async getProjectStatus(projectId: string): Promise<ProjectGenerationState> {
     try {
-      return await safeInvoke<ProjectGenerationState>('get_project_status', { projectId });
+      return await safeInvoke<ProjectGenerationState>('get_project_status', { param: { projectId } });
     } catch (error) {
-      console.error('Failed to get project status:', error);
+      console.error('Error fetching project status:', error);
       throw error;
     }
   }
 
   async getProjectLogs(projectId: string): Promise<string[]> {
     try {
-      return await safeInvoke<string[]>('get_project_logs', { projectId });
+      return await safeInvoke<string[]>('get_project_logs', { param: { projectId } });
     } catch (error) {
-      console.error('Failed to get project logs:', error);
+      console.error('Error fetching project logs:', error);
       throw error;
     }
   }
 
   async cancelProjectGeneration(projectId: string): Promise<void> {
     try {
-      await safeInvoke<void>('cancel_project_generation', { projectId });
+      // Ensure we're using the correct param structure for Rust struct parameter
+      await safeInvoke<boolean>('cancel_project_generation', { param: { projectId } });
     } catch (error) {
-      console.error('Failed to cancel project generation:', error);
+      console.error('Error cancelling project generation:', error);
       throw error;
     }
   }

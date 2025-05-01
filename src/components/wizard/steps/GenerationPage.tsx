@@ -3,7 +3,7 @@ import { useFrameworkStore } from '@/lib/store/framework-store';
 import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
 import { Terminal, FolderOpen, RefreshCw, ArrowLeft, HomeIcon, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import { TaskStatus } from '@/lib/api/local';
+import { TaskStatus, TaskStatusHelpers, TASK_STATUS } from '@/lib/api/local';
 
 interface GenerationPageProps {
   onBackToDashboard?: () => void;
@@ -100,8 +100,8 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   useEffect(() => {
     if (generationState) {
       // If generation is complete or failed, stop polling
-      if (generationState.status === TaskStatus.Completed || 
-          generationState.status === TaskStatus.Failed) {
+      if (generationState.status === TASK_STATUS.COMPLETED || 
+          TaskStatusHelpers.isFailed(generationState.status)) {
         if (pollInterval) {
           clearInterval(pollInterval);
           setPollInterval(null);
@@ -181,22 +181,19 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   };
 
   const isGenerationSuccessful = () => {
-    return generationState && generationState.status === TaskStatus.Completed;
+    return generationState && generationState.status === TASK_STATUS.COMPLETED;
   };
 
   const isGenerationFailed = () => {
-    return generationState && (
-      generationState.status === TaskStatus.Failed || 
-      typeof generationState.status === 'string' && generationState.status.startsWith('Failed')
-    );
+    return generationState && TaskStatusHelpers.isFailed(generationState.status);
   };
 
   const getErrorDetails = () => {
     if (projectError) return projectError;
     
-    if (generationState && typeof generationState.status === 'string' && 
-        generationState.status.startsWith('Failed')) {
-      return generationState.status;
+    if (generationState && TaskStatusHelpers.isFailed(generationState.status)) {
+      const reason = TaskStatusHelpers.getReason(generationState.status);
+      return reason ? `Failed: ${reason}` : 'Project generation failed';
     }
     
     return 'Project generation failed';
@@ -217,10 +214,10 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
     // Sort tasks by status: running first, then pending, then completed, then failed
     const sortedTasks = Object.values(generationState.tasks).sort((a, b) => {
       const getStatusPriority = (status: TaskStatus | string) => {
-        if (status === TaskStatus.Running) return 0;
-        if (status === TaskStatus.Pending) return 1;
-        if (status === TaskStatus.Completed) return 2;
-        if (status === TaskStatus.Skipped) return 3;
+        if (status === TASK_STATUS.RUNNING) return 0;
+        if (status === TASK_STATUS.PENDING) return 1;
+        if (status === TASK_STATUS.COMPLETED) return 2;
+        if (TaskStatusHelpers.isSkipped(status)) return 3;
         return 4; // Failed or other
       };
       
@@ -235,37 +232,37 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
             <div 
               key={task.id} 
               className={`flex items-center justify-between p-2 rounded ${
-                task.status === TaskStatus.Running ? 'bg-primary/10 border border-primary/30' :
-                task.status === TaskStatus.Completed ? 'bg-success/10 border border-success/30' :
-                task.status === TaskStatus.Failed ? 'bg-error/10 border border-error/30' :
-                task.status === TaskStatus.Skipped ? 'bg-base-100' :
+                task.status === TASK_STATUS.RUNNING ? 'bg-primary/10 border border-primary/30' :
+                task.status === TASK_STATUS.COMPLETED ? 'bg-success/10 border border-success/30' :
+                TaskStatusHelpers.isFailed(task.status) ? 'bg-error/10 border border-error/30' :
+                TaskStatusHelpers.isSkipped(task.status) ? 'bg-base-100' :
                 'bg-base-200'
               }`}
             >
               <div className="flex items-center gap-2">
-                {task.status === TaskStatus.Running && (
+                {task.status === TASK_STATUS.RUNNING && (
                   <div className="w-4 h-4 rounded-full bg-primary animate-pulse"></div>
                 )}
-                {task.status === TaskStatus.Completed && (
+                {task.status === TASK_STATUS.COMPLETED && (
                   <CheckCircle size={16} className="text-success" />
                 )}
-                {task.status === TaskStatus.Failed && (
+                {TaskStatusHelpers.isFailed(task.status) && (
                   <AlertTriangle size={16} className="text-error" />
                 )}
-                {task.status === TaskStatus.Skipped && (
+                {TaskStatusHelpers.isSkipped(task.status) && (
                   <XCircle size={16} className="text-base-content/50" />
                 )}
-                {task.status === TaskStatus.Pending && (
+                {task.status === TASK_STATUS.PENDING && (
                   <div className="w-4 h-4 rounded-full border border-base-content/30"></div>
                 )}
                 <span className="text-sm">{task.name}</span>
               </div>
               <div className="text-xs opacity-75">
-                {task.status === TaskStatus.Running && `${Math.round(task.progress * 100)}%`}
-                {task.status === TaskStatus.Completed && 'Done'}
-                {task.status === TaskStatus.Failed && 'Failed'}
-                {task.status === TaskStatus.Skipped && 'Skipped'}
-                {task.status === TaskStatus.Pending && 'Pending'}
+                {task.status === TASK_STATUS.RUNNING && `${Math.round(task.progress * 100)}%`}
+                {task.status === TASK_STATUS.COMPLETED && 'Done'}
+                {TaskStatusHelpers.isFailed(task.status) && 'Failed'}
+                {TaskStatusHelpers.isSkipped(task.status) && 'Skipped'}
+                {task.status === TASK_STATUS.PENDING && 'Pending'}
               </div>
             </div>
           ))}

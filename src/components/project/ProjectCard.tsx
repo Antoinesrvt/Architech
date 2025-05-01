@@ -8,6 +8,7 @@ import { RecentProject } from "@/lib/store/project-store";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { confirmDialog } from "@/lib/utils/dialog";
 
 interface ProjectCardProps {
   project: RecentProject;
@@ -49,13 +50,22 @@ export default function ProjectCard({ project }: ProjectCardProps) {
     }
   };
 
-  const handleRemoveProject = () => {
-    if (confirm(`Are you sure you want to remove "${project.name}" from recent projects?`)) {
-      removeProject(project.id);
-      toast({
-        type: "info",
-        message: `Project "${project.name}" removed from recent projects`,
-      });
+  const handleRemoveProject = async () => {
+    try {
+      const shouldRemove = await confirmDialog(
+        `Are you sure you want to remove "${project.name}" from recent projects?`,
+        { title: 'Confirm Remove', type: 'warning' }
+      );
+      
+      if (shouldRemove) {
+        removeProject(project.id);
+        toast({
+          type: "info",
+          message: `Project "${project.name}" removed from recent projects`,
+        });
+      }
+    } catch (error) {
+      console.error("Dialog error:", error);
     }
   };
 

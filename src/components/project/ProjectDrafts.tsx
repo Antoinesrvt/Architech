@@ -7,6 +7,68 @@ import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils/formatters";
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import { confirmDialog, messageDialog } from '@/lib/utils/dialog';
+
+// Add a GenerationStatusBadge component
+function GenerationStatusBadge({ status, error, progress }: { 
+  status?: string, 
+  error?: string | null,
+  progress?: number 
+}) {
+  if (!status) return null;
+  
+  // Determine badge styling based on status
+  let badgeClass = 'badge';
+  let icon = null;
+  let label = status;
+  
+  switch(status) {
+    case 'Running':
+      badgeClass += ' badge-primary';
+      // Add spinner icon for running
+      icon = (
+        <div className="loading loading-spinner loading-xs mr-1"></div>
+      );
+      label = `Running ${progress !== undefined ? Math.round(progress * 100) + '%' : ''}`;
+      break;
+    case 'Completed':
+      badgeClass += ' badge-success';
+      // Add checkmark icon for completed
+      icon = (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+        </svg>
+      );
+      break;
+    case 'Failed':
+      badgeClass += ' badge-error';
+      // Add error icon for failed
+      icon = (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      );
+      break;
+    case 'Cancelled':
+      badgeClass += ' badge-warning';
+      // Add cancel icon
+      icon = (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      );
+      break;
+    default:
+      badgeClass += ' badge-ghost';
+  }
+  
+  return (
+    <div className={badgeClass} title={error || status}>
+      {icon}
+      {label}
+    </div>
+  );
+}
 
 export default function ProjectDrafts() {
   const router = useRouter();
@@ -95,7 +157,7 @@ export default function ProjectDrafts() {
     return framework?.name || 'Unknown framework';
   };
 
-  const handleContinueDraft = (e: React.MouseEvent, draftId: string) => {
+  const handleContinueDraft = async (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation();
     e.preventDefault();
     setActiveDropdown(null);
@@ -108,23 +170,37 @@ export default function ProjectDrafts() {
       }, 100);
     } catch (error) {
       console.error("Error loading draft:", error);
-      alert("There was an error loading this draft. It may be corrupted.");
+      await messageDialog(
+        "There was an error loading this draft. It may be corrupted.", 
+        { title: 'Error', type: 'error' }
+      );
     }
   };
 
-  const handleDeleteDraft = (e: React.MouseEvent, draftId: string) => {
+  const handleDeleteDraft = async (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation();
     e.preventDefault();
     setActiveDropdown(null);
     
-    // Use a more attractive confirmation dialog if possible
-    if (confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
-      try {
-        deleteDraft(draftId);
-      } catch (error) {
-        console.error("Error deleting draft:", error);
-        alert("There was an error deleting this draft.");
+    try {
+      const shouldDelete = await confirmDialog(
+        'Are you sure you want to delete this draft? This action cannot be undone.',
+        { title: 'Confirm Delete', type: 'warning' }
+      );
+      
+      if (shouldDelete) {
+        try {
+          deleteDraft(draftId);
+        } catch (error) {
+          console.error("Error deleting draft:", error);
+          await messageDialog(
+            'There was an error deleting this draft.',
+            { title: 'Error', type: 'error' }
+          );
+        }
       }
+    } catch (error) {
+      console.error("Dialog error:", error);
     }
   };
 
@@ -146,6 +222,9 @@ export default function ProjectDrafts() {
   const renderDropdownMenu = () => {
     if (!activeDropdown) return null;
     
+    const activeDraft = drafts.find(d => d.id === activeDropdown);
+    if (!activeDraft) return null;
+    
     return (
       <div 
         className="dropdown-content dropdown-menu menu p-2 shadow bg-base-100 rounded-box fixed w-48 z-[9999]"
@@ -165,6 +244,19 @@ export default function ProjectDrafts() {
           </svg>
           Continue
         </button>
+        
+        {activeDraft.generationStatus === 'Failed' && activeDraft.generationId && (
+          <button 
+            className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-primary/10 text-primary"
+            onClick={(e) => handleContinueDraft(e, activeDropdown)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Resume Generation
+          </button>
+        )}
+        
         <button 
           className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
           onClick={(e) => handleDeleteDraft(e, activeDropdown)}
@@ -198,6 +290,7 @@ export default function ProjectDrafts() {
                 <th>Name</th>
                 <th>Framework</th>
                 <th>Last Updated</th>
+                <th>Status</th>
                 <th className="w-16">Actions</th>
               </tr>
             </thead>
@@ -217,6 +310,13 @@ export default function ProjectDrafts() {
                     <td>
                       {draft.lastUpdated ? formatRelativeTime(draft.lastUpdated) : 'Unknown'}
                     </td>
+                    <td>
+                      <GenerationStatusBadge 
+                        status={draft.generationStatus} 
+                        error={draft.generationError}
+                        progress={draft.generationProgress}
+                      />
+                    </td>
                     <td className="relative">
                       <div className="dropdown dropdown-end">
                         <button 
@@ -235,7 +335,7 @@ export default function ProjectDrafts() {
                   </tr>
                   {expandedDraft === draft.id && (
                     <tr className="bg-base-300">
-                      <td colSpan={4} className="p-4">
+                      <td colSpan={5} className="p-4">
                         <div className="space-y-2">
                           {draft.path && (
                             <div>
@@ -250,6 +350,27 @@ export default function ProjectDrafts() {
                           {draft.moduleIds && Array.isArray(draft.moduleIds) && draft.moduleIds.length > 0 && (
                             <div>
                               <span className="font-semibold">Modules:</span> {draft.moduleIds.length} selected
+                            </div>
+                          )}
+                          {draft.generationError && (
+                            <div className="text-error">
+                              <span className="font-semibold">Error:</span> {draft.generationError}
+                            </div>
+                          )}
+                          {draft.generationId && draft.generationStatus === 'Failed' && (
+                            <div className="mt-4">
+                              <button
+                                className="btn btn-sm btn-error"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleContinueDraft(e, draft.id);
+                                }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Retry Generation
+                              </button>
                             </div>
                           )}
                         </div>

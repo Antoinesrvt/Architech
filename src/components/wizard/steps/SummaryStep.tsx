@@ -92,10 +92,10 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
           {/* Framework Section */}
           <div className="card bg-base-200 shadow-sm">
             <div className="card-body">
-              <h3 className="card-title">Selected Framework</h3>
+
               {selectedFramework ? (
                 <div className="space-y-2">
-                  <p className="font-medium">{selectedFramework.name} <span className="text-xs opacity-70">v{selectedFramework.version}</span></p>
+                  <h3 className="font-medium">{selectedFramework.name} <span className="text-xs opacity-70">v{selectedFramework.version}</span></h3>
                   <p className="text-sm">{selectedFramework.description}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedFramework.tags.map(tag => (

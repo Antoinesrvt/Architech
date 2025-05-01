@@ -5,13 +5,30 @@ use tauri::State as TauriState;
 use uuid::Uuid;
 
 // Generation task status enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum TaskStatus {
     Pending,
     Running,
     Completed,
     Failed(String),
     Skipped(String),
+}
+
+// Implement custom Serialize for TaskStatus to ensure consistency with frontend
+impl Serialize for TaskStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Convert enum to string representation
+        match self {
+            TaskStatus::Pending => serializer.serialize_str("Pending"),
+            TaskStatus::Running => serializer.serialize_str("Running"),
+            TaskStatus::Completed => serializer.serialize_str("Completed"),
+            TaskStatus::Failed(reason) => serializer.serialize_str(&format!("Failed: {}", reason)),
+            TaskStatus::Skipped(reason) => serializer.serialize_str(&format!("Skipped: {}", reason)),
+        }
+    }
 }
 
 // Generation task definition

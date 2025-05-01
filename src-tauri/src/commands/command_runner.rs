@@ -1,7 +1,7 @@
 use std::process::{Command, Output, Stdio};
 use std::path::Path;
 use std::fs;
-use std::io::Read;
+use std::io::{Read, BufRead, BufReader};
 use regex::Regex;
 use tauri::AppHandle;
 use tauri::Emitter;
@@ -30,33 +30,155 @@ pub async fn run_command(
         }
     }
     
-    match cmd.output() {
-        Ok(output) => {
-            // Log stdout and stderr
-            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            
-            if !stdout.is_empty() {
-                println!("Command stdout: {}", stdout);
-            }
-            
-            if !stderr.is_empty() {
-                println!("Command stderr: {}", stderr);
-            }
-            
-            if output.status.success() {
-                println!("Command completed successfully");
-            } else {
-                let error_msg = format!("Command exited with non-zero status: {}", output.status);
+    // Add PATH environment variable to ensure commands can find executables
+    // This is especially important for npx, npm, etc.
+    if let Ok(path) = std::env::var("PATH") {
+        cmd.env("PATH", path);
+    }
+    
+    // Set CI environment variable to false for npm commands to force interactive mode
+    // This helps with some npm/npx commands that behave differently in CI environments
+    if command.contains("npm") || command.contains("npx") {
+        cmd.env("CI", "false");
+        // Set NODE_ENV to development to ensure proper behavior
+        cmd.env("NODE_ENV", "development");
+    }
+    
+    // Special handling for npm/npx commands
+    if command == "npm" || command == "npx" || command == "npm.cmd" || command == "npx.cmd" {
+        // For npm/npx commands, we need to make sure we capture all output
+        println!("Executing npm/npx command with special handling...");
+        
+        // Use spawn and wait approach for better handling of npm/npx
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let stdout = child.stdout.take().expect("Failed to capture stdout");
+                let stderr = child.stderr.take().expect("Failed to capture stderr");
+                
+                let stdout_reader = BufReader::new(stdout);
+                let stderr_reader = BufReader::new(stderr);
+                
+                // Collect stdout lines in real-time
+                let mut stdout_lines = Vec::new();
+                for line in stdout_reader.lines() {
+                    match line {
+                        Ok(line) => {
+                            println!("[STDOUT] {}", line);
+                            stdout_lines.push(line);
+                        },
+                        Err(e) => println!("Error reading stdout: {}", e)
+                    }
+                }
+                
+                // Collect stderr lines in real-time
+                let mut stderr_lines = Vec::new();
+                for line in stderr_reader.lines() {
+                    match line {
+                        Ok(line) => {
+                            println!("[STDERR] {}", line);
+                            stderr_lines.push(line);
+                        },
+                        Err(e) => println!("Error reading stderr: {}", e)
+                    }
+                }
+                
+                // Wait for the process to complete
+                let status = match child.wait() {
+                    Ok(status) => status,
+                    Err(e) => return Err(format!("Failed to wait for command: {}", e))
+                };
+                
+                // Create the output struct
+                let output = Output {
+                    status,
+                    stdout: stdout_lines.join("\n").into_bytes(),
+                    stderr: stderr_lines.join("\n").into_bytes(),
+                };
+                
+                if output.status.success() {
+                    println!("NPM/NPX command completed successfully");
+                    // Add a longer delay for npm/npx commands to ensure they're fully complete
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    Ok(output)
+                } else {
+                    // Gather more information about the failure
+                    let error_info = if !stderr_lines.is_empty() {
+                        format!("Command stderr: {}", stderr_lines.join("\n"))
+                    } else if !stdout_lines.is_empty() {
+                        format!("Command stdout: {}", stdout_lines.join("\n"))
+                    } else {
+                        "No additional error information available".to_string()
+                    };
+                    
+                    let error_msg = format!("Command exited with non-zero status: {} ({})", output.status, error_info);
+                    println!("{}", error_msg);
+                    Err(error_msg)
+                }
+            },
+            Err(e) => {
+                let error_msg = format!("Failed to execute npm/npx command: {}", e);
                 println!("{}", error_msg);
+                Err(error_msg)
             }
-            
-            Ok(output)
-        },
-        Err(e) => {
-            let error_msg = format!("Failed to execute command: {}", e);
-            println!("{}", error_msg);
-            Err(error_msg)
+        }
+    } else {
+        // For other commands, use the normal spawn and wait approach
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let stdout = child.stdout.take().expect("Failed to capture stdout");
+                let stderr = child.stderr.take().expect("Failed to capture stderr");
+                
+                let stdout_reader = BufReader::new(stdout);
+                let stderr_reader = BufReader::new(stderr);
+                
+                // Create threads to read stdout and stderr
+                let stdout_lines = stdout_reader.lines().collect::<Result<Vec<String>, _>>()
+                    .map_err(|e| format!("Failed to read stdout: {}", e))?;
+                
+                let stderr_lines = stderr_reader.lines().collect::<Result<Vec<String>, _>>()
+                    .map_err(|e| format!("Failed to read stderr: {}", e))?;
+                
+                // Wait for the process to complete
+                let status = child.wait()
+                    .map_err(|e| format!("Failed to wait for command: {}", e))?;
+                
+                // Collect stdout and stderr
+                let stdout_content = stdout_lines.join("\n");
+                let stderr_content = stderr_lines.join("\n");
+                
+                // Create the output struct
+                let output = Output {
+                    status,
+                    stdout: stdout_content.into_bytes(),
+                    stderr: stderr_content.into_bytes(),
+                };
+                
+                // Log output
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                
+                if !stdout.is_empty() {
+                    println!("Command stdout: {}", stdout);
+                }
+                
+                if !stderr.is_empty() {
+                    println!("Command stderr: {}", stderr);
+                }
+                
+                if output.status.success() {
+                    println!("Command completed successfully");
+                    Ok(output)
+                } else {
+                    let error_msg = format!("Command exited with non-zero status: {}", output.status);
+                    println!("{}", error_msg);
+                    Err(error_msg)
+                }
+            },
+            Err(e) => {
+                let error_msg = format!("Failed to execute command: {}", e);
+                println!("{}", error_msg);
+                Err(error_msg)
+            }
         }
     }
 }
@@ -192,16 +314,46 @@ pub fn create_file(path: &Path, content: &str) -> Result<(), String> {
 pub fn modify_file(path: &Path, pattern: &str, replacement: &str) -> Result<(), String> {
     // Check if file exists
     if !path.exists() {
-        return Err(format!("File not found: {}", path.display()));
+        // If it's a config file that might be created by command but not found yet, 
+        // try to create an empty one with default content
+        if path.file_name().map_or(false, |f| f == "tailwind.config.js") {
+            let default_content = "module.exports = {\n  content: [],\n  theme: {\n    extend: {},\n  },\n  plugins: [],\n}";
+            create_file(path, default_content)?;
+            println!("Created empty tailwind.config.js because it didn't exist");
+        } else {
+            return Err(format!("File not found: {}", path.display()));
+        }
     }
     
     let content = fs::read_to_string(path)
         .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
     
-    let regex = Regex::new(pattern)
-        .map_err(|e| format!("Invalid regex pattern '{}': {}", pattern, e))?;
+    // Attempt to create the regex pattern
+    let regex = match Regex::new(pattern) {
+        Ok(r) => r,
+        Err(e) => {
+            // Log the error but try to gracefully handle it
+            println!("Invalid regex pattern '{}': {}", pattern, e);
+            
+            // If the pattern is just a string literal, try to find it directly
+            if content.contains(pattern.replace("\\", "").as_str()) {
+                // Simple string replacement
+                let new_content = content.replace(pattern.replace("\\", "").as_str(), replacement);
+                return fs::write(path, new_content)
+                    .map_err(|e| format!("Failed to write to file '{}': {}", path.display(), e));
+            } else {
+                return Err(format!("Invalid regex pattern and string not found: {}", pattern));
+            }
+        }
+    };
     
+    // Perform the regex replacement
     let new_content = regex.replace_all(&content, replacement).to_string();
+    
+    // Check if any replacements were actually made
+    if new_content == content {
+        println!("Warning: No replacements made in '{}' for pattern '{}'", path.display(), pattern);
+    }
     
     fs::write(path, new_content)
         .map_err(|e| format!("Failed to write to file '{}': {}", path.display(), e))

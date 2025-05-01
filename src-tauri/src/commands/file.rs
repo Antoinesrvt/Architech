@@ -2,16 +2,29 @@ use tauri::command;
 use std::path::Path;
 use tauri::Runtime;
 use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
+use std::process::Command;
 
 #[command]
-pub async fn open_in_folder<R: Runtime>(path: String, app_handle: AppHandle<R>) -> Result<(), String> {
+pub async fn open_in_folder<R: Runtime>(path: String, _app_handle: AppHandle<R>) -> Result<(), String> {
     // Check if path exists
-    if !Path::new(&path).exists() {
+    let path_buf = Path::new(&path).to_path_buf();
+    if !path_buf.exists() {
         return Err(format!("Path does not exist: {}", path));
     }
     
-    // Use the shell plugin through the app_handle to open the folder
-    app_handle.shell().open(path, None)
-        .map_err(|e| format!("Failed to open folder: {}", e))
+    // Use platform-specific commands to open the folder
+    let result = if cfg!(target_os = "macos") {
+        Command::new("open").arg(path).status()
+    } else if cfg!(target_os = "windows") {
+        Command::new("explorer").arg(path).status()
+    } else if cfg!(target_os = "linux") {
+        Command::new("xdg-open").arg(path).status()
+    } else {
+        return Err("Unsupported operating system".to_string());
+    };
+    
+    match result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to open folder: {}", e)),
+    }
 } 

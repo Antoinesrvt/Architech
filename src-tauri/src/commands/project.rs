@@ -1,12 +1,6 @@
 use serde::{Serialize, Deserialize};
 use tauri::command;
 use std::path::Path;
-use std::fs;
-use uuid::Uuid;
-
-use super::command_runner::{run_command, run_interactive_command, create_file, modify_file, modify_import, emit_progress};
-use super::framework::get_framework_by_id;
-use tauri::async_runtime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectConfig {
@@ -34,13 +28,6 @@ pub struct ProjectOptions {
 pub struct ValidationResult {
     pub valid: bool,
     pub errors: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GenerationProgress {
-    pub step: String,
-    pub message: String,
-    pub progress: f32,
 }
 
 #[command]
@@ -75,19 +62,9 @@ pub async fn validate_project_config(config: ProjectConfig) -> Result<Validation
     })
 }
 
-// New function to create directory structure
-#[allow(dead_code)]
-fn create_directory_structure(project_dir: &Path, directories: &[String]) -> Result<(), String> {
-    for dir in directories {
-        let dir_path = project_dir.join(dir);
-        fs::create_dir_all(&dir_path)
-            .map_err(|e| format!("Failed to create directory '{}': {}", dir_path.display(), e))?;
-    }
-    Ok(())
-}
-
 // Function to resolve module dependencies
-async fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
+#[doc(hidden)]
+pub async fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
     // Get all available modules
     let all_modules = match super::framework::get_modules().await {
         Ok(modules) => modules,
@@ -134,189 +111,62 @@ async fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<V
     Ok(result)
 }
 
-async fn generate_project_with_cli(
-    config: &ProjectConfig,
-    app_handle: &tauri::AppHandle
-) -> Result<(), String> {
-    // Get the base path
-    let base_path = Path::new(&config.path);
-    let project_dir = base_path.join(&config.name);
-    
-    // Get framework details
-    let framework = get_framework_by_id(&config.framework).await?;
-    
-    // Emit initial progress
-    emit_progress(app_handle, "init", "Initializing project generation", 0.0);
-    
-    // Extract the base command and parse into individual parts
-    let base_cmd_parts: Vec<&str> = framework.cli.base_command.split_whitespace().collect();
-    if base_cmd_parts.is_empty() {
-        return Err("Invalid base command in framework".to_string());
-    }
-    
-    // Get the command name and arguments
-    let cmd_name = base_cmd_parts[0];
-    let mut cmd_args: Vec<&str> = base_cmd_parts[1..].to_vec();
-    
-    // Add project name as the last argument if it's not an interactive CLI
-    if !framework.cli.interactive {
-        // Add arguments based on the config
-        for (arg_name, arg_value) in &framework.cli.arguments {
-            if let Some(arg_obj) = arg_value.as_object() {
-                // Check if this argument has a flag
-                if let Some(flag) = arg_obj.get("flag").and_then(|f| f.as_str()) {
-                    // Check if the option is enabled in the project config
-                    let option_name = arg_name.to_string();
-                    let option_enabled = config.options.typescript && option_name == "typescript"
-                        || config.options.app_router && option_name == "app_router"
-                        || config.options.eslint && option_name == "eslint";
-                    
-                    if option_enabled {
-                        cmd_args.push(flag);
-                    }
-                }
-            }
-        }
-        
-        // Add project name as the last argument
-        cmd_args.push(&config.name);
-        
-        // Execute the command
-        emit_progress(app_handle, "create", &format!("Creating {} project", framework.name), 0.2);
-        run_command(cmd_name, &cmd_args, base_path, None).await?;
-    } else {
-        // For interactive CLIs, we need to handle prompts and responses
-        emit_progress(app_handle, "create", &format!("Creating {} project with interactive CLI", framework.name), 0.2);
-        
-        // Prepare responses for interactive prompts
-        let mut responses = Vec::new();
-        
-        for response_config in &framework.cli.responses {
-            let response_value = if response_config.use_project_name {
-                config.name.clone()
-            } else {
-                response_config.response.clone()
-            };
-            
-            responses.push((response_config.prompt.clone(), response_value));
-        }
-        
-        // For position-based arguments, add them to cmd_args
-        for (_arg_name, arg_value) in &framework.cli.arguments {
-            if let Some(arg_obj) = arg_value.as_object() {
-                if let (Some(position), Some(value)) = (
-                    arg_obj.get("position").and_then(|p| p.as_u64()),
-                    arg_obj.get("value").and_then(|v| v.as_str())
-                ) {
-                    // Ensure cmd_args has enough space
-                    while cmd_args.len() < position as usize {
-                        cmd_args.push("");
-                    }
-                    
-                    // Insert the value at the specified position
-                    cmd_args[position as usize - 1] = value; // Adjust for 0-based indexing
-                }
-            }
-        }
-        
-        // Add project name as a positional argument for some CLIs that need it
-        cmd_args.push(&config.name);
-        
-        // Execute the interactive command - converting responses to Option<Vec<(String, String)>>
-        let env_responses = Some(responses);
-        run_interactive_command(cmd_name, &cmd_args, base_path, env_responses).await?;
-    }
-    
-    // Step 4: Enforce the directory structure from the framework definition
-    if framework.directory_structure.enforced {
-        emit_progress(app_handle, "structure", "Enforcing project structure", 0.3);
-        
-        for dir in &framework.directory_structure.directories {
-            let dir_path = project_dir.join(dir);
-            fs::create_dir_all(&dir_path)
-                .map_err(|e| format!("Failed to create directory '{}': {}", dir_path.display(), e))?;
-        }
-    }
-    
-    // Step 5: Resolve module dependencies
-    emit_progress(app_handle, "dependencies", "Resolving module dependencies", 0.4);
-    
-    let module_ids = config.modules.iter().map(|m| m.id.clone()).collect::<Vec<String>>();
-    let ordered_modules = resolve_module_dependencies(&module_ids).await?;
-    
-    // Step 6: Install and configure each module
-    let total_modules = ordered_modules.len();
-    for (index, module) in ordered_modules.iter().enumerate() {
-        let progress = 0.5 + (0.5 * (index as f32 / total_modules as f32));
-        emit_progress(
-            app_handle,
-            "modules", 
-            &format!("Installing module {} ({}/{})", module.name, index + 1, total_modules),
-            progress
-        );
-        
-        // Find the module config from the user selections
-        let _module_config = config.modules.iter()
-            .find(|m| m.id == module.id)
-            .map(|m| &m.options)
-            .unwrap_or(&serde_json::json!({}));
-        
-        // Apply the module commands
-        for cmd in &module.installation.commands {
-            let parts: Vec<&str> = cmd.split_whitespace().collect();
-            if parts.is_empty() {
-                continue;
-            }
-            
-            let cmd_name = parts[0];
-            let cmd_args = &parts[1..];
-            
-            run_command(cmd_name, cmd_args, &project_dir, None).await?;
-        }
-        
-        // Apply file operations
-        for op in &module.installation.file_operations {
-            let file_path = project_dir.join(&op.path);
-            
-            match op.operation.as_str() {
-                "create" => {
-                    create_file(&file_path, &op.content)?;
-                },
-                "modify" => {
-                    modify_file(&file_path, &op.pattern, &op.replacement)?;
-                },
-                "modify_import" => {
-                    modify_import(&file_path, &op.action, &op.import)?;
-                },
-                _ => {
-                    println!("Warning: Unknown file operation: {}", op.operation);
-                }
-            }
-        }
-    }
-    
-    // Final step: Mark as complete
-    emit_progress(app_handle, "complete", "Project generation complete", 1.0);
-    
-    Ok(())
-}
-
 #[command]
 pub async fn generate_project(
     config: ProjectConfig,
     app_handle: tauri::AppHandle,
+    state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<String, String> {
-    // Generate unique ID for the project
-    let project_id = Uuid::new_v4().to_string();
+    // Create project generator with cloned state
+    let app_state = state.inner().clone();
+    let generator = crate::generation::ProjectGenerator::new(
+        app_handle.clone(),
+        std::sync::Arc::new(app_state)
+    );
     
-    // Validate project config
-    let validation = validate_project_config(config.clone()).await?;
-    if !validation.valid {
-        return Err(validation.errors.join(", "));
+    // Start generation
+    generator.start_generation(config).await
+}
+
+#[command]
+pub async fn get_project_status(
+    project_id: String,
+    state: tauri::State<'_, crate::state::AppState>,
+) -> Result<crate::state::ProjectGenerationState, String> {
+    state.get_project(&project_id)
+}
+
+#[command]
+pub async fn get_project_logs(
+    project_id: String,
+    state: tauri::State<'_, crate::state::AppState>,
+) -> Result<Vec<String>, String> {
+    let project = state.get_project(&project_id)?;
+    Ok(project.logs)
+}
+
+#[command]
+pub async fn cancel_project_generation(
+    project_id: String,
+    state: tauri::State<'_, crate::state::AppState>,
+) -> Result<(), String> {
+    // Get project state
+    let mut projects = state.projects.lock().map_err(|e| format!("Failed to lock projects state: {}", e))?;
+    
+    // Check if project exists
+    if let Some(project) = projects.get_mut(&project_id) {
+        // Mark as cancelled - this will stop future tasks from running
+        project.status = crate::state::TaskStatus::Failed("Generation cancelled by user".to_string());
+        
+        // Mark all pending tasks as skipped
+        for task in project.tasks.values_mut() {
+            if matches!(task.status, crate::state::TaskStatus::Pending) {
+                task.status = crate::state::TaskStatus::Skipped("Generation cancelled by user".to_string());
+            }
+        }
+        
+        Ok(())
+    } else {
+        Err(format!("Project not found: {}", project_id))
     }
-    
-    // Use the new CLI-based generation
-    generate_project_with_cli(&config, &app_handle).await?;
-    
-    Ok(project_id)
 } 

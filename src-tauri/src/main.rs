@@ -8,9 +8,12 @@
 use crate::commands::*;
 
 mod commands;
+mod state;
+mod generation;
 
 fn main() {
     tauri::Builder::default()
+        .manage(state::AppState::default())
         .invoke_handler(tauri::generate_handler![
             // Framework/Module commands
             get_frameworks,
@@ -20,6 +23,9 @@ fn main() {
             // Project commands
             validate_project_config,
             generate_project,
+            get_project_status,
+            get_project_logs,
+            cancel_project_generation,
             
             // System commands
             browse_directory,

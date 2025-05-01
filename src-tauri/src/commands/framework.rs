@@ -3,7 +3,6 @@ use tauri::command;
 use std::fs;
 use std::error::Error;
 use dirs;
-use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Framework {
@@ -221,8 +220,6 @@ pub async fn get_modules() -> Result<Vec<Module>, String> {
         "modules/forms.json",
         "modules/testing.json",
         "modules/advanced.json",
-        // For backward compatibility, try the consolidated file too
-        "modules/modules.json"
     ];
     
     for file in module_files {

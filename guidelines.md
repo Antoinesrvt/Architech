@@ -115,8 +115,9 @@ npm run tauri dev
 │   ├── Cargo.toml              # Configuration Rust
 │   └── tauri.conf.json         # Configuration Tauri
 │
-└── modules/                # Définitions des modules
-    └── modules.json        # Tous les modules disponibles
+└── data/                # Définitions des modules
+    └── frameworks/        # Tous les frameworks disponibles
+    └── modules/        # Tous les modules disponibles
 
 3. Architecture Technique Spécifique
 
@@ -836,3 +837,82 @@ graph TD
     T --> V[File Operations]
     T --> W[System Commands]
 ```
+
+## Task-Based Project Generation (Nouveauté)
+
+ArchiTech a évolué vers une architecture de génération de projets basée sur des tâches, offrant une expérience plus robuste et fiable :
+
+### Architecture de Génération Avancée
+
+1. **Génération Basée sur des États**
+   - Système central de gestion d'état pour suivre la progression de la génération
+   - Modèle de tâches avec dépendances pour une exécution séquentielle fiable
+   - Journalisation détaillée pour un débogage amélioré et une meilleure expérience utilisateur
+
+2. **Flux de Travail Robuste**
+   - Récupération automatique après échec avec logique de nouvelle tentative
+   - Support de l'annulation pour interrompre les générations en cours
+   - Exécution parallèle des tâches indépendantes pour de meilleures performances
+
+3. **Communication en Temps Réel**
+   - Retour d'information en temps réel via des événements Tauri
+   - Interface utilisateur réactive affichant la progression précise
+   - Journalisation détaillée des opérations et des sorties de commande
+
+### Structure de Code
+
+```rust
+// Structure d'état de génération
+pub struct ProjectGenerationState {
+    pub id: String,
+    pub path: String,
+    pub name: String,
+    pub framework: String,
+    pub tasks: HashMap<String, GenerationTask>,
+    pub current_task: Option<String>,
+    pub progress: f32,
+    pub status: TaskStatus,
+    pub logs: Vec<String>,
+}
+
+// Tâche de génération
+pub struct GenerationTask {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub status: TaskStatus,
+    pub progress: f32,
+    pub dependencies: Vec<String>,
+}
+
+// Statut de tâche
+pub enum TaskStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed(String), // Avec message d'erreur
+    Skipped(String), // Avec raison
+}
+```
+
+### API Frontend
+
+L'interface utilisateur communique avec le backend via une API événementielle qui fournit :
+
+```typescript
+// Récupération de l'état de génération
+async getProjectStatus(projectId: string): Promise<ProjectGenerationState>
+
+// Récupération des journaux de génération
+async getProjectLogs(projectId: string): Promise<string[]>
+
+// Annulation de la génération en cours
+async cancelProjectGeneration(projectId: string): Promise<void>
+
+// Écouteurs d'événements pour les mises à jour en temps réel
+listenToTaskUpdates(callback: (result: TaskResult) => void): () => void
+listenToGenerationComplete(callback: (projectId: string) => void): () => void
+listenToGenerationFailed(callback: (data: { projectId: string, reason: string }) => void): () => void
+```
+
+Cette architecture permet une génération de projets plus fiable, avec un retour d'information riche pour l'utilisateur et une capacité de récupération après erreur.

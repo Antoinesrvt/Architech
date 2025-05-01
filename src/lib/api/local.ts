@@ -203,6 +203,45 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
   }
 };
 
+// Project generation state type from Rust backend
+export interface ProjectGenerationState {
+  id: string;
+  path: string;
+  name: string;
+  framework: string;
+  tasks: Record<string, GenerationTask>;
+  current_task: string | null;
+  progress: number;
+  status: TaskStatus;
+  logs: string[];
+}
+
+// Generation task status
+export enum TaskStatus {
+  Pending = 'Pending',
+  Running = 'Running',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  Skipped = 'Skipped'
+}
+
+// Generation task
+export interface GenerationTask {
+  id: string;
+  name: string;
+  description: string;
+  status: TaskStatus;
+  progress: number;
+  dependencies: string[];
+}
+
+// Task result from backend
+export interface TaskResult {
+  task_id: string;
+  success: boolean;
+  message: string;
+}
+
 export class LocalFrameworkService implements FrameworkService {
   async getFrameworks(): Promise<Framework[]> {
     try {
@@ -247,11 +286,101 @@ export class LocalFrameworkService implements FrameworkService {
         throw new Error(validation.errors.join(', '));
       }
       
-      // If validation passes, generate the project
-      return await safeInvoke<string>('generate_project', { config });
+      // If validation passes, generate the project using the new state-based system
+      const projectId = await safeInvoke<string>('generate_project', { config });
+      return projectId;
     } catch (error) {
       console.error('Failed to generate project:', error);
       throw error;
+    }
+  }
+
+  async getProjectStatus(projectId: string): Promise<ProjectGenerationState> {
+    try {
+      return await safeInvoke<ProjectGenerationState>('get_project_status', { project_id: projectId });
+    } catch (error) {
+      console.error('Failed to get project status:', error);
+      throw error;
+    }
+  }
+
+  async getProjectLogs(projectId: string): Promise<string[]> {
+    try {
+      return await safeInvoke<string[]>('get_project_logs', { project_id: projectId });
+    } catch (error) {
+      console.error('Failed to get project logs:', error);
+      throw error;
+    }
+  }
+
+  async cancelProjectGeneration(projectId: string): Promise<void> {
+    try {
+      await safeInvoke<void>('cancel_project_generation', { project_id: projectId });
+    } catch (error) {
+      console.error('Failed to cancel project generation:', error);
+      throw error;
+    }
+  }
+
+  // Listen for task updates
+  listenToTaskUpdates(callback: (result: TaskResult) => void): () => void {
+    // Check if we're in a Tauri environment
+    const isTauri = window && (window as any).__TAURI__;
+    
+    if (isTauri) {
+      try {
+        const unlisten = listen<TaskResult>('task-update', (event) => {
+          callback(event.payload);
+        });
+        return () => { unlisten.then(fn => fn()); };
+      } catch (error) {
+        console.error('Failed to listen for task updates:', error);
+        return () => {};
+      }
+    } else {
+      console.warn('Task updates are not available in browser mode');
+      return () => {};
+    }
+  }
+
+  // Listen for generation completion
+  listenToGenerationComplete(callback: (projectId: string) => void): () => void {
+    const isTauri = window && (window as any).__TAURI__;
+    
+    if (isTauri) {
+      try {
+        const unlisten = listen<string>('generation-complete', (event) => {
+          callback(event.payload);
+        });
+        return () => { unlisten.then(fn => fn()); };
+      } catch (error) {
+        console.error('Failed to listen for generation completion:', error);
+        return () => {};
+      }
+    } else {
+      console.warn('Generation completion events are not available in browser mode');
+      return () => {};
+    }
+  }
+
+  // Listen for generation failure
+  listenToGenerationFailed(callback: (data: { projectId: string, reason: string }) => void): () => void {
+    const isTauri = window && (window as any).__TAURI__;
+    
+    if (isTauri) {
+      try {
+        const unlisten = listen<[string, string]>('generation-failed', (event) => {
+          const [projectId, reason] = event.payload;
+          callback({ projectId, reason });
+        });
+        return () => { unlisten.then(fn => fn()); };
+      } catch (error) {
+        console.error('Failed to listen for generation failure:', error);
+        return () => {};
+      }
+    } else {
+      console.warn('Generation failure events are not available in browser mode');
+      return () => {};
     }
   }
 

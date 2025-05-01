@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
 import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
-import { GenerationProgress } from '@/lib/api/types';
-import { Terminal, FolderOpen, RefreshCw, ArrowLeft, HomeIcon, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Terminal, FolderOpen, RefreshCw, ArrowLeft, HomeIcon, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { TaskStatus } from '@/lib/api/local';
 
 interface GenerationPageProps {
   onBackToDashboard?: () => void;
@@ -18,17 +18,21 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
     selectedModuleIds,
     generateProject,
     isLoading,
-    setIsLoading,
     error: projectError,
-    setError: setProjectError
+    setError: setProjectError,
+    
+    // New state management properties
+    currentGenerationId,
+    generationState,
+    generationLogs,
+    getGenerationStatus,
+    getGenerationLogs,
+    cancelGeneration,
+    setupGenerationListeners
   } = useProjectStore();
 
-  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
-  const [currentStep, setCurrentStep] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [commandLogs, setCommandLogs] = useState<string[]>([]);
   const [showConsole, setShowConsole] = useState(false);
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // Get the selected framework
@@ -44,46 +48,87 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
     if (logEndRef.current) {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [commandLogs]);
+  }, [generationLogs]);
 
-  // Set up progress listener
+  // Set up polling for generation status updates
+  const startPolling = useCallback(() => {
+    if (!currentGenerationId || !isLoading) return;
+
+    // Clear any existing poll interval
+    if (pollInterval) {
+      clearInterval(pollInterval);
+    }
+
+    // Poll every 2 seconds
+    const interval = setInterval(async () => {
+      await getGenerationStatus();
+      await getGenerationLogs();
+    }, 2000);
+
+    setPollInterval(interval);
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentGenerationId, isLoading, getGenerationStatus, getGenerationLogs, pollInterval]);
+
+  // Setup event listeners and polling
   useEffect(() => {
-    // Clear existing logs when component mounts
-    setCommandLogs([]);
-    
-    // Listen for progress updates
-    const unsubscribe = frameworkService.listenToProgress((progress) => {
-      setCurrentStep(progress.step);
-      setGenerationProgress(progress);
-      
-      // Add message to command logs if it's not empty
-      if (progress.message && progress.message.trim() !== '') {
-        setCommandLogs(prev => [...prev, progress.message]);
-      }
-    });
-    
     // Start project generation automatically
     handleGenerateProject();
+
+    // Setup listeners for generation events
+    const unsubscribe = setupGenerationListeners();
     
-    return () => unsubscribe();
+    // Start polling for updates
+    startPolling();
+
+    return () => {
+      // Clean up listeners and polling
+      unsubscribe();
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
   }, []);
+
+  // Update polling when generation state changes
+  useEffect(() => {
+    if (generationState) {
+      // If generation is complete or failed, stop polling
+      if (generationState.status === TaskStatus.Completed || 
+          generationState.status === TaskStatus.Failed) {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          setPollInterval(null);
+        }
+      } else if (isLoading && !pollInterval) {
+        // If we're loading but not polling, start polling
+        startPolling();
+      }
+    }
+  }, [generationState, isLoading, pollInterval, startPolling]);
 
   // Handle project generation
   const handleGenerateProject = async () => {
-    setError(null);
-    setSuccess(false);
-    setGenerationProgress(null);
-    setCommandLogs([]);
     if (setProjectError) setProjectError(null);
-    if (setIsLoading) setIsLoading(true);
     
     try {
       // Generate project using the store method
       await generateProject();
-      setSuccess(true);
     } catch (err) {
       console.error('Project generation failed:', err);
-      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // Handle canceling project generation
+  const handleCancelGeneration = async () => {
+    if (!currentGenerationId) return;
+    
+    try {
+      await cancelGeneration();
+    } catch (err) {
+      console.error('Failed to cancel generation:', err);
     }
   };
 
@@ -100,7 +145,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       await frameworkService.openInEditor(`${projectPath}/${projectName}`);
     } catch (error) {
       console.error('Failed to open in editor:', error);
-      setError('Failed to open project in editor');
+      if (setProjectError) setProjectError('Failed to open project in editor');
     }
   };
 
@@ -112,36 +157,107 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       await frameworkService.openInFolder(`${projectPath}/${projectName}`);
     } catch (error) {
       console.error('Failed to open in file explorer:', error);
-      setError('Failed to open project location');
+      if (setProjectError) setProjectError('Failed to open project location');
     }
   };
 
   const getProgressPercentage = () => {
-    if (!generationProgress) return 0;
-    return Math.round(generationProgress.progress * 100);
+    if (!generationState) return 0;
+    return Math.round(generationState.progress * 100);
   };
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 'init':
-        return 'Initializing Project...';
-      case 'create':
-        return 'Creating Project...';
-      case 'structure':
-        return 'Setting Up Directory Structure...';
-      case 'dependencies':
-        return 'Resolving Dependencies...';
-      case 'modules':
-        return 'Installing Modules...';
-      case 'complete':
-        return 'Project Generated Successfully!';
-      default:
-        return 'Generating Project...';
+  const getActiveTaskName = () => {
+    if (!generationState || !generationState.current_task) {
+      return 'Initializing...';
     }
+    
+    const currentTask = generationState.tasks[generationState.current_task];
+    return currentTask ? currentTask.name : 'Processing...';
+  };
+
+  const isGenerationSuccessful = () => {
+    return generationState && generationState.status === TaskStatus.Completed;
+  };
+
+  const isGenerationFailed = () => {
+    return generationState && (
+      generationState.status === TaskStatus.Failed || 
+      typeof generationState.status === 'string' && generationState.status.startsWith('Failed')
+    );
   };
 
   const getErrorDetails = () => {
-    return error || projectError || 'An unknown error occurred during project generation';
+    if (projectError) return projectError;
+    
+    if (generationState && typeof generationState.status === 'string' && 
+        generationState.status.startsWith('Failed')) {
+      return generationState.status;
+    }
+    
+    return 'Project generation failed';
+  };
+
+  const renderTaskList = () => {
+    if (!generationState || !generationState.tasks) return null;
+    
+    // Sort tasks by status: running first, then pending, then completed, then failed
+    const sortedTasks = Object.values(generationState.tasks).sort((a, b) => {
+      const getStatusPriority = (status: TaskStatus | string) => {
+        if (status === TaskStatus.Running) return 0;
+        if (status === TaskStatus.Pending) return 1;
+        if (status === TaskStatus.Completed) return 2;
+        if (status === TaskStatus.Skipped) return 3;
+        return 4; // Failed or other
+      };
+      
+      return getStatusPriority(a.status) - getStatusPriority(b.status);
+    });
+    
+    return (
+      <div className="mt-4 space-y-2">
+        <h4 className="font-medium">Generation Tasks</h4>
+        <div className="space-y-2 max-h-40 overflow-y-auto p-2 bg-base-300 rounded-lg">
+          {sortedTasks.map(task => (
+            <div 
+              key={task.id} 
+              className={`flex items-center justify-between p-2 rounded ${
+                task.status === TaskStatus.Running ? 'bg-primary/10 border border-primary/30' :
+                task.status === TaskStatus.Completed ? 'bg-success/10 border border-success/30' :
+                task.status === TaskStatus.Failed ? 'bg-error/10 border border-error/30' :
+                task.status === TaskStatus.Skipped ? 'bg-base-100' :
+                'bg-base-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {task.status === TaskStatus.Running && (
+                  <div className="w-4 h-4 rounded-full bg-primary animate-pulse"></div>
+                )}
+                {task.status === TaskStatus.Completed && (
+                  <CheckCircle size={16} className="text-success" />
+                )}
+                {task.status === TaskStatus.Failed && (
+                  <AlertTriangle size={16} className="text-error" />
+                )}
+                {task.status === TaskStatus.Skipped && (
+                  <XCircle size={16} className="text-base-content/50" />
+                )}
+                {task.status === TaskStatus.Pending && (
+                  <div className="w-4 h-4 rounded-full border border-base-content/30"></div>
+                )}
+                <span className="text-sm">{task.name}</span>
+              </div>
+              <div className="text-xs opacity-75">
+                {task.status === TaskStatus.Running && `${Math.round(task.progress * 100)}%`}
+                {task.status === TaskStatus.Completed && 'Done'}
+                {task.status === TaskStatus.Failed && 'Failed'}
+                {task.status === TaskStatus.Skipped && 'Skipped'}
+                {task.status === TaskStatus.Pending && 'Pending'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const handleBackToDashboard = () => {
@@ -201,8 +317,8 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
           >
             <div className="card-body">
               <h3 className="card-title flex justify-between">
-                <span>{getStepTitle()}</span>
-                {generationProgress && (
+                <span>{getActiveTaskName()}</span>
+                {generationState && (
                   <span className="text-sm font-normal badge badge-primary">{getProgressPercentage()}%</span>
                 )}
               </h3>
@@ -210,18 +326,34 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               {/* Progress Bar */}
               <div className="w-full bg-base-300 rounded-full h-4 my-4 overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all duration-500 ${success ? 'bg-success' : error ? 'bg-error' : 'bg-primary'}`}
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isGenerationSuccessful() ? 'bg-success' : 
+                    isGenerationFailed() ? 'bg-error' : 
+                    'bg-primary'
+                  }`}
                   style={{ width: `${getProgressPercentage()}%` }}
                 />
               </div>
 
               {/* Current Action */}
-              {generationProgress && !success && !error && (
-                <p className="text-center text-sm py-2">{generationProgress.message}</p>
+              {generationState && isLoading && !isGenerationSuccessful() && !isGenerationFailed() && (
+                <div className="flex justify-between items-center">
+                  <p className="text-center text-sm py-2">{getActiveTaskName()}</p>
+                  <button
+                    onClick={handleCancelGeneration}
+                    className="btn btn-sm btn-outline btn-error gap-2"
+                  >
+                    <XCircle size={16} />
+                    Cancel
+                  </button>
+                </div>
               )}
 
+              {/* Task List */}
+              {renderTaskList()}
+
               {/* Success Message */}
-              {success && (
+              {isGenerationSuccessful() && (
                 <div 
                   className="bg-success/10 border border-success/30 rounded-lg p-4 text-center my-4 animate-fadeIn"
                 >
@@ -257,7 +389,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               )}
 
               {/* Error Message */}
-              {(error || projectError) && (
+              {isGenerationFailed() && (
                 <div 
                   className="bg-error/10 border border-error/30 rounded-lg p-4 text-center my-4 animate-fadeIn"
                 >
@@ -298,18 +430,12 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               >
                 <div className="border-b border-gray-700 pb-1 mb-2 flex justify-between">
                   <span>Command Output</span>
-                  <button 
-                    onClick={() => setCommandLogs([])}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    Clear
-                  </button>
                 </div>
-                {commandLogs.length === 0 ? (
+                {generationLogs.length === 0 ? (
                   <div className="text-gray-500 italic">Waiting for command output...</div>
                 ) : (
-                  commandLogs.map((log, index) => (
-                    <div key={index} className="mb-1">
+                  generationLogs.map((log, index) => (
+                    <div key={index} className="mb-1 whitespace-pre-wrap">
                       <span className="text-blue-400">$</span> {log}
                     </div>
                   ))

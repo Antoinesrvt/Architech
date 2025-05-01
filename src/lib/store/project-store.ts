@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { frameworkService } from '@/lib/api';
+import { ProjectGenerationState, TaskResult } from '@/lib/api/local';
 
 export interface RecentProject {
   id: string;
@@ -57,6 +58,11 @@ interface ProjectState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   
+  // New generation tracking
+  currentGenerationId: string | null;
+  generationState: ProjectGenerationState | null;
+  generationLogs: string[];
+  
   // Save tracking
   lastSaved: Date | null;
   
@@ -72,6 +78,15 @@ interface ProjectState {
   
   // Project generation
   generateProject: () => Promise<string>;
+  getGenerationStatus: () => Promise<ProjectGenerationState | undefined>;
+  getGenerationLogs: () => Promise<string[] | undefined>;
+  cancelGeneration: () => Promise<void>;
+  
+  // Setup event listeners
+  setupGenerationListeners: () => () => void;
+  
+  // Reset generation state
+  resetGenerationState: () => void;
 }
 
 // Default state for a new project
@@ -192,11 +207,16 @@ export const useProjectStore = create<ProjectState>()(
     // Current project properties
     ...DEFAULT_PROJECT_STATE,
     
-    // Generation state
+    // Project generation state
     isLoading: false,
     error: null,
     setIsLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
+    
+    // New generation tracking
+    currentGenerationId: null,
+    generationState: null,
+    generationLogs: [],
     
     // Actions
     setProjectName: (name) => {
@@ -258,6 +278,14 @@ export const useProjectStore = create<ProjectState>()(
       });
     },
     
+    resetGenerationState: () => {
+      set({
+        currentGenerationId: null,
+        generationState: null,
+        generationLogs: [],
+      });
+    },
+    
     generateProject: async () => {
       const { projectName, projectPath, selectedFrameworkId, selectedModuleIds, moduleConfigurations } = get();
       
@@ -277,6 +305,9 @@ export const useProjectStore = create<ProjectState>()(
         return Promise.reject('Framework selection is required');
       }
       
+      // Reset any previous generation state
+      get().resetGenerationState();
+      
       // Start generation
       set({ isLoading: true, error: null });
       
@@ -292,18 +323,22 @@ export const useProjectStore = create<ProjectState>()(
           })),
           options: {
             typescript: true,
-            app_router: true, // Using app_router to match backend expectations
+            app_router: true,
             eslint: true,
-            cli_execution: true,
-            verbose_logging: true
           }
         };
         
-        // Log the config for debugging
         console.log('Project generation config:', JSON.stringify(config, null, 2));
         
-        // Call API to generate project - this will use CLI tools
+        // Call the backend to generate the project
         const projectId = await frameworkService.generateProject(config);
+        set({ currentGenerationId: projectId });
+        
+        // Setup listeners for this generation
+        get().setupGenerationListeners();
+        
+        // Get initial status
+        await get().getGenerationStatus();
         
         // Add to recent projects
         const newProject: RecentProject = {
@@ -317,13 +352,11 @@ export const useProjectStore = create<ProjectState>()(
         
         get().addProject(newProject);
         
-        // If we have a current draft, delete it after successful generation
+        // If we have a current draft, delete it after starting generation
         const { currentDraftId } = get();
         if (currentDraftId) {
           get().deleteDraft(currentDraftId);
         }
-        
-        set({ isLoading: false });
         
         return projectId;
       } catch (error) {
@@ -332,17 +365,102 @@ export const useProjectStore = create<ProjectState>()(
         // Provide a more helpful error message
         let errorMessage = error instanceof Error ? error.message : String(error);
         
-        // Special handling for known errors
-        if (errorMessage.includes('app_router')) {
-          errorMessage = 'There was an issue with the Next.js App Router configuration. Please try again.';
-        }
-        
         set({ 
           isLoading: false, 
           error: errorMessage
         });
         return Promise.reject(error);
       }
+    },
+    
+    getGenerationStatus: async () => {
+      const { currentGenerationId } = get();
+      if (!currentGenerationId) return;
+      
+      try {
+        const status = await frameworkService.getProjectStatus(currentGenerationId);
+        set({ generationState: status });
+        
+        // Update loading state based on generation status
+        if (status.status === 'Completed' || status.status.startsWith('Failed')) {
+          set({ isLoading: false });
+        }
+        
+        return status;
+      } catch (error) {
+        console.error('Failed to get generation status:', error);
+        // Don't set error state here to avoid interrupting the UI
+      }
+    },
+    
+    getGenerationLogs: async () => {
+      const { currentGenerationId } = get();
+      if (!currentGenerationId) return;
+      
+      try {
+        const logs = await frameworkService.getProjectLogs(currentGenerationId);
+        set({ generationLogs: logs });
+        return logs;
+      } catch (error) {
+        console.error('Failed to get generation logs:', error);
+        // Don't set error state here to avoid interrupting the UI
+      }
+    },
+    
+    cancelGeneration: async () => {
+      const { currentGenerationId } = get();
+      if (!currentGenerationId) return;
+      
+      try {
+        await frameworkService.cancelProjectGeneration(currentGenerationId);
+        set({ isLoading: false });
+        // Immediately update status to reflect cancellation
+        await get().getGenerationStatus();
+      } catch (error) {
+        console.error('Failed to cancel generation:', error);
+        set({ 
+          isLoading: false,
+          error: 'Failed to cancel project generation' 
+        });
+      }
+    },
+    
+    setupGenerationListeners: () => {
+      // Set up event listeners for task updates, completion, and failure
+      const unlistenTaskUpdates = frameworkService.listenToTaskUpdates((result: TaskResult) => {
+        console.log('Task update received:', result);
+        // Update status whenever we get a task update
+        get().getGenerationStatus();
+        get().getGenerationLogs();
+      });
+      
+      const unlistenComplete = frameworkService.listenToGenerationComplete((projectId: string) => {
+        console.log('Generation completed:', projectId);
+        if (projectId === get().currentGenerationId) {
+          set({ isLoading: false });
+          get().getGenerationStatus();
+          get().getGenerationLogs();
+        }
+      });
+      
+      const unlistenFailed = frameworkService.listenToGenerationFailed(({ projectId, reason }) => {
+        console.log('Generation failed:', projectId, reason);
+        if (projectId === get().currentGenerationId) {
+          set({ 
+            isLoading: false,
+            error: `Generation failed: ${reason}`
+          });
+          get().getGenerationStatus();
+          get().getGenerationLogs();
+        }
+      });
+      
+      // Return a function to unsubscribe from all listeners
+      return () => {
+        unlistenTaskUpdates();
+        unlistenComplete();
+        unlistenFailed();
+      };
     }
   }), 
   { 

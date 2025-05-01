@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from "@/lib/store/project-store";
 import { useFrameworkStore } from "@/lib/store/framework-store";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils/formatters";
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 
 export default function ProjectDrafts() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export default function ProjectDrafts() {
   const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ left: 0, top: 0 });
+  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
   // Fix hydration issues by only rendering after component mounts
   useEffect(() => {
@@ -37,6 +40,22 @@ export default function ProjectDrafts() {
     };
   }, [activeDropdown]);
 
+  // Update position of dropdown when active dropdown changes
+  useEffect(() => {
+    if (activeDropdown && buttonRefs.current[activeDropdown]) {
+      const buttonElement = buttonRefs.current[activeDropdown];
+      if (buttonElement) {
+        const rect = buttonElement.getBoundingClientRect();
+        
+        // Position directly below the button
+        setDropdownPosition({
+          left: rect.left,
+          top: rect.bottom + 5, // Add a small gap
+        });
+      }
+    }
+  }, [activeDropdown]);
+
   // Sort drafts by last updated date (newest first)
   const sortedDrafts = [...drafts].sort((a, b) => 
     new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
@@ -55,6 +74,18 @@ export default function ProjectDrafts() {
   const toggleDropdown = (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation();
     e.preventDefault(); // Prevent any other actions
+    
+    // Calculate position immediately on toggle
+    if (e.currentTarget instanceof HTMLButtonElement) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      
+      // Position directly below the button
+      setDropdownPosition({
+        left: rect.left,
+        top: rect.bottom + 5, // Add a small gap
+      });
+    }
+    
     setActiveDropdown(activeDropdown === draftId ? null : draftId);
   };
 
@@ -111,6 +142,42 @@ export default function ProjectDrafts() {
     );
   }
 
+  // Render dropdown menu as a portal-style element at the body level
+  const renderDropdownMenu = () => {
+    if (!activeDropdown) return null;
+    
+    return (
+      <div 
+        className="dropdown-content dropdown-menu menu p-2 shadow bg-base-100 rounded-box fixed w-48 z-[9999]"
+        style={{ 
+          left: `${dropdownPosition.left}px`,
+          top: `${dropdownPosition.top}px`,
+          maxHeight: '200px',
+          overflowY: 'auto'
+        }}
+      >
+        <button 
+          className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-base-200"
+          onClick={(e) => handleContinueDraft(e, activeDropdown)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+          Continue
+        </button>
+        <button 
+          className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
+          onClick={(e) => handleDeleteDraft(e, activeDropdown)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Delete
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -153,6 +220,7 @@ export default function ProjectDrafts() {
                     <td className="relative">
                       <div className="dropdown dropdown-end">
                         <button 
+                          ref={(el) => { buttonRefs.current[draft.id] = el; }}
                           onClick={(e) => toggleDropdown(e, draft.id)}
                           className="btn btn-sm btn-ghost btn-square dropdown-trigger hover:bg-base-300 relative z-20"
                           aria-label="Open actions menu"
@@ -162,28 +230,6 @@ export default function ProjectDrafts() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                           </svg>
                         </button>
-                        {activeDropdown === draft.id && (
-                          <div className="dropdown-content dropdown-menu menu p-2 shadow bg-base-100 rounded-box absolute right-0 top-full mt-1 w-48 z-50">
-                            <button 
-                              className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-base-200"
-                              onClick={(e) => handleContinueDraft(e, draft.id)}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                              </svg>
-                              Continue
-                            </button>
-                            <button 
-                              className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
-                              onClick={(e) => handleDeleteDraft(e, draft.id)}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              Delete
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -216,6 +262,7 @@ export default function ProjectDrafts() {
           </table>
         </div>
       </div>
+      {createPortal(renderDropdownMenu(), document.body)}
     </div>
   );
 } 

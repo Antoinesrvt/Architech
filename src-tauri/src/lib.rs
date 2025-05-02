@@ -1,10 +1,11 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// Import our commands and modules
-mod commands;
+// Export modules for use in binaries and the main app
+pub mod commands;
 pub mod state;
 pub mod generation;
+pub mod tasks;
 
 use commands::*;
 

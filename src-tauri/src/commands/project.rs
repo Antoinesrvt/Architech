@@ -1,21 +1,17 @@
 use serde::{Serialize, Deserialize};
-use tauri::command;
+use tauri::{command, State};
 use std::path::Path;
+use std::sync::Arc;
 use uuid::Uuid;
+use log::info;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectConfig {
     pub name: String,
     pub path: String,
     pub framework: String,
-    pub modules: Vec<ModuleConfig>,
+    pub modules: Vec<String>,
     pub options: ProjectOptions,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ModuleConfig {
-    pub id: String,
-    pub options: serde_json::Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -34,7 +30,24 @@ pub struct ValidationResult {
 // Command parameter structs
 #[derive(Deserialize)]
 pub struct ProjectIdParam {
-    pub projectId: String,
+    pub project_id: String,
+}
+
+// Responses
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ProjectStatusResponse {
+    pub status: String,
+    pub progress: u8,
+    pub current_step: String,
+    pub path: Option<String>,
+    pub error: Option<String>,
+    pub resumable: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ProjectLogResponse {
+    pub timestamp: u64,
+    pub message: String,
 }
 
 #[command]
@@ -69,111 +82,210 @@ pub async fn validate_project_config(config: ProjectConfig) -> Result<Validation
     })
 }
 
-// Function to resolve module dependencies
-#[doc(hidden)]
-pub async fn resolve_module_dependencies(selected_module_ids: &[String]) -> Result<Vec<super::framework::Module>, String> {
-    // Get all available modules
-    let all_modules = match super::framework::get_modules().await {
-        Ok(modules) => modules,
-        Err(e) => return Err(format!("Failed to get modules: {}", e)),
-    };
-    
-    let mut result = Vec::new();
-    let mut processed = std::collections::HashSet::new();
-    
-    fn add_module_with_deps(
-        module_id: &str,
-        all_modules: &[super::framework::Module],
-        result: &mut Vec<super::framework::Module>,
-        processed: &mut std::collections::HashSet<String>,
-    ) -> Result<(), String> {
-        if processed.contains(module_id) {
-            return Ok(());
-        }
-        
-        // Find module by id
-        let module = all_modules.iter()
-            .find(|m| m.id == module_id)
-            .ok_or_else(|| format!("Module '{}' not found", module_id))?
-            .clone();
-        
-        // Add dependencies first
-        for dep_id in &module.dependencies {
-            add_module_with_deps(dep_id, all_modules, result, processed)?;
-        }
-        
-        // Add the module itself if not already added
-        if !processed.contains(module_id) {
-            result.push(module);
-            processed.insert(module_id.to_string());
-        }
-        
-        Ok(())
-    }
-    
-    for module_id in selected_module_ids {
-        add_module_with_deps(module_id, &all_modules, &mut result, &mut processed)?;
-    }
-    
-    Ok(result)
-}
-
 #[command]
 pub async fn generate_project(
     config: ProjectConfig,
     app_handle: tauri::AppHandle,
-    state: tauri::State<'_, crate::state::AppState>,
+    state: State<'_, Arc<crate::state::AppState>>,
 ) -> Result<String, String> {
-    // Create project generator with cloned state
-    let app_state = state.inner().clone();
+    // Add extensive debug logs
+    println!("=============================================");
+    println!("GENERATE_PROJECT COMMAND CALLED");
+    println!("Project name: {}", config.name);
+    println!("Project path: {}", config.path);
+    println!("Framework: {}", config.framework);
+    println!("Modules: {:?}", config.modules);
+    println!("=============================================");
+    
+    // Add debug logs
+    log::debug!("generate_project command called with config: {:#?}", config);
+    log::info!("Starting project generation with name: {}, framework: {}", config.name, config.framework);
+    
+    // Create a new project_id
+    let project_id = Uuid::new_v4().to_string();
+    
+    println!("Generated new project ID: {}", project_id);
+    log::debug!("Generated new project ID: {}", project_id);
+    
+    // Set project status to preparing
+    println!("Setting project status to Preparing");
+    state.set_project_status(&project_id, crate::state::ProjectStatus::Preparing).await;
+    
+    // Log the start of generation
+    info!("Starting project generation: {}", project_id);
+    println!("Adding log entry for project generation start");
+    state.add_log(&project_id, &format!("Starting generation of {} project with framework {}", 
+        config.name, config.framework)).await;
+    
+    // Create project generator
     let generator = crate::generation::ProjectGenerator::new(
         app_handle.clone(),
-        std::sync::Arc::new(app_state)
+        state.inner().clone()
     );
     
-    // Start generation
-    generator.start_generation(config).await
+    // Store the config for task initialization
+    match generator.store_config(&project_id, config).await {
+        Ok(_) => {
+            // Return the project ID immediately
+            log::info!("Project initialized successfully with ID: {}", project_id);
+            log::debug!("Returning project ID to frontend");
+            Ok(project_id)
+        },
+        Err(e) => {
+            println!("PROJECT INITIALIZATION FAILED: {}", e);
+            log::error!("Failed to initialize project: {}", e);
+            Err(e)
+        }
+    }
+}
+
+#[command]
+pub async fn initialize_project_tasks(
+    param: ProjectIdParam,
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<crate::state::AppState>>,
+) -> Result<(), String> {
+    println!("=============================================");
+    println!("INITIALIZE_PROJECT_TASKS COMMAND CALLED");
+    println!("Project ID: {}", param.project_id);
+    println!("=============================================");
+    
+    log::debug!("initialize_project_tasks command called for project ID: {}", param.project_id);
+    
+    // Create project generator
+    let generator = crate::generation::ProjectGenerator::new(
+        app_handle.clone(),
+        state.inner().clone()
+    );
+    
+    // Initialize tasks and start generation
+    match generator.initialize_and_start(&param.project_id).await {
+        Ok(_) => {
+            println!("PROJECT TASKS INITIALIZED: {}", param.project_id);
+            log::info!("Project tasks initialized successfully for ID: {}", param.project_id);
+            Ok(())
+        },
+        Err(e) => {
+            println!("PROJECT TASK INITIALIZATION FAILED: {}", e);
+            log::error!("Failed to initialize project tasks: {}", e);
+            Err(e)
+        }
+    }
 }
 
 #[command]
 pub async fn get_project_status(
     param: ProjectIdParam,
-    state: tauri::State<'_, crate::state::AppState>,
-) -> Result<crate::state::ProjectGenerationState, String> {
-    state.get_project(&param.projectId)
+    state: State<'_, Arc<crate::state::AppState>>,
+) -> Result<ProjectStatusResponse, String> {
+    let status = state.get_project_status(&param.project_id).await;
+    
+    // Convert internal status to response
+    let response = match status {
+        crate::state::ProjectStatus::NotStarted => ProjectStatusResponse {
+            status: "not_started".to_string(),
+            progress: 0,
+            current_step: "".to_string(),
+            path: None,
+            error: None,
+            resumable: false,
+        },
+        crate::state::ProjectStatus::Preparing => ProjectStatusResponse {
+            status: "preparing".to_string(),
+            progress: 0,
+            current_step: "Preparing".to_string(),
+            path: None,
+            error: None,
+            resumable: false,
+        },
+        crate::state::ProjectStatus::Generating { current_step, progress } => ProjectStatusResponse {
+            status: "generating".to_string(),
+            progress,
+            current_step,
+            path: None,
+            error: None,
+            resumable: false,
+        },
+        crate::state::ProjectStatus::Completed { path } => ProjectStatusResponse {
+            status: "completed".to_string(),
+            progress: 100,
+            current_step: "Completed".to_string(),
+            path: Some(path),
+            error: None,
+            resumable: false,
+        },
+        crate::state::ProjectStatus::Failed { error, resumable } => ProjectStatusResponse {
+            status: "failed".to_string(),
+            progress: 0,
+            current_step: "Failed".to_string(),
+            path: None,
+            error: Some(error),
+            resumable,
+        },
+        crate::state::ProjectStatus::Cancelled => ProjectStatusResponse {
+            status: "cancelled".to_string(),
+            progress: 0,
+            current_step: "Cancelled".to_string(),
+            path: None,
+            error: Some("Project generation was cancelled".to_string()),
+            resumable: false,
+        },
+    };
+    
+    Ok(response)
 }
 
 #[command]
 pub async fn get_project_logs(
     param: ProjectIdParam,
-    state: tauri::State<'_, crate::state::AppState>,
-) -> Result<Vec<String>, String> {
-    let project = state.get_project(&param.projectId)?;
-    Ok(project.logs)
+    state: State<'_, Arc<crate::state::AppState>>,
+) -> Result<Vec<ProjectLogResponse>, String> {
+    let logs = state.get_logs(&param.project_id).await;
+    
+    // Convert internal logs to response
+    let response = logs.into_iter()
+        .map(|log| ProjectLogResponse {
+            timestamp: log.timestamp,
+            message: log.message,
+        })
+        .collect();
+    
+    Ok(response)
 }
 
 #[command]
 pub async fn cancel_project_generation(
     param: ProjectIdParam,
-    state: tauri::State<'_, crate::state::AppState>,
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<crate::state::AppState>>,
 ) -> Result<(), String> {
-    // Get project state
-    let mut projects = state.projects.lock().map_err(|e| format!("Failed to lock projects state: {}", e))?;
+    // Create project generator
+    let generator = crate::generation::ProjectGenerator::new(
+        app_handle.clone(),
+        state.inner().clone()
+    );
     
-    // Check if project exists
-    if let Some(project) = projects.get_mut(&param.projectId) {
-        // Mark as cancelled - this will stop future tasks from running
-        project.status = crate::state::TaskStatus::Failed("Generation cancelled by user".to_string());
-        
-        // Mark all pending tasks as skipped
-        for task in project.tasks.values_mut() {
-            if matches!(task.status, crate::state::TaskStatus::Pending) {
-                task.status = crate::state::TaskStatus::Skipped("Generation cancelled by user".to_string());
-            }
-        }
-        
-        Ok(())
-    } else {
-        Err(format!("Project not found: {}", param.projectId))
+    // Cancel generation
+    generator.cancel_generation(&param.project_id).await
+}
+
+#[command]
+pub async fn resume_project_generation(
+    param: ProjectIdParam,
+    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<crate::state::AppState>>,
+) -> Result<(), String> {
+    // Check if project can be resumed
+    if !state.can_resume(&param.project_id).await {
+        return Err("Project cannot be resumed".to_string());
     }
+    
+    // Create project generator
+    let generator = crate::generation::ProjectGenerator::new(
+        app_handle.clone(),
+        state.inner().clone()
+    );
+    
+    // Resume generation
+    generator.resume_generation(&param.project_id).await
 } 

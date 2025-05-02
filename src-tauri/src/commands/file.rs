@@ -3,6 +3,7 @@ use std::path::Path;
 use tauri::Runtime;
 use tauri::AppHandle;
 use std::process::Command;
+use std::fs;
 
 #[command]
 pub async fn open_in_folder<R: Runtime>(path: String, _app_handle: AppHandle<R>) -> Result<(), String> {
@@ -26,5 +27,23 @@ pub async fn open_in_folder<R: Runtime>(path: String, _app_handle: AppHandle<R>)
     match result {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to open folder: {}", e)),
+    }
+}
+
+/// Modifies a file by replacing a pattern with new content
+pub fn modify_file(path: &Path, pattern: &str, replacement: &str) -> Result<(), String> {
+    // Read the original content
+    let content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => return Err(format!("Failed to read file: {}", e)),
+    };
+    
+    // Replace pattern with new content
+    let new_content = content.replace(pattern, replacement);
+    
+    // Write the modified content back to the file
+    match fs::write(path, new_content) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to write to file: {}", e)),
     }
 } 

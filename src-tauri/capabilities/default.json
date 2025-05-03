@@ -1,7 +1,27 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
+  "description": "Capability for the main window",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default"]
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "binaries/nodejs-sidecar",
+          "sidecar": true,
+          "args": [
+            {
+              "validator": ".*"
+            },
+            {
+              "validator": "^(npm|npx|yarn|pnpm|node)\\s.*"
+            }
+          ]
+        }
+      ]
+    },
+    "shell:allow-open"
+  ]
 }

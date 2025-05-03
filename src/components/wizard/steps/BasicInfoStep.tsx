@@ -93,11 +93,7 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
           path: '',
         }));
         saveDraft();
-        
-        toast({
-          type: "success",
-          message: "Project location selected",
-        });
+      
       } else {
         // Silently handle the case where no directory was selected
         // User might have just closed the dialog

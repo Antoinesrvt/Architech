@@ -112,7 +112,9 @@ impl TaskRegistry {
     /// Register the default task types
     fn register_defaults(&mut self) {
         self.register("framework", |context| {
-            Box::new(FrameworkTask::new(context))
+            let framework_name = context.config.framework.clone();
+            let id = format!("framework:{}", framework_name);
+            Box::new(FrameworkTask::new(id, framework_name))
         });
         
         self.register("module", |context| {

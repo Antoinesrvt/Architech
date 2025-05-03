@@ -9,8 +9,8 @@ use log::{info, error};
 
 use super::{Task, TaskContext};
 
-// Import the get_framework function from the framework module
-use super::framework::get_framework;
+// Import the get_frameworks function from the commands module
+use crate::commands::framework::get_frameworks;
 
 /// Task for creating directory structure
 pub struct DirectoryTask {
@@ -61,7 +61,10 @@ impl Task for DirectoryTask {
         let project_dir = &context.project_dir;
         
         // Get framework details
-        let framework = get_framework(&config.framework).await?;
+        let frameworks = get_frameworks().await?;
+        let framework = frameworks.iter()
+            .find(|f| f.id == config.framework)
+            .ok_or_else(|| format!("Framework {} not found", config.framework))?;
         
         // Skip this task if the framework doesn't enforce directory structure
         if !framework.directory_structure.enforced {

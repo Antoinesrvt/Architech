@@ -186,10 +186,40 @@ impl CommandBuilder {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
             
-            // Set environment variables
+            // Ensure PATH includes common Node.js installation locations
+            let mut paths = Vec::new();
             if let Ok(path) = std::env::var("PATH") {
-                cmd.env("PATH", path);
+                paths.push(path);
             }
+            
+            // Add common Node.js installation paths on macOS/Linux
+            if !cfg!(windows) {
+                paths.push("/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin".to_string());
+                paths.push("/opt/homebrew/bin".to_string()); // Homebrew on M1 Macs
+                
+                // Add user-local npm paths
+                if let Ok(home) = std::env::var("HOME") {
+                    paths.push(format!("{}/node_modules/.bin", home));
+                    paths.push(format!("{}/.npm-global/bin", home));
+                    paths.push(format!("{}/.nvm/versions/node/*/bin", home));
+                    paths.push(format!("{}/.nodenv/shims", home));
+                }
+            } else {
+                // Windows paths
+                paths.push(r"C:\Program Files\nodejs".to_string());
+                paths.push(r"C:\Program Files (x86)\nodejs".to_string());
+                
+                // Add AppData npm paths
+                if let Ok(appdata) = std::env::var("APPDATA") {
+                    paths.push(format!(r"{}\npm", appdata));
+                    paths.push(format!(r"{}\npm\bin", appdata));
+                }
+            }
+            
+            // Join all paths
+            let path_string = paths.join(if cfg!(windows) { ";" } else { ":" });
+            debug!("Setting PATH environment variable: {}", path_string);
+            cmd.env("PATH", path_string);
             
             // Add custom environment variables
             for (key, value) in &self.options.env_vars {
@@ -288,6 +318,7 @@ impl CommandBuilder {
                     
                     // If we have a project name to verify, check that it exists
                     if let Some(project_name) = &project_name {
+                        // working_dir is now the parent directory, so we need to join the project name
                         let project_dir = working_dir.join(project_name);
                         info!("Verifying project directory exists: {}", project_dir.display());
                         

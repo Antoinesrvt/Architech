@@ -267,14 +267,15 @@ impl ProjectGenerator {
         // Log the config for debugging
         debug!("Project config: {:?}", config);
         
-        // Project directory path
-        let project_path = PathBuf::from(&config.path).join(&config.name);
+        // Project directory path - Use only the parent directory path, not including the project name
+        // This is critical for framework generators like create-next-app that need to run from parent directory
+        let project_path = PathBuf::from(&config.path);
         debug!("Project path will be: {}", project_path.display());
         
         // Create task context
         let context = TaskContext {
             project_id: project_id.to_string(),
-            project_dir: project_path.into(),
+            project_dir: project_path.clone().into(),
             app_handle: self.app_handle.clone(),
             config: Arc::new(config.clone()),
         };
@@ -285,8 +286,11 @@ impl ProjectGenerator {
         
         // Step 1: Framework setup task - No dependencies
         debug!("Creating framework task for: {}", config.framework);
-        let framework_task = Box::new(FrameworkTask::new(context.clone()));
-        let framework_task_id = framework_task.id().to_string();
+        let framework_task_id = format!("framework:{}", config.framework);
+        let framework_task = Box::new(FrameworkTask::new(
+            framework_task_id.clone(),
+            config.framework.clone()
+        ));
         tasks.push(framework_task);
         info!("Created framework task with ID: {}", framework_task_id);
         
@@ -454,15 +458,15 @@ impl ProjectGenerator {
         config: crate::commands::project::ProjectConfig,
         tasks: Vec<Box<dyn Task>>
     ) -> Result<(), String> {
-        // Create project path
-        let project_path = PathBuf::from(&config.path).join(&config.name);
+        // Create project path - use only the parent directory, not including project name
+        // This is critical for framework generators like create-next-app
+        let project_path = PathBuf::from(&config.path);
         debug!("Project path for task execution: {}", project_path.display());
-        let project_path_arc = Arc::from(project_path.as_path());
         
         // Create task context
         let context = TaskContext {
             project_id: project_id.to_string(),
-            project_dir: project_path_arc,
+            project_dir: project_path.clone().into(),
             app_handle: app_handle.clone(),
             config: Arc::new(config.clone()),
         };
@@ -1215,6 +1219,7 @@ impl ProjectGenerator {
                             
                             // If we have a project name to verify, check that it exists
                             if let Some(project_name) = &project_name {
+                                // working_dir is now the parent directory, so we need to join the project name
                                 let project_dir = working_dir.join(project_name);
                                 println!("Verifying project directory exists: {}", project_dir.display());
                                 

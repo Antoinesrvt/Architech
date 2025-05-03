@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use crate::commands::*;
 use crate::state::AppState;
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tauri_plugin_log::Builder as LogBuilder;
 use std::sync::Once;
 
@@ -165,6 +165,31 @@ fn main() {
                 }
             });
             
+            // Add window event handlers for resource cleanup
+            let app_handle = app.handle();
+            
+            // Set up once the main window is created
+            let window = app.get_webview_window("main").unwrap();
+            let window_clone = window.clone();
+            let app_handle_clone = app_handle.clone();
+            
+            // Set up cleanup on window close
+            window.on_window_event(move |event| {
+                match event {
+                    tauri::WindowEvent::CloseRequested { .. } => {
+                        // Clean up event listeners and resources
+                        let _ = app_handle_clone.emit("cleanup-resources", ());
+                    },
+                    // Also clean up on navigation
+                    tauri::WindowEvent::Destroyed => {
+                        let _ = app_handle_clone.emit("cleanup-resources", ());
+                    },
+                    _ => {}
+                }
+            });
+            
+            // No need for separate on_navigation since we're handling it in window events
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -186,6 +211,11 @@ fn main() {
             browse_directory,
             open_in_editor,
             open_in_folder,
+            
+            // Node.js commands
+            run_node_command,
+            run_node_command_streaming,
+            cleanup_command_resources,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())

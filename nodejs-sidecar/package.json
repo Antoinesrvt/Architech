@@ -1,0 +1,23 @@
+{
+  "name": "nodejs-command-executor",
+  "version": "1.0.0",
+  "description": "Generic Node.js command executor sidecar for Tauri applications",
+  "main": "index.js",
+  "type": "module",
+  "bin": "index.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.10.0"
+  },
+  "pkg": {
+    "targets": [
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-win-x64",
+      "node18-linux-x64"
+    ],
+    "assets": []
+  }
+} 

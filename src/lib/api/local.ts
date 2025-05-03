@@ -169,31 +169,52 @@ const mockModules: Module[] = [
   }
 ];
 
+// Helper function to check if we're running in a Tauri environment
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && 
+    window !== undefined && 
+    // @ts-ignore - window.__TAURI__ exists in Tauri apps
+    window.__TAURI__ !== undefined;
+}
+
 // Safe invoke function that handles both Tauri and browser environments
 const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
   // Check if we're in a Tauri environment
   const isTauri = window && (window as any).__TAURI__;
   
   // Debug logging - better format for readability
-  console.log(`Invoking ${command} with args:`, JSON.stringify(args, null, 2));
+  console.log(`Invoking ${command} with args:`, args ? JSON.stringify(args, null, 2) : 'undefined');
   
   if (isTauri) {
     try {
+      console.log(`[${new Date().toISOString()}] Invoking ${command} in Tauri environment`);
       let result;
+      
+      // Make sure args is not undefined before invoking
+      const safeArgs = args || {};
       
       // Try the core.invoke approach first (newer Tauri versions)
       if ((window as any).__TAURI__.core?.invoke) {
-        result = await (window as any).__TAURI__.core.invoke(command, args);
+        console.log('Using core.invoke');
+        result = await (window as any).__TAURI__.core.invoke(command, safeArgs);
       } else {
         // Try the direct invoke from import
-        result = await invoke(command, args);
+        console.log('Using @tauri-apps/api/invoke');
+        result = await invoke(command, safeArgs);
       }
       
       console.log(`${command} result:`, typeof result === 'object' ? JSON.stringify(result, null, 2) : result);
       return result;
     } catch (error) {
-      console.error(`Error invoking ${command}:`, error);
-      console.error(`Args were:`, JSON.stringify(args, null, 2));
+      console.error(`[${new Date().toISOString()}] ERROR invoking ${command}:`, error);
+      console.error(`Args were:`, args ? JSON.stringify(args, null, 2) : 'undefined');
+      
+      // Enhanced error reporting
+      if (error instanceof Error) {
+        console.error(`Error details: ${error.name} - ${error.message}`);
+        console.error(`Stack trace: ${error.stack}`);
+      }
+      
       console.error(`Command context:`, { command, commandType: typeof command, argsType: typeof args });
       throw error;
     }
@@ -224,9 +245,15 @@ const safeInvoke = async <T>(command: string, args?: Record<string, unknown>): P
       } as T;
     } else if (command === 'get_project_logs') {
       return ['Mock log 1', 'Mock log 2'] as T;
+    } else if (command === 'generate_project') {
+      // Return a mock project ID
+      return 'mock-project-' + Date.now() as T;
+    } else if (command === 'initialize_project_tasks') {
+      // Mock successful initialization
+      return undefined as T;
     } else {
       console.warn(`Mock for command ${command} not implemented`);
-      return {} as T;
+    return {} as T;
     }
   }
 };
@@ -242,6 +269,7 @@ export interface ProjectGenerationState {
   progress: number;
   status: TaskStatus;
   logs: string[];
+  resumable?: boolean;
 }
 
 // Generation task status
@@ -296,7 +324,32 @@ export interface GenerationTask {
 // Task result from backend
 export interface TaskResult {
   task_id: string;
-  success: boolean;
+  project_id: string;
+  state: TaskStatus;
+}
+
+// Helper to convert backend TaskState to frontend TaskResult
+export function convertTaskEvent(event: any): TaskResult {
+  console.log('Converting task event:', event);
+  return {
+    task_id: event.task_id,
+    project_id: event.project_id,
+    state: event.state
+  };
+}
+
+// Update the project status and log response types to match our new backend
+export interface ProjectStatusResponse {
+  status: string;
+  progress: number;
+  current_step: string;
+  path: string | null;
+  error: string | null;
+  resumable: boolean;
+}
+
+export interface LogEntry {
+  timestamp: number;
   message: string;
 }
 
@@ -337,113 +390,224 @@ export class LocalFrameworkService implements FrameworkService {
   }
 
   async generateProject(config: ProjectConfig): Promise<string> {
+    console.log('Generating project with config:', JSON.stringify(config, null, 2));
+    
     try {
-      // Validate the config first
+      // Validate project config
       const validation = await this.validateProjectConfig(config);
       if (!validation.valid) {
-        throw new Error(validation.errors.join(', '));
+        console.error('Project config validation failed:', validation.errors);
+        throw new Error(`Project validation failed: ${validation.errors.join(', ')}`);
       }
       
-      // If validation passes, generate the project using the new state-based system
-      const projectId = await safeInvoke<string>('generate_project', { config });
+      // Create backend config object 
+      const backendConfig = {
+        name: config.name,
+        path: config.path,
+        framework: config.framework,
+        modules: config.modules || [],
+        options: {
+          typescript: config.options?.typescript !== false,
+          app_router: config.options?.app_router !== false,
+          eslint: config.options?.eslint !== false,
+        }
+      };
+      
+      console.log('Sending final config to backend:', JSON.stringify(backendConfig, null, 2));
+      
+      // Call generate_project to get the ID (first phase)
+      const projectId = await safeInvoke<string>('generate_project', { config: backendConfig });
+      console.log('Backend returned project ID:', projectId);
+      
+      if (!projectId) {
+        throw new Error('Backend returned empty project ID');
+      }
+      
+      // Return the project ID immediately
       return projectId;
     } catch (error) {
-      console.error('Failed to generate project:', error);
+      console.error('Error generating project:', error);
+      throw error;
+    }
+  }
+  
+  async initializeProjectTasks(projectId: string): Promise<void> {
+    console.log('Initializing project tasks for ID:', projectId);
+    
+    if (!projectId) {
+      console.error('Cannot initialize tasks: Empty project ID');
+      throw new Error('Cannot initialize tasks: Empty project ID');
+    }
+    
+    try {
+      // Call initialize_project_tasks (second phase)
+      console.log('Calling initialize_project_tasks with project_id:', projectId);
+      await safeInvoke<void>('initialize_project_tasks', { 
+        param: { project_id: projectId }  // Fix: wrap in param object to match Rust function signature
+      });
+      console.log('Project tasks initialized successfully for ID:', projectId);
+    } catch (error) {
+      console.error('Error initializing project tasks:', error);
       throw error;
     }
   }
 
   async getProjectStatus(projectId: string): Promise<ProjectGenerationState> {
     try {
-      return await safeInvoke<ProjectGenerationState>('get_project_status', { param: { projectId } });
+      // Call the updated backend API with revised parameter structure
+      console.log(`Getting project status for ID: ${projectId}`);
+      const response = await safeInvoke<ProjectStatusResponse>('get_project_status', { 
+        param: { project_id: projectId }
+      });
+      console.log(`Got project status response:`, response);
+      
+      // Convert the new response format to the existing ProjectGenerationState format
+      // for backward compatibility
+      const status: TaskStatus = 
+        response.status === 'not_started' ? 'Pending' :
+        response.status === 'preparing' ? 'Initializing' :
+        response.status === 'generating' ? 'Running' :
+        response.status === 'completed' ? 'Completed' :
+        response.status === 'cancelled' ? 'Skipped: Cancelled by user' :
+        `Failed: ${response.error || 'Unknown error'}`;
+      
+      // For initializing status, we need to create placeholder tasks
+      // This is handled in the frontend store, but we prepare the state here
+      const isInitializing = response.status === 'preparing'; 
+      
+      // Create a synthetic generation state from the new response format
+      const projectGenerationState: ProjectGenerationState = {
+        id: projectId,
+        path: response.path || '',
+        name: '', // This will be filled in by the UI if needed
+        framework: '',
+        tasks: {}, // The UI will create placeholder tasks for initializing state
+        current_task: null,
+        progress: response.progress / 100, // Convert from 0-100 to 0-1
+        status,
+        logs: [], // Logs are fetched separately
+        resumable: response.resumable
+      };
+      
+      console.log(`Converted to ProjectGenerationState:`, projectGenerationState);
+      return projectGenerationState;
     } catch (error) {
-      console.error('Error fetching project status:', error);
+      console.error('Error getting project status:', error);
       throw error;
     }
   }
 
   async getProjectLogs(projectId: string): Promise<string[]> {
     try {
-      return await safeInvoke<string[]>('get_project_logs', { param: { projectId } });
+      // Call the updated backend API with revised parameter structure
+      const logs = await safeInvoke<LogEntry[]>('get_project_logs', { 
+        param: { project_id: projectId }
+      });
+      
+      // Convert the new log format to the existing string array format
+      // for backward compatibility
+      return logs.map(log => log.message);
     } catch (error) {
-      console.error('Error fetching project logs:', error);
+      console.error('Error getting project logs:', error);
       throw error;
     }
   }
 
   async cancelProjectGeneration(projectId: string): Promise<void> {
     try {
-      // Ensure we're using the correct param structure for Rust struct parameter
-      await safeInvoke<boolean>('cancel_project_generation', { param: { projectId } });
+      // Call the updated backend API with revised parameter structure
+      await safeInvoke<void>('cancel_project_generation', { 
+        param: { project_id: projectId }
+      });
     } catch (error) {
       console.error('Error cancelling project generation:', error);
       throw error;
     }
   }
 
+  // Add a new method for resuming project generation
+  async resumeProjectGeneration(projectId: string): Promise<void> {
+    try {
+      // Call the new backend API for resuming generation
+      await safeInvoke<void>('resume_project_generation', { 
+        param: { project_id: projectId }
+      });
+    } catch (error) {
+      console.error('Error resuming project generation:', error);
+      throw error;
+    }
+  }
+
   // Listen for task updates
-  listenToTaskUpdates(callback: (result: TaskResult) => void): () => void {
+  listenToTaskUpdates(callback: (result: TaskResult) => void): Promise<() => void> {
     // Check if we're in a Tauri environment
     const isTauri = window && (window as any).__TAURI__;
     
     if (isTauri) {
       try {
-        const unlisten = listen<TaskResult>('task-update', (event) => {
-          callback(event.payload);
+        console.log('Setting up listener for task-state-changed event');
+        return listen<{project_id: string, task_id: string, state: string}>('task-state-changed', (event) => {
+          console.log('Received task-state-changed event:', event);
+          
+          // Convert the incoming event to the expected TaskResult format
+          const taskResult: TaskResult = {
+            task_id: event.payload.task_id,
+            project_id: event.payload.project_id,
+            state: event.payload.state
+          };
+          
+          callback(taskResult);
         });
-        return () => { unlisten.then(fn => fn()); };
       } catch (error) {
         console.error('Failed to listen for task updates:', error);
-        return () => {};
+        return Promise.resolve(() => {});
       }
     } else {
       console.warn('Task updates are not available in browser mode');
-      return () => {};
+      return Promise.resolve(() => {});
     }
   }
 
   // Listen for generation completion
-  listenToGenerationComplete(callback: (projectId: string) => void): () => void {
+  listenToGenerationComplete(callback: (projectId: string) => void): Promise<() => void> {
     const isTauri = window && (window as any).__TAURI__;
     
     if (isTauri) {
       try {
-        const unlisten = listen<string>('generation-complete', (event) => {
+        return listen<string>('generation-complete', (event) => {
           callback(event.payload);
         });
-        return () => { unlisten.then(fn => fn()); };
       } catch (error) {
         console.error('Failed to listen for generation completion:', error);
-        return () => {};
+        return Promise.resolve(() => {});
       }
     } else {
       console.warn('Generation completion events are not available in browser mode');
-      return () => {};
+      return Promise.resolve(() => {});
     }
   }
 
   // Listen for generation failure
-  listenToGenerationFailed(callback: (data: { projectId: string, reason: string }) => void): () => void {
+  listenToGenerationFailed(callback: (data: { projectId: string, reason: string }) => void): Promise<() => void> {
     const isTauri = window && (window as any).__TAURI__;
     
     if (isTauri) {
       try {
-        const unlisten = listen<[string, string]>('generation-failed', (event) => {
+        return listen<[string, string]>('generation-failed', (event) => {
           const [projectId, reason] = event.payload;
           callback({ projectId, reason });
         });
-        return () => { unlisten.then(fn => fn()); };
       } catch (error) {
         console.error('Failed to listen for generation failure:', error);
-        return () => {};
+        return Promise.resolve(() => {});
       }
     } else {
       console.warn('Generation failure events are not available in browser mode');
-      return () => {};
+      return Promise.resolve(() => {});
     }
   }
 
-  listenToProgress(callback: (progress: GenerationProgress) => void): () => void {
+  listenToProgress(callback: (progress: GenerationProgress) => void): Promise<() => void> {
     // In browser mode, simulate progress
     if (!(window as any).__TAURI__) {
       let progress = 0;
@@ -462,21 +626,17 @@ export class LocalFrameworkService implements FrameworkService {
         }
       }, 500);
       
-      return () => clearInterval(interval);
+      return Promise.resolve(() => clearInterval(interval));
     }
     
     // In Tauri mode, listen to real events
     try {
-      const unlisten = listen<GenerationProgress>('generation-progress', (event) => {
+      return listen<GenerationProgress>('generation-progress', (event) => {
         callback(event.payload);
       });
-      
-      return () => {
-        unlisten.then(unlistenFn => unlistenFn());
-      };
     } catch (error) {
       console.error('Failed to listen to progress events:', error);
-      return () => {};
+      return Promise.resolve(() => {});
     }
   }
 
@@ -519,5 +679,83 @@ export class LocalFrameworkService implements FrameworkService {
       console.error('Failed to open folder:', error);
       return false;
     }
+  }
+
+  // Listen for task initialization started
+  listenToTaskInitializationStarted(callback: (data: { project_id: string }) => void): Promise<() => void> {
+    console.log('Setting up listener for task-initialization-started event');
+    
+    return listen<{ project_id: string }>('task-initialization-started', (event) => {
+      console.log('Task initialization started event received:', event);
+      callback(event.payload);
+    });
+  }
+  
+  // Listen for task initialization progress
+  listenToTaskInitializationProgress(callback: (data: { project_id: string, message: string }) => void): Promise<() => void> {
+    console.log('Setting up listener for task-initialization-progress event');
+    
+    return listen<{ project_id: string, message: string }>('task-initialization-progress', (event) => {
+      console.log('Task initialization progress event received:', event);
+      callback(event.payload);
+    });
+  }
+  
+  // Listen for task initialization completed
+  async listenToTaskInitializationCompleted(callback: (data: { 
+    project_id: string, 
+    task_count: number,
+    task_names: Array<[string, string]> // [task_id, task_name]
+  }) => void): Promise<() => void> {
+    if (isTauri()) {
+      console.log('Setting up task-initialization-completed listener (Tauri)');
+      
+      // For Tauri, use the event system
+      const unlisten = await listen('task-initialization-completed', (event: { payload: any }) => {
+        console.log('task-initialization-completed event received:', event.payload);
+        callback({
+          project_id: event.payload.project_id,
+          task_count: event.payload.task_count,
+          task_names: event.payload.task_names || [] // Use empty array as fallback if not provided
+        });
+      });
+      
+      return unlisten;
+    } else {
+      // For browser, we don't have a real backend, so simulate with localStorage
+      console.log('Setting up task-initialization-completed listener (Browser)');
+      
+      // Create event listener
+      const handleEvent = (e: StorageEvent) => {
+        if (e.key === 'task-initialization-completed') {
+          try {
+            const data = JSON.parse(e.newValue || '{}');
+            callback({
+              project_id: data.project_id,
+              task_count: data.task_count,
+              task_names: data.task_names || []
+            });
+          } catch (error) {
+            console.error('Error parsing task initialization event', error);
+          }
+        }
+      };
+      
+      // Add event listener
+      window.addEventListener('storage', handleEvent);
+      
+      // Return cleanup function
+      return () => window.removeEventListener('storage', handleEvent);
+    }
+  }
+  
+  // Listen for task initialization failed
+  listenToTaskInitializationFailed(callback: (data: { project_id: string, reason: string }) => void): Promise<() => void> {
+    console.log('Setting up listener for task-initialization-failed event');
+    
+    return listen<{ project_id: string, reason: string }>('task-initialization-failed', (event) => {
+      console.log('Task initialization failed event received:', event);
+      callback(event.payload);
+    });
   }
 } 

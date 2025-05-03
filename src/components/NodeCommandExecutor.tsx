@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   executeNodeCommand, 
-  executeCommandStreaming, 
+  executeCommandWithEvents, 
   cleanupCommand, 
   CommandResult,
-  NodeCommandType,
-  CommandEvent
-} from '../lib/api/nodejs-executor';
+  CommandEvent,
+  NodeTool
+} from '../lib/api/nodejs';
 
 interface NodeCommandExecutorProps {
   /**
@@ -25,6 +25,9 @@ interface NodeCommandExecutorProps {
   onCommandComplete?: (result: CommandResult) => void;
 }
 
+// Type that includes our NodeTool plus "custom" for full commands
+type CommandToolType = NodeTool | "custom";
+
 /**
  * Component for executing Node.js commands with real-time output
  */
@@ -38,7 +41,7 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [commandId, setCommandId] = useState<string | null>(null);
-  const [selectedTool, setSelectedTool] = useState<NodeCommandType>(NodeCommandType.Npm);
+  const [selectedTool, setSelectedTool] = useState<CommandToolType>("npm");
   const outputRef = useRef<HTMLDivElement>(null);
   
   // Auto-scroll output to bottom
@@ -57,46 +60,6 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
     };
   }, [commandId]);
   
-  // Parse command into args for tool-based execution
-  const parseCommand = (cmd: string): string[] => {
-    if (!cmd.trim()) return [];
-    
-    // Split by spaces but respect quoted strings
-    const args: string[] = [];
-    let currentArg = '';
-    let inQuotes = false;
-    let quoteChar = '';
-    
-    for (let i = 0; i < cmd.length; i++) {
-      const char = cmd[i];
-      
-      if ((char === '"' || char === "'") && (i === 0 || cmd[i - 1] !== '\\')) {
-        if (!inQuotes) {
-          inQuotes = true;
-          quoteChar = char;
-        } else if (char === quoteChar) {
-          inQuotes = false;
-          quoteChar = '';
-        } else {
-          currentArg += char;
-        }
-      } else if (char === ' ' && !inQuotes) {
-        if (currentArg) {
-          args.push(currentArg);
-          currentArg = '';
-        }
-      } else {
-        currentArg += char;
-      }
-    }
-    
-    if (currentArg) {
-      args.push(currentArg);
-    }
-    
-    return args;
-  };
-  
   const handleExecuteCommand = async () => {
     if (!command.trim() || isRunning) return;
     
@@ -105,14 +68,15 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
       setOutput([]);
       setError(null);
 
-      // For custom tool type, use the raw command
       let result: CommandResult;
-      if (selectedTool === NodeCommandType.Custom) {
-        result = await executeNodeCommand(workingDir, command);
+      // Use the tool-specific or custom command
+      if (selectedTool === "npm" || selectedTool === "npx" || 
+          selectedTool === "yarn" || selectedTool === "pnpm" || 
+          selectedTool === "node") {
+        result = await executeNodeCommand(workingDir, `${selectedTool} ${command}`);
       } else {
-        // For specific tools, parse args and use the tool-specific function
-        const args = parseCommand(command);
-        result = await executeNodeCommand(workingDir, `${selectedTool.toLowerCase()} ${command}`);
+        // Fallback for custom commands
+        result = await executeNodeCommand(workingDir, command);
       }
       
       // Split output by lines
@@ -120,8 +84,8 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
       const errorLines = result.stderr.split('\n');
       
       setOutput([
-        ...outputLines.map(line => `[stdout] ${line}`),
-        ...errorLines.map(line => `[stderr] ${line}`),
+        ...outputLines.map((line: string) => `[stdout] ${line}`),
+        ...errorLines.map((line: string) => `[stderr] ${line}`),
         `[system] Command completed with exit code ${result.exit_code}`,
       ]);
       
@@ -143,51 +107,38 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
       setOutput([]);
       setError(null);
       
-      // Handle command event
-      const handleEvent = (event: CommandEvent) => {
-        switch (event.type) {
-          case 'stdout':
-            setOutput(prev => [...prev, `[stdout] ${event.data}`]);
-            break;
-          case 'stderr':
-            setOutput(prev => [...prev, `[stderr] ${event.data}`]);
-            break;
-          case 'completed':
-            setOutput(prev => [
-              ...prev,
-              `[system] Command completed with exit code ${event.exitCode} (${event.success ? 'success' : 'failed'})`,
-            ]);
-            setIsRunning(false);
-            setCommandId(null);
-            break;
-          case 'error':
-            setError(`Command error: ${event.message}`);
-            setIsRunning(false);
-            setCommandId(null);
-            break;
-        }
-      };
-
       // Execute command with streaming
-      let id: string;
-      if (selectedTool === NodeCommandType.Custom) {
-        // For custom commands, use the raw command string
-        id = await executeCommandStreaming(
-          workingDir,
-          NodeCommandType.Custom,
-          [command],
-          handleEvent
-        );
-      } else {
-        // For specific tools, parse the arguments
-        const args = parseCommand(command);
-        id = await executeCommandStreaming(
-          workingDir,
-          selectedTool,
-          args,
-          handleEvent
-        );
-      }
+      const fullCommand = selectedTool === "custom" 
+        ? command 
+        : `${selectedTool} ${command}`;
+        
+      const id = await executeCommandWithEvents(
+        workingDir,
+        fullCommand,
+        (event) => {
+          switch (event.type) {
+            case 'stdout':
+              setOutput(prev => [...prev, `[stdout] ${event.data}`]);
+              break;
+            case 'stderr':
+              setOutput(prev => [...prev, `[stderr] ${event.data}`]);
+              break;
+            case 'completed':
+              setOutput(prev => [
+                ...prev,
+                `[system] Command completed with exit code ${event.exitCode} (${event.success ? 'success' : 'failed'})`,
+              ]);
+              setIsRunning(false);
+              setCommandId(null);
+              break;
+            case 'error':
+              setError(`Command error: ${event.message}`);
+              setIsRunning(false);
+              setCommandId(null);
+              break;
+          }
+        }
+      );
       
       setCommandId(id);
     } catch (err) {
@@ -216,22 +167,22 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
         <select
           id="tool-selector"
           value={selectedTool}
-          onChange={(e) => setSelectedTool(e.target.value as NodeCommandType)}
+          onChange={(e) => setSelectedTool(e.target.value as CommandToolType)}
           disabled={isRunning}
           className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value={NodeCommandType.Npm}>npm</option>
-          <option value={NodeCommandType.Npx}>npx</option>
-          <option value={NodeCommandType.Yarn}>yarn</option>
-          <option value={NodeCommandType.Pnpm}>pnpm</option>
-          <option value={NodeCommandType.Node}>node</option>
-          <option value={NodeCommandType.Custom}>Custom</option>
+          <option value="npm">npm</option>
+          <option value="npx">npx</option>
+          <option value="yarn">yarn</option>
+          <option value="pnpm">pnpm</option>
+          <option value="node">node</option>
+          <option value="custom">Custom</option>
         </select>
       </div>
       
       <div className="mb-4">
         <label htmlFor="command" className="block text-sm font-medium text-gray-700 mb-1">
-          {selectedTool === NodeCommandType.Custom ? 'Command' : 'Arguments'}
+          {selectedTool === "custom" ? 'Command' : 'Arguments'}
         </label>
         <div className="flex gap-2">
           <input
@@ -241,9 +192,9 @@ const NodeCommandExecutor: React.FC<NodeCommandExecutorProps> = ({
             onChange={(e) => setCommand(e.target.value)}
             disabled={isRunning}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder={selectedTool === NodeCommandType.Custom 
+            placeholder={selectedTool === "custom" 
               ? "Enter full command..." 
-              : `Enter ${selectedTool.toLowerCase()} arguments...`}
+              : `Enter ${selectedTool} arguments...`}
           />
         </div>
       </div>

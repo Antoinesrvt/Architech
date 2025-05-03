@@ -8,9 +8,9 @@ use async_trait::async_trait;
 use log::{info, warn, debug};
 use tokio::time::{sleep, Duration};
 
-use crate::commands::node_commands::NodeCommandBuilder;
 use crate::commands::framework::get_modules;
 use crate::commands::file::modify_file;
+use crate::commands::node_commands::execute_node_command;
 use super::{Task, TaskContext};
 
 /// Task for installing a module
@@ -27,7 +27,7 @@ pub struct ModuleTask {
 
 impl ModuleTask {
     /// Create a new module task
-    pub fn new(context: TaskContext, module_id: String) -> Self {
+    pub fn new(_context: TaskContext, module_id: String) -> Self {
         Self {
             id: format!("module:{}", module_id),
             name: format!("Install module: {}", module_id),
@@ -77,7 +77,7 @@ impl Task for ModuleTask {
     }
     
     async fn execute(&self, context: &TaskContext) -> Result<(), String> {
-        let config = &context.config;
+        // Use only the needed context variables
         let app_handle = &context.app_handle;
         let project_dir = &context.project_dir;
         
@@ -128,24 +128,16 @@ impl Task for ModuleTask {
             info!("{}", progress_msg);
             app_handle.emit("task-progress", progress_msg).unwrap();
             
-            // Parse the command
-            let parts: Vec<&str> = cmd.split_whitespace().collect();
-            if parts.is_empty() {
-                continue;
-            }
-            
-            let cmd_name = parts[0];
-            let cmd_args = &parts[1..];
-            
-            // Build and execute the command
-            let command_log = format!("Executing: {} {}", cmd_name, cmd_args.join(" "));
+            // Execute the command using the new API
+            let command_log = format!("Executing: {}", cmd);
             app_handle.emit("log-message", &command_log).unwrap();
             
-            let command_result = NodeCommandBuilder::new(cmd_name)
-                .args(cmd_args.iter().map(|s| *s))
-                .current_dir(project_dir.to_string_lossy().to_string())
-                .execute(&app_handle)
-                .await;
+            let command_result = execute_node_command(
+                app_handle,
+                project_dir,
+                cmd,
+                None
+            ).await;
                 
             match command_result {
                 Ok(result) => {
@@ -199,101 +191,67 @@ impl Task for ModuleTask {
                     if let Err(e) = fs::create_dir_all(parent) {
                         let error_msg = format!("Failed to create directory: {}", e);
                         warn!("{}", error_msg);
-                        app_handle.emit("log-message", error_msg).unwrap();
-                        // Continue despite error
+                        app_handle.emit("log-message", &error_msg).unwrap();
+                        continue;
                     }
                 }
             }
             
-            // Apply operation
+            // Handle different operation types
             match op.operation.as_str() {
                 "create" => {
-                    // Check if file already exists before attempting to create
-                    if file_path.exists() {
-                        let msg = format!("File already exists, skipping: {}", file_path.display());
-                        info!("{}", msg);
-                        app_handle.emit("log-message", msg).unwrap();
+                    // Create a new file
+                    let content = op.content.as_str();
+                    if let Err(e) = fs::write(&file_path, content) {
+                        let error_msg = format!("Failed to create file '{}': {}", op.path, e);
+                        warn!("{}", error_msg);
+                        app_handle.emit("log-message", &error_msg).unwrap();
                     } else {
-                        let msg = format!("Creating file: {}", file_path.display());
-                        info!("{}", msg);
-                        app_handle.emit("log-message", msg).unwrap();
-                        
-                        if let Err(e) = fs::write(&file_path, &op.content) {
-                            let error_msg = format!("Failed to create file: {}", e);
-                            warn!("{}", error_msg);
-                            app_handle.emit("log-message", error_msg).unwrap();
-                        }
+                        let success_msg = format!("Created file: {}", op.path);
+                        debug!("{}", success_msg);
+                        app_handle.emit("log-message", &success_msg).unwrap();
                     }
                 },
                 "modify" => {
+                    // Modify an existing file
                     if !file_path.exists() {
-                        let msg = format!("File does not exist, cannot modify: {}", file_path.display());
-                        warn!("{}", msg);
-                        app_handle.emit("log-message", msg).unwrap();
-                    } else {
-                        let msg = format!("Modifying file: {}", file_path.display());
-                        info!("{}", msg);
-                        app_handle.emit("log-message", msg).unwrap();
-                        
-                        if let Err(e) = modify_file(&file_path, &op.pattern, &op.replacement) {
-                            let error_msg = format!("Failed to modify file: {}", e);
-                            warn!("{}", error_msg);
-                            app_handle.emit("log-message", error_msg).unwrap();
-                        }
+                        let warning = format!("Cannot modify non-existent file: {}", op.path);
+                        warn!("{}", warning);
+                        app_handle.emit("log-message", &warning).unwrap();
+                        continue;
                     }
-                },
-                "append" => {
-                    if !file_path.exists() {
-                        let msg = format!("File does not exist, creating before append: {}", file_path.display());
-                        info!("{}", msg);
-                        app_handle.emit("log-message", msg).unwrap();
-                        
-                        if let Err(e) = fs::write(&file_path, &op.content) {
-                            let error_msg = format!("Failed to create file: {}", e);
-                            warn!("{}", error_msg);
-                            app_handle.emit("log-message", error_msg).unwrap();
-                            continue;
+                    
+                    // Check if pattern and replacement are available
+                    if !op.pattern.is_empty() && !op.replacement.is_empty() {
+                        match modify_file(&file_path, &op.pattern, &op.replacement) {
+                            Ok(_) => {
+                                let success_msg = format!("Modified file: {}", op.path);
+                                debug!("{}", success_msg);
+                                app_handle.emit("log-message", &success_msg).unwrap();
+                            },
+                            Err(e) => {
+                                let error_msg = format!("Failed to modify file '{}': {}", op.path, e);
+                                warn!("{}", error_msg);
+                                app_handle.emit("log-message", &error_msg).unwrap();
+                            }
                         }
                     } else {
-                        let msg = format!("Appending to file: {}", file_path.display());
-                        info!("{}", msg);
-                        app_handle.emit("log-message", msg).unwrap();
-                        
-                        // Read existing content
-                        let existing_content = match fs::read_to_string(&file_path) {
-                            Ok(content) => content,
-                            Err(e) => {
-                                let error_msg = format!("Failed to read file: {}", e);
-                                warn!("{}", error_msg);
-                                app_handle.emit("log-message", error_msg).unwrap();
-                                continue;
-                            }
-                        };
-                        
-                        // Append new content
-                        let new_content = format!("{}\n{}", existing_content, op.content);
-                        if let Err(e) = fs::write(&file_path, new_content) {
-                            let error_msg = format!("Failed to write file: {}", e);
-                            warn!("{}", error_msg);
-                            app_handle.emit("log-message", error_msg).unwrap();
-                        }
+                        let warning = "Missing pattern or replacement for file modification";
+                        warn!("{}", warning);
+                        app_handle.emit("log-message", warning).unwrap();
                     }
                 },
                 _ => {
-                    let msg = format!("Unknown file operation: {}", op.operation);
-                    warn!("{}", msg);
-                    app_handle.emit("log-message", msg).unwrap();
+                    let warning = format!("Unknown file operation: {}", op.operation);
+                    warn!("{}", warning);
+                    app_handle.emit("log-message", &warning).unwrap();
                 }
             }
             
-            // Add a delay between file operations to ensure file system consistency
-            sleep(Duration::from_millis(100)).await;
+            // Add a delay between file operations to ensure consistency
+            sleep(Duration::from_millis(200)).await;
         }
         
-        // Module installation completed
-        let completion_msg = format!("Module {} installed successfully", module.name);
-        info!("{}", completion_msg);
-        app_handle.emit("log-message", completion_msg).unwrap();
         Ok(())
     }
 } 

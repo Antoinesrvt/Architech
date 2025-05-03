@@ -16,7 +16,7 @@ use crate::tasks::{
     Task, TaskContext, TaskExecutor, TaskState,
     FrameworkTask, ModuleTask, CleanupTask
 };
-use crate::commands::node_commands::{NodeCommandBuilder, CommandResult};
+use crate::commands::node_commands::{CommandResult, execute_node_command};
 use crate::commands::file::modify_file;
 
 // Project generator
@@ -1075,12 +1075,16 @@ impl ProjectGenerator {
         working_dir: &Path,
         app_handle: &AppHandle
     ) -> Result<CommandResult, String> {
-        // Use NodeCommandBuilder instead of CommandBuilder
-        NodeCommandBuilder::new(command)
-            .args(args.iter().map(|s| *s))
-            .current_dir(working_dir.to_string_lossy().to_string())
-            .execute(app_handle)
-            .await
+        // Build full command string
+        let full_command = format!("{} {}", command, args.join(" "));
+        
+        // Execute the command using the new API
+        execute_node_command(
+            app_handle,
+            working_dir,
+            &full_command,
+            None
+        ).await
     }
 
     /// Modify imports in a file

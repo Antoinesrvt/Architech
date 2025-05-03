@@ -3,13 +3,13 @@
 //! This module provides utilities for executing Node.js commands via the sidecar
 
 use std::path::Path;
-use log::{info, warn, debug};
+use log::{warn, debug};
 use tauri::{AppHandle, Runtime, Emitter};
 use tauri_plugin_shell::ShellExt;
 use serde::{Deserialize, Serialize};
 use tauri_plugin_shell::process::CommandEvent;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 /// Result of a Node.js command execution
@@ -171,11 +171,11 @@ fn prepare_command<R: Runtime>(
     let sidecar = app_handle.shell().sidecar("nodejs-sidecar")
         .map_err(|e| format!("Failed to create sidecar: {}", e))?;
     
-    let command_process = sidecar
+    let cmd = sidecar
         .args([working_dir.to_string_lossy().to_string(), command.to_string()])
         .envs(env);
     
-    Ok(command_process)
+    Ok(cmd)
 }
 
 /// Execute a Node.js command
@@ -213,20 +213,15 @@ pub async fn execute_node_command<R: Runtime>(
     }
     
     // Prepare the command
-    let command_process = prepare_command(
+    let cmd = prepare_command(
         app_handle, 
         working_dir, 
         command, 
         options.env_vars
     )?;
     
-    // Execute the command
-    let command_process = command_process
-        .spawn()
-        .map_err(|e| format!("Failed to spawn command: {}", e))?;
-    
-    // Wait for the process to complete
-    let output = command_process
+    // Execute the command and capture its output
+    let output = cmd
         .output()
         .await
         .map_err(|e| format!("Failed to get command output: {}", e))?;
@@ -255,44 +250,50 @@ async fn execute_node_command_streaming<R: Runtime>(
     debug!("Executing Node.js command with streaming: {} in directory: {}", command, working_dir.display());
     
     // Prepare the command
-    let command_process = prepare_command(app_handle, working_dir, command, None)?;
+    let cmd = prepare_command(app_handle, working_dir, command, None)?;
     
     // Build output
     let mut stdout_output = String::new();
     let mut stderr_output = String::new();
     
-    // Execute the command
-    let mut command_process = command_process
+    // Execute the command and collect output
+    let (mut rx, mut child) = cmd
         .spawn()
         .map_err(|e| format!("Failed to spawn command: {}", e))?;
     
-    // Process command events
-    let (mut rx, child) = command_process.output_child();
-    
-    // Store the child process for cleanup
+    // Register command for cleanup
     let command_id = event_name.replace("node-command-", "");
+    
+    // Use the PID as a marker
+    let pid = child.pid();
+    debug!("Process ID for command: {}", pid);
+    
     add_command(command_id.clone(), Box::new(move || {
         if let Err(e) = child.kill() {
-            warn!("Failed to kill command process: {}", e);
+            warn!("Failed to kill process {}: {}", pid, e);
+        } else {
+            debug!("Successfully killed process {}", pid);
         }
     }));
     
     let mut exit_code = 1;
     let mut success = false;
     
-    // Emit events during execution
+    // Process events
     while let Some(event) = rx.recv().await {
         match event {
             CommandEvent::Stdout(line) => {
-                stdout_output.push_str(&line);
+                let line_str = String::from_utf8_lossy(&line).to_string();
+                stdout_output.push_str(&line_str);
                 stdout_output.push('\n');
-                app_handle.emit(event_name, NodeCommandEvent::Stdout(line))
+                app_handle.emit(event_name, NodeCommandEvent::Stdout(line_str))
                     .map_err(|e| format!("Failed to emit stdout event: {}", e))?;
             }
             CommandEvent::Stderr(line) => {
-                stderr_output.push_str(&line);
+                let line_str = String::from_utf8_lossy(&line).to_string();
+                stderr_output.push_str(&line_str);
                 stderr_output.push('\n');
-                app_handle.emit(event_name, NodeCommandEvent::Stderr(line))
+                app_handle.emit(event_name, NodeCommandEvent::Stderr(line_str))
                     .map_err(|e| format!("Failed to emit stderr event: {}", e))?;
             }
             CommandEvent::Error(err) => {
@@ -357,11 +358,15 @@ pub async fn run_node_command_streaming(
 ) -> Result<CommandResult, String> {
     let event_name = format!("node-command-{}", command_id);
     
-    execute_node_command_streaming(
+    execute_node_command(
         &app_handle,
         Path::new(&working_dir),
         &command,
-        &event_name,
+        Some(NodeCommandOptions {
+            streaming: true,
+            event_name: Some(event_name),
+            env_vars: None,
+        }),
     ).await
 }
 

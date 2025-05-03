@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use log::{info, warn};
 use serde_json::Value;
 
-use crate::commands::node_commands::NodeCommandBuilder;
+use crate::commands::node_commands::execute_node_command;
 use super::{Task, TaskContext};
 
 /// Task for project cleanup
@@ -22,7 +22,7 @@ pub struct CleanupTask {
 
 impl CleanupTask {
     /// Create a new cleanup task
-    pub fn new(context: TaskContext) -> Self {
+    pub fn new(_context: TaskContext) -> Self {
         Self {
             id: "cleanup".to_string(),
             name: "Project cleanup".to_string(),
@@ -69,11 +69,12 @@ impl Task for CleanupTask {
             app_handle.emit("log-message", "Installing npm dependencies...").unwrap();
             
             // Run npm install with retry logic
-            let npm_result = NodeCommandBuilder::new("npm")
-                .arg("install")
-                .current_dir(project_dir.to_string_lossy().to_string())
-                .execute(&app_handle)
-                .await;
+            let npm_result = execute_node_command(
+                app_handle,
+                project_dir,
+                "npm install",
+                None
+            ).await;
                 
             match npm_result {
                 Ok(result) => {
@@ -109,11 +110,12 @@ impl Task for CleanupTask {
             info!("Running npm format");
             app_handle.emit("log-message", "Running npm format").unwrap();
             
-            let npm_result = NodeCommandBuilder::new("npm")
-                .args(["run", "format"])
-                .current_dir(project_dir.to_string_lossy().to_string())
-                .execute(&app_handle)
-                .await;
+            let npm_result = execute_node_command(
+                app_handle,
+                project_dir,
+                "npm run format",
+                None
+            ).await;
                 
             match npm_result {
                 Ok(result) => {
@@ -178,11 +180,12 @@ impl Task for CleanupTask {
                                     info!("Building the project");
                                     app_handle.emit("log-message", "Building the project").unwrap();
                                     
-                                    let build_result = NodeCommandBuilder::new("npm")
-                                        .args(["run", "build"])
-                                        .current_dir(project_dir.to_string_lossy().to_string())
-                                        .execute(&app_handle)
-                                        .await;
+                                    let build_result = execute_node_command(
+                                        app_handle,
+                                        project_dir,
+                                        "npm run build",
+                                        None
+                                    ).await;
                                         
                                     match build_result {
                                         Ok(result) => {
@@ -204,20 +207,24 @@ impl Task for CleanupTask {
                                 }
                             }
                         },
-                        Err(_) => {
-                            // Already warned about invalid JSON above
+                        Err(e) => {
+                            let warning = format!("Warning: package.json contains invalid JSON: {}", e);
+                            warn!("{}", warning);
+                            app_handle.emit("log-message", warning).unwrap();
                         }
                     }
                 },
-                Err(_) => {
-                    // Already warned about read failure above
+                Err(e) => {
+                    let warning = format!("Warning: Failed to read package.json: {}", e);
+                    warn!("{}", warning);
+                    app_handle.emit("log-message", warning).unwrap();
                 }
             }
         }
         
-        // Cleanup completed successfully
-        info!("Project cleanup completed successfully");
-        app_handle.emit("log-message", "Project cleanup completed successfully").unwrap();
+        info!("Project cleanup completed");
+        app_handle.emit("log-message", "Project cleanup completed").unwrap();
+        
         Ok(())
     }
 } 

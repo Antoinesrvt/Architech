@@ -6,7 +6,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use log::{info, debug, warn};
 use crate::commands::framework::{get_frameworks, Framework};
-use crate::commands::node_commands::{execute_node_command, NodeCommandType, NodeCommandOptions};
+use crate::commands::node_commands::execute_node_command;
 use crate::tasks::{Task, TaskContext, TaskState};
 
 /// Task for setting up the framework

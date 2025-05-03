@@ -9,11 +9,11 @@ declare module '@tauri-apps/api' {
   export * as path from '@tauri-apps/api/path';
   export * as process from '@tauri-apps/api/process';
   export * as shell from '@tauri-apps/api/shell';
-  export * as tauri from '@tauri-apps/api/tauri';
+  export * as core from '@tauri-apps/api/core';
   export * as window from '@tauri-apps/api/window';
 }
 
-declare module '@tauri-apps/api/tauri' {
+declare module '@tauri-apps/api/core' {
   export function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T>;
 }
 
@@ -131,4 +131,9 @@ declare module '@tauri-apps/api/shell' {
   }
   
   export function open(path: string): Promise<void>;
+}
+
+// Keep the old module declaration for backward compatibility during transition
+declare module '@tauri-apps/api/tauri' {
+  export function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T>;
 } 

@@ -28,6 +28,26 @@ async fn initialize_app_state() -> Result<Arc<AppState>, String> {
     Ok(app_state)
 }
 
+#[tauri::command]
+async fn test_node_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
+    // Use the current working directory instead of app_dir which doesn't exist
+    let working_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    let result = commands::node_commands::execute_node_command(
+        &app_handle,
+        &working_dir,
+        "node -v",
+        None
+    ).await?;
+    
+    if result.success {
+        Ok(format!("Node.js version: {}", result.stdout.trim()))
+    } else {
+        Err(format!("Error: {} (exit code: {})", result.stderr, result.exit_code))
+    }
+}
+
 fn main() {
     // Remove manual env var setting and use the plugin properly
     // std::env::set_var("RUST_LOG", "debug,tailwind_tauri_template=debug");
@@ -217,6 +237,7 @@ fn main() {
             run_node_command,
             run_node_command_streaming,
             cleanup_command_resources,
+            test_node_sidecar,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())

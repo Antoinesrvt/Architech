@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Tauri with Tailwind and DaisyUI
+	•	Follow Tauri's security best practices for desktop applications 	
+  •	Use Tailwind's utility-first approach consistently 	
+  •	Leverage DaisyUI components while maintaining customizability 	
+  •	Implement proper state management for desktop application needs 	
+  •	Optimize asset loading for desktop performance 	
+  •	Structure your project with clear frontend/backend separation 	
+  •	Use proper error boundaries for robust error handling 	
+  •	Implement proper desktop-specific features (system tray, notifications)

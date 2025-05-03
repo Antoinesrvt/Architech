@@ -1,0 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+Language/Framework Agnostic Rules (Clean Code Principles)
+	•	Follow DRY (Don't Repeat Yourself) principle by extracting reusable code into functions/components 	
+  •	Keep it simple (KISS principle) - avoid unnecessary complexity 	
+  •	Use consistent naming conventions for variables, functions, and components 	
+  •	Write self-documenting code with clear variable/function names 	
+  •	Implement proper error handling with meaningful error messages 	
+  •	Follow single responsibility principle - each function/component should do one thing well 	
+  •	Add comments only for complex logic, not for obvious operations 	
+  •	Prioritize code readability over clever solutions 
+
+  Web/App Design and UX Best Principles
+	•	Design for accessibility from the start (WCAG compliance) 	
+  •	Implement responsive design that works across all device sizes 	
+  •	Maintain consistent UI patterns throughout the application 	
+  •	Prioritize performance optimization (lazy loading, code splitting) 	
+  •	Follow the principle of progressive disclosure for complex interfaces 	
+  •	Design clear navigation paths with proper visual hierarchy 	
+  •	Provide immediate feedback for user actions 	
+  •	Use appropriate contrast ratios for text and background 

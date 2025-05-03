@@ -15,86 +15,79 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Determine platform-specific extension
+// Platform detection - simplified
 const isWindows = process.platform === 'win32';
-const isMac = process.platform === 'darwin';
 const extension = isWindows ? '.exe' : '';
 
-// Determine the current platform identifier for binaries
-let currentPlatform = '';
-if (isWindows) {
-  currentPlatform = 'win-x64';
-} else if (isMac) {
-  const isArm64 = process.arch === 'arm64';
-  currentPlatform = isArm64 ? 'macos-arm64' : 'macos-x64';
-} else {
-  // Linux
-  currentPlatform = 'linux-x64';
+// Get current platform identifier
+function getPlatformIdentifier() {
+  switch (process.platform) {
+    case 'win32':
+      return 'win-x64';
+    case 'darwin':
+      return process.arch === 'arm64' ? 'macos-arm64' : 'macos-x64';
+    default:
+      return 'linux-x64';
+  }
 }
 
+const currentPlatform = getPlatformIdentifier();
 console.log(`Current platform: ${currentPlatform}`);
 
-// Determine the Rust target triple from rustc if available
-let rustTarget = '';
-try {
-  const rustcOutput = execSync('rustc -vV', { encoding: 'utf-8' });
-  const targetMatch = rustcOutput.match(/host: (.*)/);
-  if (targetMatch && targetMatch[1]) {
-    rustTarget = targetMatch[1].trim();
-    console.log(`Detected Rust target triple: ${rustTarget}`);
-  } else {
-    console.warn('Could not determine Rust target triple from rustc output');
-  }
-} catch (error) {
-  console.warn(`Could not determine Rust target triple: ${error.message}`);
-}
-
-// Create the binaries directory in the src-tauri folder
+// Create the binaries directory
 const binariesDir = path.resolve(__dirname, '..', 'src-tauri', 'binaries');
 if (!fs.existsSync(binariesDir)) {
   console.log(`Creating binaries directory at ${binariesDir}`);
   fs.mkdirSync(binariesDir, { recursive: true });
 }
 
-// Build the sidecar binary
-console.log('Building Node.js sidecar...');
-try {
-  // Run pkg to create the binary
-  execSync('npx @yao-pkg/pkg . --output nodejs-sidecar', { 
-    stdio: 'inherit',
-    cwd: __dirname
-  });
+// Build the sidecar
+async function buildSidecar() {
+  try {
+    // Install dependencies first
+    console.log('Installing dependencies...');
+    execSync('npm install', { 
+      stdio: 'inherit',
+      cwd: __dirname
+    });
 
-  // Find the generated binary files
-  const files = fs.readdirSync(__dirname);
-  const binaries = files.filter(file => file.startsWith('nodejs-sidecar'));
+    // Run pkg to create the binaries
+    console.log('Building Node.js sidecar...');
+    execSync('npx @yao-pkg/pkg . --output nodejs-sidecar', { 
+      stdio: 'inherit',
+      cwd: __dirname
+    });
 
-  if (binaries.length === 0) {
-    throw new Error('No binaries were generated');
-  }
+    // Find generated binaries and copy them to the Tauri binaries directory
+    const files = fs.readdirSync(__dirname)
+      .filter(file => file.startsWith('nodejs-sidecar'));
 
-  // Copy each binary to the Tauri binaries directory
-  binaries.forEach(binary => {
-    const sourcePath = path.join(__dirname, binary);
-    const targetPath = path.join(binariesDir, binary);
-    
-    console.log(`Copying ${sourcePath} to ${targetPath}`);
-    fs.copyFileSync(sourcePath, targetPath);
-    
-    // Make executable on non-Windows platforms
-    if (!isWindows) {
-      fs.chmodSync(targetPath, 0o755); // rwxr-xr-x
-      console.log(`Made ${targetPath} executable`);
+    if (files.length === 0) {
+      throw new Error('No binaries were generated');
     }
-    
-    console.log(`Successfully copied binary to ${targetPath}`);
-    
-    // If this binary matches the current platform, create a generic nodejs-sidecar link
-    if (binary.includes(currentPlatform)) {
-      const genericName = 'nodejs-sidecar' + extension;
-      const genericPath = path.join(binariesDir, genericName);
+
+    // Copy each binary to the Tauri binaries directory
+    for (const binary of files) {
+      const sourcePath = path.join(__dirname, binary);
+      const targetPath = path.join(binariesDir, binary);
       
-      console.log(`Creating generic binary for current platform (${currentPlatform}): ${genericPath}`);
+      console.log(`Copying ${sourcePath} to ${targetPath}`);
+      fs.copyFileSync(sourcePath, targetPath);
+      
+      // Make executable on non-Windows platforms
+      if (!isWindows) {
+        fs.chmodSync(targetPath, 0o755); // rwxr-xr-x
+        console.log(`Made ${targetPath} executable`);
+      }
+    }
+
+    // Create or update the generic nodejs-sidecar symlink for the current platform
+    const genericName = 'nodejs-sidecar' + extension;
+    const genericPath = path.join(binariesDir, genericName);
+    const currentBinary = files.find(file => file.includes(currentPlatform));
+    
+    if (currentBinary) {
+      const currentBinaryPath = path.join(binariesDir, currentBinary);
       
       // Remove existing file if it exists
       if (fs.existsSync(genericPath)) {
@@ -103,19 +96,21 @@ try {
       }
       
       // Create a copy (symlinks don't work well cross-platform with Tauri)
-      fs.copyFileSync(targetPath, genericPath);
+      fs.copyFileSync(currentBinaryPath, genericPath);
       
       // Make executable on non-Windows platforms
       if (!isWindows) {
-        fs.chmodSync(genericPath, 0o755); // rwxr-xr-x
+        fs.chmodSync(genericPath, 0o755);
       }
       
       console.log(`Created generic binary at: ${genericPath}`);
     }
-  });
-  
-  console.log('Node.js sidecar build completed successfully!');
-} catch (error) {
-  console.error(`Failed to build sidecar: ${error.message}`);
-  process.exit(1);
-} 
+    
+    console.log('Node.js sidecar build completed successfully!');
+  } catch (error) {
+    console.error(`Failed to build sidecar: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+buildSidecar(); 

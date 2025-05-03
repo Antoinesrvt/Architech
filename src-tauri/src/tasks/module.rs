@@ -1,15 +1,15 @@
 //! Module installation task implementation
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter};
+use std::path::PathBuf;
+use tauri::Emitter;
 
 use async_trait::async_trait;
-use log::{info, error, warn, debug};
+use log::{info, warn, debug};
 use tokio::time::{sleep, Duration};
 
-use crate::commands::command_runner::CommandBuilder;
-use crate::commands::framework::{Module as ModuleDetails, get_modules};
+use crate::commands::node_commands::NodeCommandBuilder;
+use crate::commands::framework::get_modules;
 use crate::commands::file::modify_file;
 use super::{Task, TaskContext};
 
@@ -141,12 +141,10 @@ impl Task for ModuleTask {
             let command_log = format!("Executing: {} {}", cmd_name, cmd_args.join(" "));
             app_handle.emit("log-message", &command_log).unwrap();
             
-            let command_result = CommandBuilder::new(cmd_name)
-                .args(cmd_args.iter().map(|s| s.to_string()))
-                .working_dir(project_dir.as_ref())
-                .retries(3)
-                .retry_delay(2)
-                .execute()
+            let command_result = NodeCommandBuilder::new(cmd_name)
+                .args(cmd_args.iter().map(|s| *s))
+                .current_dir(project_dir.to_string_lossy().to_string())
+                .execute(&app_handle)
                 .await;
                 
             match command_result {

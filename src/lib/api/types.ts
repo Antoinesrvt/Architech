@@ -9,6 +9,7 @@ export interface ProjectConfig {
   path: string;
   framework: string;
   modules: string[];
+  setup_command?: string;
   options: {
     typescript: boolean;
     app_router: boolean;

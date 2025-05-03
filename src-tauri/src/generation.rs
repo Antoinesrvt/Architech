@@ -5,33 +5,19 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
-use tokio::sync::mpsc;
 use tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use log::{debug, info, warn, error};
-use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
-use std::thread::sleep as thread_sleep;
-use std::time::Duration as StdDuration;
 
 use crate::state::{AppState, ProjectStatus};
 use crate::commands::framework::{get_framework_by_id as get_framework, get_modules};
-use crate::commands::command_runner::{modify_file, modify_import};
 use crate::tasks::{
-    Task, TaskContext, TaskExecutor, TaskResult, TaskState,
-    FrameworkTask, ModuleTask, DirectoryTask, CleanupTask
+    Task, TaskContext, TaskExecutor, TaskState,
+    FrameworkTask, ModuleTask, CleanupTask
 };
-use crate::commands::command_runner::{CommandBuilder, CommandResult as CommandRunnerResult};
-
-// Task result type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommandResult {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-    pub exit_code: i32,
-}
+use crate::commands::node_commands::{NodeCommandBuilder, CommandResult};
+use crate::commands::file::modify_file;
 
 // Project generator
 pub struct ProjectGenerator {
@@ -286,11 +272,8 @@ impl ProjectGenerator {
         
         // Step 1: Framework setup task - No dependencies
         debug!("Creating framework task for: {}", config.framework);
-        let framework_task_id = format!("framework:{}", config.framework);
-        let framework_task = Box::new(FrameworkTask::new(
-            framework_task_id.clone(),
-            config.framework.clone()
-        ));
+        let framework_task = Box::new(FrameworkTask::from_context(context.clone()));
+        let framework_task_id = framework_task.id().to_string();
         tasks.push(framework_task);
         info!("Created framework task with ID: {}", framework_task_id);
         
@@ -747,7 +730,7 @@ impl ProjectGenerator {
         })).unwrap_or_else(|e| error!("Failed to emit progress event: {}", e));
         
         // Execute the command with reasonable timeout
-        let cmd_result = ProjectGenerator::execute_command(&cmd_name, &cmd_args, Path::new(&config.path)).await?;
+        let cmd_result = ProjectGenerator::execute_command(&cmd_name, &cmd_args, Path::new(&config.path), &app_handle).await?;
         
         // Ensure the command completed successfully
         if !cmd_result.success {
@@ -858,7 +841,7 @@ impl ProjectGenerator {
             let mut success = false;
             
             for attempt in 1..=max_retries {
-                match ProjectGenerator::execute_command(cmd_name, cmd_args, project_dir).await {
+                match ProjectGenerator::execute_command(cmd_name, cmd_args, project_dir, &app_handle).await {
                     Ok(result) => {
                         if result.success {
                             success = true;
@@ -945,7 +928,7 @@ impl ProjectGenerator {
                     if !file_path.exists() {
                         app_handle.emit("log-message", format!("File does not exist, cannot modify imports: {}", file_path.display())).unwrap();
                     } else {
-                        if let Err(e) = modify_import(&file_path, &op.action, &op.import) {
+                        if let Err(e) = Self::modify_import(&file_path, &op.action, &op.import) {
                             app_handle.emit("log-message", format!("Failed to modify import: {}", e)).unwrap();
                         } else {
                             app_handle.emit("log-message", format!("Modified imports in: {}", file_path.display())).unwrap();
@@ -996,7 +979,7 @@ impl ProjectGenerator {
                 app_handle.emit("log-message", format!("Running npm install (attempt {}/{}, timeout {}s)...", 
                     attempt, max_retries, timeout_seconds)).unwrap();
                 
-                match ProjectGenerator::execute_command("npm", &["install"], project_dir).await {
+                match ProjectGenerator::execute_command("npm", &["install"], project_dir, &app_handle).await {
                     Ok(result) => {
                         if result.success {
                             app_handle.emit("log-message", "NPM dependencies installed successfully").unwrap();
@@ -1042,7 +1025,7 @@ impl ProjectGenerator {
             app_handle.emit("log-message", "Running code formatting...").unwrap();
             
             // Format the project code if possible
-            let format_result = ProjectGenerator::execute_command("npm", &["run", "format"], project_dir).await;
+            let format_result = ProjectGenerator::execute_command("npm", &["run", "format"], project_dir, &app_handle).await;
             
             match format_result {
                 Ok(result) => {
@@ -1089,202 +1072,19 @@ impl ProjectGenerator {
     async fn execute_command(
         command: &str,
         args: &[&str],
-        working_dir: &Path
-    ) -> Result<CommandRunnerResult, String> {
-        use std::io::{BufRead, BufReader};
-        use std::process::{Command, Stdio};
-        use std::thread::sleep as thread_sleep;
-        use std::time::Duration as StdDuration;
-        use tokio::time::{sleep, Duration};
-        
-        let command_display = format!("{} {}", command, args.join(" "));
-        println!("Executing command: {} in {}", command_display, working_dir.display());
-        
-        // Check if this is a create-next-app command or similar
-        let is_project_generator = 
-            (command == "npx" && args.len() > 0 && args[0].contains("create-")) ||
-            (command == "npm" && args.len() > 1 && args[0] == "init");
-            
-        // Check if this is a project directory that we need to verify gets created
-        let project_name = if is_project_generator && args.len() > 0 {
-            args.last().map(|s| s.to_string())
-        } else {
-            None
-        };
-        
-        // Adjust command for platform if needed
-        let platform_cmd = if (command == "npm" || command == "npx") && cfg!(windows) {
-            format!("{}.cmd", command)
-        } else {
-            command.to_string()
-        };
-        
-        // We'll try the command up to 2 times for generators
-        let max_retries = if is_project_generator { 2 } else { 1 };
-        
-        for attempt in 1..=max_retries {
-            // Create a new command instance for each attempt
-            let mut cmd = Command::new(&platform_cmd);
-            cmd.args(args)
-                .current_dir(working_dir)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
-            
-            // Set environment variables
-            if let Ok(path) = std::env::var("PATH") {
-                cmd.env("PATH", path);
-            }
-            
-            // Force interactive mode for npm
-            if command == "npm" || command == "npx" {
-                cmd.env("CI", "false");
-                cmd.env("NODE_ENV", "development");
-            }
-            
-            // Create a clone of cmd for this attempt
-            let mut cmd_for_closure = cmd;
-        
-            // Execute with a timeout
-            let spawn_result = tokio::task::spawn_blocking(move || {
-                match cmd_for_closure.spawn() {
-                    Ok(mut child) => {
-                        let mut stdout_lines = Vec::new();
-                        let mut stderr_lines = Vec::new();
-                        
-                        // Read stdout lines
-                        if let Some(stdout) = child.stdout.take() {
-                            let stdout_reader = BufReader::new(stdout);
-                            for line in stdout_reader.lines() {
-                                if let Ok(line) = line {
-                                    println!("[STDOUT] {}", line);
-                                    stdout_lines.push(line);
-                                }
-                            }
-                        }
-                        
-                        // Read stderr lines
-                        if let Some(stderr) = child.stderr.take() {
-                            let stderr_reader = BufReader::new(stderr);
-                            for line in stderr_reader.lines() {
-                                if let Ok(line) = line {
-                                    println!("[STDERR] {}", line);
-                                    stderr_lines.push(line);
-                                }
-                            }
-                        }
-                        
-                        // Wait for process to complete
-                        match child.wait() {
-                            Ok(status) => {
-                                let exit_code = status.code().unwrap_or(-1);
-                                let success = status.success();
-                                
-                                CommandRunnerResult {
-                                    success,
-                                    stdout: stdout_lines.join("\n"),
-                                    stderr: stderr_lines.join("\n"),
-                                    exit_code,
-                                }
-                            },
-                            Err(e) => {
-                                CommandRunnerResult {
-                                    success: false,
-                                    stdout: stdout_lines.join("\n"),
-                                    stderr: format!("Failed to wait for command: {}", e),
-                                    exit_code: -1,
-                                }
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        CommandRunnerResult {
-                            success: false,
-                            stdout: String::new(),
-                            stderr: format!("Failed to execute command: {}", e),
-                            exit_code: -1,
-                        }
-                    }
-                }
-            }).await;
-            
-            match spawn_result {
-                Ok(result) => {
-                    // Special handling for npm/npx commands - we need to ensure filesystem sync
-                    if command == "npm" || command == "npx" {
-                        // For project generators like create-next-app, we need to verify project creation
-                        if is_project_generator && result.success {
-                            // First wait longer for filesystem to settle
-                            println!("Project generator command completed, waiting for filesystem to settle...");
-                            sleep(Duration::from_secs(3)).await;
-                            
-                            // If we have a project name to verify, check that it exists
-                            if let Some(project_name) = &project_name {
-                                // working_dir is now the parent directory, so we need to join the project name
-                                let project_dir = working_dir.join(project_name);
-                                println!("Verifying project directory exists: {}", project_dir.display());
-                                
-                                // Try multiple times with increasing delays
-                                let mut dir_exists = false;
-                                for i in 0..5 {
-                                    if project_dir.exists() && project_dir.is_dir() {
-                                        dir_exists = true;
-                                        println!("Project directory verified!");
-                                        break;
-                                    }
-                                    println!("Directory not found, waiting (attempt {}/5)...", i+1);
-                                    thread_sleep(StdDuration::from_millis(500 * (i+1)));
-                                }
-                                
-                                if !dir_exists {
-                                    // If we've done max retries, fail, otherwise retry the command
-                                    if attempt == max_retries {
-                                        return Err(format!("Project directory {} was not created even though command reported success", project_dir.display()));
-                                    } else {
-                                        println!("Retrying command due to missing project directory (attempt {}/{})", attempt, max_retries);
-                                        sleep(Duration::from_secs(1)).await;
-                                        continue;
-                                    }
-                                }
-                                
-                                // If project exists, check for package.json
-                                let package_json = project_dir.join("package.json");
-                                if !package_json.exists() {
-                                    println!("Warning: package.json not found in project directory");
-                                } else {
-                                    println!("package.json verified!");
-                                }
-                            } else {
-                                // No project name to verify, use a standard delay
-                                sleep(Duration::from_secs(2)).await;
-                            }
-                        } else {
-                            // Standard delay for other npm/npx commands
-                            sleep(Duration::from_secs(1)).await;
-                        }
-                    }
-                    
-                    // If successful or final attempt, return the result
-                    if result.success || attempt == max_retries {
-                        return Ok(result);
-                    } else {
-                        // If failed but we have retries left
-                        println!("Command failed, retrying (attempt {}/{})", attempt, max_retries);
-                        sleep(Duration::from_secs(1)).await;
-                    }
-                },
-                Err(e) => {
-                    // If this is the final retry, return error, otherwise try again
-                    if attempt == max_retries {
-                        return Err(format!("Failed to execute command: {}", e));
-                    } else {
-                        println!("Command execution error, retrying (attempt {}/{})", attempt, max_retries);
-                        sleep(Duration::from_secs(1)).await;
-                    }
-                }
-            }
-        }
-        
-        // We should never reach here (loop always returns), but satisfy the compiler
-        Err("Command execution failed after all retries".to_string())
+        working_dir: &Path,
+        app_handle: &AppHandle
+    ) -> Result<CommandResult, String> {
+        // Use NodeCommandBuilder instead of CommandBuilder
+        NodeCommandBuilder::new(command)
+            .args(args.iter().map(|s| *s))
+            .current_dir(working_dir.to_string_lossy().to_string())
+            .execute(app_handle)
+            .await
+    }
+
+    /// Modify imports in a file
+    pub fn modify_import(file_path: &Path, old_import: &str, new_import: &str) -> Result<(), String> {
+        modify_file(file_path, old_import, new_import)
     }
 } 

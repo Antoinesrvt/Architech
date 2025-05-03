@@ -1,15 +1,13 @@
 //! Cleanup task implementation
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 
 use async_trait::async_trait;
-use log::{info, warn, error};
-use tokio::time::{sleep, Duration};
+use log::{info, warn};
 use serde_json::Value;
 
-use crate::commands::command_runner::CommandBuilder;
+use crate::commands::node_commands::NodeCommandBuilder;
 use super::{Task, TaskContext};
 
 /// Task for project cleanup
@@ -71,13 +69,10 @@ impl Task for CleanupTask {
             app_handle.emit("log-message", "Installing npm dependencies...").unwrap();
             
             // Run npm install with retry logic
-            let npm_result = CommandBuilder::new("npm")
+            let npm_result = NodeCommandBuilder::new("npm")
                 .arg("install")
-                .working_dir(project_dir.as_ref())
-                .retries(3)
-                .retry_delay(5)
-                .timeout(180)
-                .execute()
+                .current_dir(project_dir.to_string_lossy().to_string())
+                .execute(&app_handle)
                 .await;
                 
             match npm_result {
@@ -111,15 +106,16 @@ impl Task for CleanupTask {
             app_handle.emit("log-message", "Running code formatting...").unwrap();
             
             // Format the project code if possible
-            let format_result = CommandBuilder::new("npm")
+            info!("Running npm format");
+            app_handle.emit("log-message", "Running npm format").unwrap();
+            
+            let npm_result = NodeCommandBuilder::new("npm")
                 .args(["run", "format"])
-                .working_dir(project_dir.as_ref())
-                .retries(1)
-                .retry_delay(2)
-                .execute()
+                .current_dir(project_dir.to_string_lossy().to_string())
+                .execute(&app_handle)
                 .await;
                 
-            match format_result {
+            match npm_result {
                 Ok(result) => {
                     if !result.success {
                         let warning = "Warning: Code formatting failed, but continuing";
@@ -179,13 +175,13 @@ impl Task for CleanupTask {
                                     app_handle.emit("log-message", "Running development build...").unwrap();
                                     
                                     // Run the build command
-                                    let build_result = CommandBuilder::new("npm")
+                                    info!("Building the project");
+                                    app_handle.emit("log-message", "Building the project").unwrap();
+                                    
+                                    let build_result = NodeCommandBuilder::new("npm")
                                         .args(["run", "build"])
-                                        .working_dir(project_dir.as_ref())
-                                        .retries(1)
-                                        .retry_delay(2)
-                                        .timeout(300)
-                                        .execute()
+                                        .current_dir(project_dir.to_string_lossy().to_string())
+                                        .execute(&app_handle)
                                         .await;
                                         
                                     match build_result {

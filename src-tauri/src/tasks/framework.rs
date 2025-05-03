@@ -1,11 +1,12 @@
 //! Framework setup task implementation
 
+use tauri::{AppHandle, Emitter};
 use std::path::Path;
-use tauri::{AppHandle, Manager, Emitter};
+
 use async_trait::async_trait;
-use log::info;
+use log::{info, debug, warn};
 use crate::commands::framework::{get_frameworks, Framework};
-use crate::commands::node_commands::execute_node_command;
+use crate::commands::node_commands::{execute_node_command, NodeCommandType, NodeCommandOptions};
 use crate::tasks::{Task, TaskContext, TaskState};
 
 /// Task for setting up the framework
@@ -26,6 +27,17 @@ impl FrameworkTask {
         Self {
             id,
             name: format!("Setup {} framework", framework_name),
+            dependencies: Vec::new(),
+            state: TaskState::Pending,
+        }
+    }
+    
+    /// Create a new framework task from the task context
+    pub fn from_context(context: TaskContext) -> Self {
+        let framework_id = context.config.framework.clone();
+        Self {
+            id: format!("framework:{}", framework_id),
+            name: format!("Setup {} framework", framework_id),
             dependencies: Vec::new(),
             state: TaskState::Pending,
         }
@@ -66,44 +78,29 @@ impl Task for FrameworkTask {
         app_handle.emit("log-message", format!("Setting up {} framework", framework.name))
             .map_err(|e| format!("Failed to emit log message: {}", e))?;
         
-        // Check if this is a Next.js project
-        if framework.id == "nextjs" {
-            info!("Setting up Next.js project");
-            app_handle.emit("log-message", "Setting up Next.js project")
+        // Use the command from the frontend configuration
+        if let Some(setup_command) = &config.setup_command {
+            info!("Executing framework setup command: {}", setup_command);
+            app_handle.emit("log-message", format!("Setting up framework with command: {}", setup_command))
                 .map_err(|e| format!("Failed to emit log message: {}", e))?;
             
-            // Build the Next.js command
-            let typescript = config.options.typescript;
-            let app_router = config.options.app_router;
-            let eslint = config.options.eslint;
-            
-            let mut next_command = String::from("npx create-next-app@latest");
-            next_command.push_str(&format!(" {} ", config.name));
-            next_command.push_str(&format!("--ts={} ", typescript));
-            next_command.push_str(&format!("--app={} ", app_router));
-            next_command.push_str(&format!("--eslint={} ", eslint));
-            next_command.push_str("--src-dir=true --import-alias=@/* --no-tailwind --no-git");
-            
-            info!("Executing Next.js command: {}", next_command);
-            app_handle.emit("log-message", format!("Creating Next.js project with command: {}", next_command))
-                .map_err(|e| format!("Failed to emit log message: {}", e))?;
-            
-            // Execute the command
+            // Execute the command using the consolidated API
             let result = execute_node_command(
                 app_handle,
                 project_dir,
-                &next_command
+                setup_command,
+                None,
             ).await?;
             
             // Check if the command was successful
             if !result.success {
-                let error_msg = format!("Failed to set up Next.js project: {}", result.stderr);
+                let error_msg = format!("Failed to set up framework: {}", result.stderr);
                 app_handle.emit("log-message", format!("Error: {}", error_msg))
                     .map_err(|e| format!("Failed to emit log message: {}", e))?;
                 return Err(error_msg);
             }
             
-            // Check if the project folder exists
+            // Verify the project was created
             let project_folder = project_dir.join(&config.name);
             if !project_folder.exists() {
                 let error_msg = format!("Project folder was not created: {}", project_folder.display());
@@ -112,26 +109,17 @@ impl Task for FrameworkTask {
                 return Err(error_msg);
             }
             
-            // Check for critical files
-            let package_json = project_folder.join("package.json");
-            if !package_json.exists() {
-                let error_msg = format!("Project was not set up correctly, missing package.json");
-                app_handle.emit("log-message", format!("Error: {}", error_msg))
-                    .map_err(|e| format!("Failed to emit log message: {}", e))?;
-                return Err(error_msg);
-            }
-            
-            app_handle.emit("log-message", "Next.js project setup successful")
+            app_handle.emit("log-message", format!("{} framework setup successful", framework.name))
                 .map_err(|e| format!("Failed to emit log message: {}", e))?;
             
-            return Ok(());
+            Ok(())
         } else {
-            // Handle other framework types
-            let error_msg = format!("Framework {} is not directly supported with Node.js sidecar", framework.id);
+            // No setup command provided
+            let error_msg = format!("No setup command provided for framework {}", framework.id);
             app_handle.emit("log-message", format!("Error: {}", error_msg))
                 .map_err(|e| format!("Failed to emit log message: {}", e))?;
             
-            return Err(error_msg);
+            Err(error_msg)
         }
     }
 } 

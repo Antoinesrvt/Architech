@@ -41,33 +41,63 @@ if (!command || command.trim() === '') {
   process.exit(1);
 }
 
+// Build environment variables based on command type
+function getEnvironmentVars(cmd) {
+  // Default environment for all commands
+  const env = {
+    ...process.env,
+    // General non-interactive settings
+    CI: 'true',
+    FORCE_COLOR: '0',
+    NO_COLOR: 'true',
+  };
+  
+  // Command-specific environment variables
+  if (cmd.startsWith('npm') || cmd.startsWith('npx')) {
+    Object.assign(env, {
+      // Disable telemetry
+      NEXT_TELEMETRY_DISABLED: '1',
+      NPM_CONFIG_UPDATE_NOTIFIER: 'false',
+      // Prevent prompts
+      NPM_CONFIG_YES: 'true',
+      // Use production mode for installing dependencies
+      NODE_ENV: cmd.includes('install') ? 'production' : 'development',
+    });
+  } else if (cmd.startsWith('yarn')) {
+    Object.assign(env, {
+      // Yarn specific settings
+      YARN_SILENT: 'true',
+      YARN_NONINTERACTIVE: 'true',
+      // Use production mode for installing dependencies
+      NODE_ENV: cmd.includes('install') ? 'production' : 'development',
+    });
+  } else if (cmd.startsWith('pnpm')) {
+    Object.assign(env, {
+      // PNPM specific settings
+      PNPM_SILENT: 'true',
+      NODE_ENV: cmd.includes('install') ? 'production' : 'development',
+    });
+  }
+  
+  return env;
+}
+
 try {
   // Change to working directory
   chdir(workingDir);
   console.log(`Working directory: ${workingDir}`);
   console.log(`Executing: ${command}`);
   
-  // Set environment variables for non-interactive use
-  const env = {
-    ...process.env,
-    CI: 'true',
-    NEXT_TELEMETRY_DISABLED: '1',
-    NODE_ENV: 'development',
-    // Prevent npm update checks
-    NPM_CONFIG_UPDATE_NOTIFIER: 'false',
-    // Prevent yarn from displaying emoji and other UI niceties
-    FORCE_COLOR: '0',
-    // Prevent color output
-    NO_COLOR: 'true'
-  };
+  // Get environment variables for this command
+  const env = getEnvironmentVars(command);
   
   // Execute the command
   const output = execSync(command, {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
-    // Set a reasonable timeout (10 minutes)
-    timeout: 10 * 60 * 1000
+    // Set a reasonable timeout (15 minutes)
+    timeout: 15 * 60 * 1000
   });
   
   console.log(output);

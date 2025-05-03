@@ -12,6 +12,7 @@ pub struct ProjectConfig {
     pub framework: String,
     pub modules: Vec<String>,
     pub options: ProjectOptions,
+    pub setup_command: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

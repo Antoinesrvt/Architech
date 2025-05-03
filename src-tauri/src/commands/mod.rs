@@ -1,7 +1,6 @@
 pub mod project;
 pub mod system;
 pub mod framework;
-pub mod command_runner;
 pub mod file;
 pub mod node_commands;
 
@@ -19,5 +18,11 @@ pub use file::open_in_folder;
 pub use node_commands::{
     run_node_command,
     run_node_command_streaming,
-    cleanup_command_resources
+    cleanup_command_resources,
+    NodeCommandBuilder,
+    CommandResult,
+    run_npm_command,
+    run_npx_command,
+    run_yarn_command,
+    run_pnpm_command
 };

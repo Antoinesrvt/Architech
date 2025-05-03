@@ -3,8 +3,8 @@
 //! This module provides utilities for executing Node.js commands via the sidecar
 
 use std::path::Path;
-use log::{info, warn};
-use tauri::{AppHandle, Manager, Runtime, Emitter, Listener};
+use log::{info, warn, debug};
+use tauri::{AppHandle, Runtime, Emitter};
 use tauri_plugin_shell::ShellExt;
 use serde::{Deserialize, Serialize};
 use tauri_plugin_shell::process::CommandEvent;
@@ -44,37 +44,56 @@ pub enum NodeCommandEvent {
 }
 
 // Track active command processes
-static ACTIVE_COMMANDS: Lazy<Arc<Mutex<HashMap<String, CommandTracker>>>> = Lazy::new(|| {
-    Arc::new(Mutex::new(HashMap::new()))
+type CommandId = String;
+type CleanupFn = Box<dyn FnOnce() + Send + 'static>;
+
+static ACTIVE_COMMANDS: Lazy<Mutex<HashMap<CommandId, CleanupFn>>> = Lazy::new(|| {
+    Mutex::new(HashMap::new())
 });
 
-/// Tracks a command's resources for cleanup
-struct CommandTracker {
-    unlisten_fn: Box<dyn FnOnce() + Send + 'static>,
+/// Add a command to the active commands map
+fn add_command(id: String, cleanup_fn: CleanupFn) {
+    let mut commands = ACTIVE_COMMANDS.lock().unwrap();
+    commands.insert(id, cleanup_fn);
 }
 
-/// Execute a Node.js command using the sidecar
+/// Remove a command from the active commands map
+fn remove_command(id: &str) -> Result<(), String> {
+    let mut commands = ACTIVE_COMMANDS.lock().unwrap();
+    if let Some(cleanup_fn) = commands.remove(id) {
+        cleanup_fn();
+        Ok(())
+    } else {
+        Err(format!("Command with ID {} not found", id))
+    }
+}
+
+/// Clear all active commands
+fn clear_commands() {
+    let mut commands = ACTIVE_COMMANDS.lock().unwrap();
+    // Take all cleanup functions and execute them
+    let all_commands = std::mem::take(&mut *commands);
+    for (_, cleanup_fn) in all_commands {
+        cleanup_fn();
+    }
+}
+
+/// Options for executing a Node.js command
+#[derive(Debug, Clone, Default)]
+pub struct NodeCommandOptions {
+    /// Environment variables to set for the command
+    pub env_vars: Option<HashMap<String, String>>,
+    /// Whether to use streaming output
+    pub streaming: bool,
+    /// Event name for streaming output
+    pub event_name: Option<String>,
+}
+
+/// Validate command inputs
 /// 
-/// This function executes a Node.js command using the Node.js sidecar,
-/// which allows running Node.js commands without requiring Node.js to be
-/// installed on the end user's machine.
-/// 
-/// # Arguments
-/// 
-/// * `app_handle` - The Tauri app handle
-/// * `working_dir` - The working directory where the command should be executed
-/// * `command` - The command to execute (e.g., "npm install", "npx create-next-app", etc.)
-/// 
-/// # Returns
-/// 
-/// A result containing the command output or an error message
-pub async fn execute_node_command(
-    app_handle: &AppHandle,
-    working_dir: &Path,
-    command: &str,
-) -> Result<CommandResult, String> {
-    info!("Executing Node.js command: {}", command);
-    
+/// This is a helper function to validate the working directory and command
+/// for Node.js command execution.
+fn validate_command_inputs(working_dir: &Path, command: &str) -> Result<(), String> {
     // Validate the working directory
     if !working_dir.exists() {
         let error = format!("Working directory does not exist: {}", working_dir.display());
@@ -89,203 +108,246 @@ pub async fn execute_node_command(
         return Err(error);
     }
     
-    // Build and execute the sidecar command
-    let sidecar = app_handle.shell().sidecar("binaries/nodejs-sidecar")
-        .map_err(|e| format!("Failed to create sidecar: {}", e))?;
-        
-    // Use output() to get the full result
-    let output = sidecar
-        .args([working_dir.to_string_lossy().to_string(), command.to_string()])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to execute Node.js sidecar: {}", e))?;
+    // Validate command security
+    validate_command_security(command)?;
     
-    let stdout = String::from_utf8(output.stdout)
-        .map_err(|e| format!("Failed to parse stdout: {}", e))?;
-    let stderr = String::from_utf8(output.stderr)
-        .map_err(|e| format!("Failed to parse stderr: {}", e))?;
-    let exit_code = output.status.code().unwrap_or(-1);
-    let success = exit_code == 0;
-    
-    let command_result = CommandResult {
-        stdout,
-        stderr,
-        exit_code,
-        success,
-    };
-    
-    Ok(command_result)
+    Ok(())
 }
 
-/// Execute a Node.js command with real-time streaming
+/// Validate command for security
 /// 
-/// This function executes a Node.js command and streams the output
-/// in real-time via Tauri events.
+/// This checks if the command starts with allowed prefixes and doesn't contain
+/// potentially dangerous patterns.
+fn validate_command_security(command: &str) -> Result<(), String> {
+    // Check if the command starts with an allowed prefix
+    let allowed_prefixes = ["npm ", "npx ", "yarn ", "pnpm ", "node "];
+    let is_allowed = allowed_prefixes.iter().any(|prefix| command.starts_with(prefix));
+    
+    if !is_allowed {
+        return Err(format!("Command not allowed: {}. Only npm, npx, yarn, pnpm, and node commands are permitted.", command));
+    }
+    
+    // Check for potentially dangerous patterns
+    let dangerous_patterns = [
+        "&&", "||", ";", "|", ">", "<", "`", "$(",
+        "eval", "exec", "system", "spawn"
+    ];
+    
+    for pattern in dangerous_patterns {
+        if command.contains(pattern) {
+            return Err(format!("Command contains forbidden pattern '{}': {}", pattern, command));
+        }
+    }
+    
+    Ok(())
+}
+
+/// Prepare a command for execution
+/// 
+/// This helper function validates and prepares a command for execution,
+/// setting up environment variables and the sidecar.
+fn prepare_command<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    working_dir: &Path,
+    command: &str,
+    env_vars: Option<HashMap<String, String>>
+) -> Result<tauri_plugin_shell::process::Command, String> {
+    // Validate inputs
+    validate_command_inputs(working_dir, command)?;
+    
+    // Set up environment variables
+    let env_vars = env_vars.unwrap_or_default();
+    let mut env = HashMap::new();
+    
+    // Always set CI=true to prevent interactive prompts
+    env.insert("CI".to_string(), "true".to_string());
+    
+    // Add custom environment variables
+    for (key, value) in env_vars {
+        env.insert(key, value);
+    }
+    
+    // Create and configure the command
+    let sidecar = app_handle.shell().sidecar("nodejs-sidecar")
+        .map_err(|e| format!("Failed to create sidecar: {}", e))?;
+    
+    let command_process = sidecar
+        .args([working_dir.to_string_lossy().to_string(), command.to_string()])
+        .envs(env);
+    
+    Ok(command_process)
+}
+
+/// Execute a Node.js command
+/// 
+/// This is the main function for executing Node.js commands, handling both basic and streaming execution.
 /// 
 /// # Arguments
 /// 
 /// * `app_handle` - The Tauri app handle
 /// * `working_dir` - The working directory where the command should be executed
-/// * `command` - The command to execute (e.g., "npm install", "npx create-next-app", etc.)
-/// * `event_name` - The name of the event to emit for streaming output
+/// * `command` - The command to execute
+/// * `options` - Options for command execution
 /// 
 /// # Returns
 /// 
-/// A result containing the command result or an error message
-pub async fn execute_node_command_streaming<R: Runtime>(
+/// Command execution result or error message
+pub async fn execute_node_command<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    working_dir: &Path,
+    command: &str,
+    options: Option<NodeCommandOptions>,
+) -> Result<CommandResult, String> {
+    let options = options.unwrap_or_default();
+    
+    debug!("Executing Node.js command: {} in directory: {}", command, working_dir.display());
+    
+    // Use streaming if requested
+    if options.streaming && options.event_name.is_some() {
+        return execute_node_command_streaming(
+            app_handle,
+            working_dir,
+            command,
+            options.event_name.as_ref().unwrap(),
+        ).await;
+    }
+    
+    // Prepare the command
+    let command_process = prepare_command(
+        app_handle, 
+        working_dir, 
+        command, 
+        options.env_vars
+    )?;
+    
+    // Execute the command
+    let command_process = command_process
+        .spawn()
+        .map_err(|e| format!("Failed to spawn command: {}", e))?;
+    
+    // Wait for the process to complete
+    let output = command_process
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get command output: {}", e))?;
+    
+    // Parse the output
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let exit_code = output.status.code().unwrap_or(-1);
+    let success = exit_code == 0;
+    
+    Ok(CommandResult {
+        stdout,
+        stderr,
+        exit_code,
+        success,
+    })
+}
+
+/// Execute a Node.js command with streaming output
+async fn execute_node_command_streaming<R: Runtime>(
     app_handle: &AppHandle<R>,
     working_dir: &Path,
     command: &str,
     event_name: &str,
 ) -> Result<CommandResult, String> {
-    info!("Executing Node.js command with streaming: {}", command);
+    debug!("Executing Node.js command with streaming: {} in directory: {}", command, working_dir.display());
     
-    // Validate the working directory
-    if !working_dir.exists() {
-        let error = format!("Working directory does not exist: {}", working_dir.display());
-        warn!("{}", error);
-        return Err(error);
-    }
+    // Prepare the command
+    let command_process = prepare_command(app_handle, working_dir, command, None)?;
     
-    // Validate the command
-    if command.trim().is_empty() {
-        let error = "Command cannot be empty".to_string();
-        warn!("{}", error);
-        return Err(error);
-    }
+    // Build output
+    let mut stdout_output = String::new();
+    let mut stderr_output = String::new();
     
-    // Set up cleanup listener for this command
-    let listener_id = app_handle.listen("cleanup-resources", {
-        let event_name = event_name.to_string();
-        let app_handle = app_handle.clone();
-        move |_| {
-            info!("Cleaning up resources for command event: {}", event_name);
-            let mut commands = ACTIVE_COMMANDS.lock().unwrap();
-            if let Some(tracker) = commands.remove(&event_name) {
-                drop(tracker.unlisten_fn); // Call the unlisten function
-            }
+    // Execute the command
+    let mut command_process = command_process
+        .spawn()
+        .map_err(|e| format!("Failed to spawn command: {}", e))?;
+    
+    // Process command events
+    let (mut rx, child) = command_process.output_child();
+    
+    // Store the child process for cleanup
+    let command_id = event_name.replace("node-command-", "");
+    add_command(command_id.clone(), Box::new(move || {
+        if let Err(e) = child.kill() {
+            warn!("Failed to kill command process: {}", e);
         }
-    });
+    }));
     
-    // Create the sidecar command
-    let sidecar = app_handle.shell().sidecar("binaries/nodejs-sidecar")
-        .map_err(|e| format!("Failed to create sidecar: {}", e))?;
-        
-    // Set up the command with arguments
-    let mut command_with_args = sidecar.args([
-        working_dir.to_string_lossy().to_string(), 
-        command.to_string()
-    ]);
-    
-    // Spawn the command
-    let (mut rx, _child) = command_with_args.spawn()
-        .map_err(|e| format!("Failed to spawn Node.js sidecar: {}", e))?;
-    
-    let mut stdout_buffer = String::new();
-    let mut stderr_buffer = String::new();
-    let mut final_exit_code = -1;
+    let mut exit_code = 1;
     let mut success = false;
     
-    // Process events
+    // Emit events during execution
     while let Some(event) = rx.recv().await {
         match event {
             CommandEvent::Stdout(line) => {
-                let line_str = String::from_utf8_lossy(&line).to_string();
-                stdout_buffer.push_str(&line_str);
-                stdout_buffer.push('\n');
-                
-                // Forward stdout to the event system
-                app_handle.emit(
-                    event_name,
-                    NodeCommandEvent::Stdout(line_str),
-                ).map_err(|e| format!("Failed to emit stdout event: {}", e))?;
-            },
+                stdout_output.push_str(&line);
+                stdout_output.push('\n');
+                app_handle.emit(event_name, NodeCommandEvent::Stdout(line))
+                    .map_err(|e| format!("Failed to emit stdout event: {}", e))?;
+            }
             CommandEvent::Stderr(line) => {
-                let line_str = String::from_utf8_lossy(&line).to_string();
-                stderr_buffer.push_str(&line_str);
-                stderr_buffer.push('\n');
-                
-                // Forward stderr to the event system
-                app_handle.emit(
-                    event_name,
-                    NodeCommandEvent::Stderr(line_str),
-                ).map_err(|e| format!("Failed to emit stderr event: {}", e))?;
-            },
+                stderr_output.push_str(&line);
+                stderr_output.push('\n');
+                app_handle.emit(event_name, NodeCommandEvent::Stderr(line))
+                    .map_err(|e| format!("Failed to emit stderr event: {}", e))?;
+            }
             CommandEvent::Error(err) => {
-                app_handle.emit(
-                    event_name,
-                    NodeCommandEvent::Error(err.to_string()),
-                ).map_err(|e| format!("Failed to emit error event: {}", e))?;
-            },
-            CommandEvent::Terminated(status) => {
-                final_exit_code = status.code.unwrap_or(-1);
-                success = final_exit_code == 0;
+                let error_message = format!("Command error: {}", err);
+                stderr_output.push_str(&error_message);
+                stderr_output.push('\n');
+                app_handle.emit(event_name, NodeCommandEvent::Error(error_message))
+                    .map_err(|e| format!("Failed to emit error event: {}", e))?;
+            }
+            CommandEvent::Terminated(terminated) => {
+                exit_code = terminated.code.unwrap_or(-1);
+                success = exit_code == 0;
                 
+                // Emit a completion event
                 app_handle.emit(
                     event_name,
                     NodeCommandEvent::Completed {
-                        exit_code: final_exit_code,
+                        exit_code,
                         success,
                     },
-                ).map_err(|e| format!("Failed to emit completion event: {}", e))?;
-            },
-            _ => {
-                // Handle any future variants that might be added to the CommandEvent enum
+                )
+                .map_err(|e| format!("Failed to emit completion event: {}", e))?;
+                
+                debug!("Command completed with exit code: {}", exit_code);
+                break;
             }
+            _ => {}
         }
     }
     
-    let command_result = CommandResult {
-        stdout: stdout_buffer,
-        stderr: stderr_buffer,
-        exit_code: final_exit_code,
+    // Clean up resources
+    remove_command(&command_id).ok();
+    
+    Ok(CommandResult {
+        stdout: stdout_output,
+        stderr: stderr_output,
+        exit_code,
         success,
-    };
-    
-    // Store the unlisten function for cleanup
-    let unlisten_fn = Box::new({
-        let app_handle = app_handle.clone();
-        move || {
-            app_handle.unlisten(listener_id);
-        }
-    });
-    
-    // Register this command for cleanup
-    {
-        let mut commands = ACTIVE_COMMANDS.lock().unwrap();
-        commands.insert(event_name.to_string(), CommandTracker {
-            unlisten_fn,
-        });
-    }
-    
-    // Clean up resources after completion
-    {
-        let mut commands = ACTIVE_COMMANDS.lock().unwrap();
-        commands.remove(event_name);
-    }
-    
-    Ok(command_result)
+    })
 }
 
-/// Tauri command to execute a Node.js command
-/// 
-/// This function is exposed as a Tauri command and can be called from the frontend.
 #[tauri::command]
 pub async fn run_node_command(
     app_handle: AppHandle,
     working_dir: String,
     command: String,
 ) -> Result<CommandResult, String> {
-    execute_node_command(&app_handle, &Path::new(&working_dir), &command).await
+    execute_node_command(
+        &app_handle,
+        Path::new(&working_dir),
+        &command,
+        None,
+    ).await
 }
 
-/// Tauri command to execute a Node.js command with real-time output streaming
-/// 
-/// This function is exposed as a Tauri command and can be called from the frontend.
-/// It streams output in real-time via Tauri events.
-/// 
-/// The event name will be used as a base for the event, with the provided 
-/// command ID appended to make it unique.
 #[tauri::command]
 pub async fn run_node_command_streaming(
     app_handle: AppHandle,
@@ -294,34 +356,21 @@ pub async fn run_node_command_streaming(
     command_id: String,
 ) -> Result<CommandResult, String> {
     let event_name = format!("node-command-{}", command_id);
-    execute_node_command_streaming(&app_handle, &Path::new(&working_dir), &command, &event_name).await
+    
+    execute_node_command_streaming(
+        &app_handle,
+        Path::new(&working_dir),
+        &command,
+        &event_name,
+    ).await
 }
 
-/// Clean up resources for node commands
-/// 
-/// This function is exposed as a Tauri command and can be called from the frontend
-/// to explicitly clean up resources when needed.
 #[tauri::command]
 pub fn cleanup_command_resources(command_id: Option<String>) -> Result<(), String> {
-    match command_id {
-        Some(id) => {
-            let event_name = format!("node-command-{}", id);
-            let mut commands = ACTIVE_COMMANDS.lock().unwrap();
-            if let Some(tracker) = commands.remove(&event_name) {
-                drop(tracker.unlisten_fn);
-                info!("Cleaned up resources for command: {}", event_name);
-            } else {
-                warn!("No resources found for command: {}", event_name);
-            }
-        },
-        None => {
-            // Clean up all resources
-            let mut commands = ACTIVE_COMMANDS.lock().unwrap();
-            let count = commands.len();
-            commands.clear();
-            info!("Cleaned up all resources for {} commands", count);
-        }
+    if let Some(id) = command_id {
+        remove_command(&id)
+    } else {
+        clear_commands();
+        Ok(())
     }
-    
-    Ok(())
 } 

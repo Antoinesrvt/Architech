@@ -35,10 +35,5 @@
       "icons/icon.ico"
     ],
     "externalBin": ["binaries/nodejs-sidecar"]
-  },
-  "plugins": {
-    "shell": {
-      "open": true
-    }
   }
 }

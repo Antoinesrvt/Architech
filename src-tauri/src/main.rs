@@ -7,6 +7,7 @@
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use std::sync::Arc;
 use crate::commands::*;
+use crate::commands::node_commands::*;
 use crate::state::AppState;
 use tauri::{Emitter, Manager};
 use tauri_plugin_log::Builder as LogBuilder;

@@ -400,12 +400,41 @@ export class LocalFrameworkService implements FrameworkService {
         throw new Error(`Project validation failed: ${validation.errors.join(', ')}`);
       }
       
+      // Get the framework details to build the setup command
+      const frameworks = await this.getFrameworks();
+      const framework = frameworks.find(f => f.id === config.framework);
+      
+      if (!framework) {
+        throw new Error(`Framework ${config.framework} not found`);
+      }
+      
+      // Generate the framework setup command
+      let setupCommand = framework.cli.base_command;
+      
+      // Add the project name
+      setupCommand += ` ${config.name}`;
+      
+      // Add typescript flag if specified
+      if (framework.id === 'nextjs') {
+        // Add Next.js specific flags
+        setupCommand += ` --ts=${config.options?.typescript !== false}`;
+        setupCommand += ` --app=${config.options?.app_router !== false}`;
+        setupCommand += ` --eslint=${config.options?.eslint !== false}`;
+        setupCommand += ` --src-dir=true --import-alias=@/* --no-tailwind --no-git`;
+      } else if (config.options?.typescript !== false) {
+        // Generic typescript flag for other frameworks
+        setupCommand += ` --typescript`;
+      }
+      
+      console.log('Generated setup command:', setupCommand);
+      
       // Create backend config object 
       const backendConfig = {
         name: config.name,
         path: config.path,
         framework: config.framework,
         modules: config.modules || [],
+        setup_command: setupCommand,
         options: {
           typescript: config.options?.typescript !== false,
           app_router: config.options?.app_router !== false,

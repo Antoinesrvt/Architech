@@ -13,12 +13,14 @@
           "sidecar": true,
           "args": [
             {
-              "validator": ".*"
+              "validator": "^([A-Za-z0-9\\-_/.]+)$"
             },
             {
-              "validator": "^(npm|npx|yarn|pnpm|node)\\s.*"
+              "validator": "^(npm|npx|yarn|pnpm|node)\\s[A-Za-z0-9\\-_/.\\s\\\"'=@]+$"
             }
-          ]
+          ],
+          "executeDirectly": true,
+          "scope": ["executable"]
         }
       ]
     },

@@ -8,7 +8,7 @@ import {
   executeNodeCommandStreaming, 
   cleanupCommand, 
   getActiveCommands 
-} from '@/lib/api/nodejs-executor';
+} from '@/lib/api/nodejs';
 
 interface GenerationPageProps {
   onBackToDashboard?: () => void;

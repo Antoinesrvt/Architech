@@ -372,18 +372,41 @@ impl TaskExecutor {
     async fn find_ready_tasks(&self) -> Vec<String> {
         let state_map = self.state.lock().await;
         
-        self.tasks
+        // Detailed debugging for all tasks and their states
+        log::info!("Current task states: {:#?}", state_map);
+        
+        let ready_tasks: Vec<String> = self.tasks
             .iter()
             .filter(|(id, task)| {
                 // Task must be pending
-                matches!(state_map.get(*id), Some(TaskState::Pending)) &&
-                // All dependencies must be completed
-                task.dependencies().iter().all(|dep| {
-                    matches!(state_map.get(dep), Some(TaskState::Completed))
-                })
+                let is_pending = matches!(state_map.get(*id), Some(TaskState::Pending));
+                
+                // Check dependencies
+                let dependencies_satisfied = task.dependencies().iter().all(|dep| {
+                    let dep_state = state_map.get(dep);
+                    let is_satisfied = matches!(dep_state, Some(TaskState::Completed));
+                    
+                    if !is_satisfied {
+                        log::warn!("Task {} is waiting for dependency {} (current state: {:?})", 
+                           id, dep, dep_state);
+                    }
+                    
+                    is_satisfied
+                });
+                
+                if is_pending && dependencies_satisfied {
+                    log::info!("Task {} is ready to execute", id);
+                } else if is_pending {
+                    log::info!("Task {} is pending but dependencies are not satisfied", id);
+                }
+                
+                is_pending && dependencies_satisfied
             })
             .map(|(id, _)| id.clone())
-            .collect()
+            .collect();
+        
+        log::info!("Found {} ready tasks", ready_tasks.len());
+        ready_tasks
     }
     
     /// Check if execution can continue or if we're stuck

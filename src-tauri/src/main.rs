@@ -34,6 +34,19 @@ async fn test_node_sidecar(app_handle: tauri::AppHandle) -> Result<String, Strin
     let working_dir = std::env::current_dir()
         .map_err(|e| format!("Failed to get current directory: {}", e))?;
     
+    log::info!("Testing Node.js sidecar with working directory: {}", working_dir.display());
+    log::info!("Executing 'node -v' command to test sidecar");
+    
+    // Try to look for the sidecar file
+    let expected_sidecar_path = working_dir.join("binaries").join("nodejs-sidecar");
+    log::info!("Expected sidecar path: {}", expected_sidecar_path.display());
+    if !expected_sidecar_path.exists() {
+        log::warn!("Sidecar file not found at expected path!");
+    } else {
+        log::info!("Sidecar file found at expected path, size: {} bytes", 
+            std::fs::metadata(&expected_sidecar_path).map(|m| m.len()).unwrap_or(0));
+    }
+    
     let result = commands::node_commands::execute_node_command(
         &app_handle,
         &working_dir,
@@ -46,6 +59,49 @@ async fn test_node_sidecar(app_handle: tauri::AppHandle) -> Result<String, Strin
     } else {
         Err(format!("Error: {} (exit code: {})", result.stderr, result.exit_code))
     }
+}
+
+#[tauri::command]
+async fn get_task_diagnostic(app_handle: tauri::AppHandle, project_id: String) -> Result<String, String> {
+    // Get the AppState from manage
+    let app_state = app_handle.state::<Arc<AppState>>();
+    
+    // Build diagnostic information using app_state public methods
+    let mut result = String::new();
+    result.push_str(&format!("Project ID: {}\n", project_id));
+    
+    // Get project status
+    let status = app_state.get_project_status(&project_id).await;
+    result.push_str(&format!("Project status: {:?}\n", status));
+    
+    // Get task states
+    let task_states = app_state.get_all_task_states(&project_id).await;
+    result.push_str(&format!("Total tasks: {}\n\n", task_states.len()));
+    
+    // Get task metadata
+    let task_metadata = app_state.get_task_metadata(&project_id).await;
+    
+    // List all tasks with their states
+    for (task_id, state) in &task_states {
+        result.push_str(&format!("Task ID: {}\n", task_id));
+        
+        if let Some(metadata) = task_metadata.get(task_id) {
+            result.push_str(&format!("  Name: {}\n", metadata.name));
+            result.push_str(&format!("  Dependencies: {:?}\n", metadata.dependencies));
+        } else {
+            result.push_str("  Metadata: Not found\n");
+        }
+        
+        result.push_str(&format!("  State: {:?}\n", state));
+        result.push_str("\n");
+    }
+    
+    Ok(result)
+}
+
+// Add this helper function before main
+fn log_event_emission(event_name: &str, data: &impl std::fmt::Debug) {
+    log::info!("🔔 EMITTING EVENT: {} with data: {:?}", event_name, data);
 }
 
 fn main() {
@@ -91,12 +147,18 @@ fn main() {
                     // Forward events to frontend
                     match &event {
                         crate::state::ProjectEvent::Progress { project_id, step, progress } => {
-                            log::debug!("Emitting generation-progress event to frontend: {}% - {}", progress, step);
-                            let _ = app_handle.emit("generation-progress", serde_json::json!({
+                            let payload = serde_json::json!({
                                 "step": step,
                                 "message": format!("Progress: {}% - {}", progress, step),
                                 "progress": *progress as f32 / 100.0
-                            }));
+                            });
+                            log_event_emission("generation-progress", &payload);
+                            let result = app_handle.emit("generation-progress", payload);
+                            if let Err(e) = &result {
+                                log::error!("❌ Failed to emit generation-progress event: {:?}", e);
+                            } else {
+                                log::debug!("✅ Successfully emitted generation-progress event");
+                            }
                         },
                         crate::state::ProjectEvent::Completed { project_id, path } => {
                             log::debug!("Emitting generation-complete event to frontend: {}", project_id);
@@ -125,11 +187,18 @@ fn main() {
                             };
                             
                             // Emit both events - one for the global system, and one specific for task state changes
-                            let _ = app_handle.emit("task-state-changed", serde_json::json!({
+                            let payload = serde_json::json!({
                                 "project_id": project_id,
                                 "task_id": task_id,
                                 "state": task_state_json
-                            }));
+                            });
+                            log_event_emission("task-state-changed", &payload);
+                            let result = app_handle.emit("task-state-changed", payload);
+                            if let Err(e) = &result {
+                                log::error!("❌ Failed to emit task-state-changed event: {:?}", e);
+                            } else {
+                                log::debug!("✅ Successfully emitted task-state-changed event");
+                            }
                         },
                         crate::state::ProjectEvent::TaskInitializationStarted { project_id } => {
                             DETAILED_DEBUG.call_once(|| {
@@ -227,6 +296,7 @@ fn main() {
             get_project_logs,
             cancel_project_generation,
             resume_project_generation,
+            check_directory_exists,
             
             // System commands
             browse_directory,
@@ -238,6 +308,7 @@ fn main() {
             run_node_command_streaming,
             cleanup_command_resources,
             test_node_sidecar,
+            get_task_diagnostic,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())

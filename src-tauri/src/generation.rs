@@ -481,18 +481,50 @@ impl ProjectGenerator {
         debug!("Executing all tasks (total: {})", total_tasks);
         let results = match executor.execute_all().await {
             Ok(results) => {
-                debug!("Task execution completed with {} results", results.len());
+                info!("Task execution completed with {} results", results.len());
+                
+                // Process each task result
                 for result in &results {
-                    // Update progress for each completed task
+                    // Log task results for debugging
                     if result.success {
+                        info!("✅ Task {} completed successfully", result.task_id);
                         completed_tasks += 1;
                         let progress = ((completed_tasks as f64 / total_tasks as f64) * 90.0) as u8 + 5;
                         debug!("Task completed: {}, progress: {}%", result.message, progress);
                         app_state.update_progress(project_id, &result.message, progress).await;
                     } else {
-                        warn!("Task failed: {}", result.message);
+                        warn!("❌ Task {} failed: {}", result.task_id, result.message);
+                    }
+                    
+                    // Explicitly update task state in the app state
+                    let new_state = if result.success {
+                        TaskState::Completed
+                    } else {
+                        TaskState::Failed(result.message.clone())
+                    };
+                    
+                    // Update the task state in the app state and log it
+                    info!("Updating task state in app state: {} -> {:?}", result.task_id, new_state);
+                    app_state.set_task_state(project_id, &result.task_id, new_state.clone()).await;
+                    
+                    // Emit event for task completion
+                    let status_event = if result.success {
+                        "task-completed"
+                    } else {
+                        "task-failed"
+                    };
+                    
+                    let payload = serde_json::json!({
+                        "project_id": project_id,
+                        "task_id": result.task_id,
+                        "message": result.message
+                    });
+                    
+                    if let Err(e) = app_handle.emit(status_event, payload) {
+                        error!("Failed to emit {} event: {}", status_event, e);
                     }
                 }
+                
                 results
             },
             Err(e) => {

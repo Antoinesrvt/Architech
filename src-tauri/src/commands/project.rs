@@ -289,4 +289,23 @@ pub async fn resume_project_generation(
     
     // Resume generation
     generator.resume_generation(&param.project_id).await
+}
+
+#[command]
+pub async fn check_directory_exists(name: String, path: String) -> Result<bool, String> {
+    if name.trim().is_empty() || path.trim().is_empty() {
+        return Err("Project name and path cannot be empty".to_string());
+    }
+    
+    let base_path = Path::new(&path);
+    
+    // First check if the base path exists
+    if !base_path.exists() {
+        return Err(format!("Directory '{}' does not exist", path));
+    }
+    
+    // Then check if the project directory exists
+    let project_path = base_path.join(&name);
+    
+    Ok(project_path.exists())
 } 

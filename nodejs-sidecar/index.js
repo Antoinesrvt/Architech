@@ -1,49 +1,53 @@
 #!/usr/bin/env node
 
 /**
- * Simplified Node.js command executor sidecar for Tauri applications
+ * Generic Node.js command executor sidecar for Tauri applications
  * 
- * Usage: nodejs-sidecar <working-directory> <command>
+ * This sidecar provides a contained Node.js environment that can execute any
+ * Node.js command without requiring Node.js to be installed on the end-user's machine.
+ * 
+ * Usage:
+ *   nodejs-sidecar <working-directory> <command>
+ * 
+ * Arguments:
+ *   working-directory: The directory where the command should be executed
+ *   command: The full command string to execute
  */
 
-const { spawnSync } = require('child_process');
-const path = require('path');
+// Generic Node.js command executor sidecar
+const { execSync } = require('child_process');
 
-// Log environment for debugging
-console.log('Node.js version:', process.version);
-console.log('Arguments:', process.argv);
-
-// Get command parts from arguments
+// Get command details from arguments
 const workingDir = process.argv[2] || process.cwd();
-const cmdParts = process.argv.slice(3);
+const command = process.argv.slice(3).join(' ');
 
-if (cmdParts.length === 0) {
+if (!command) {
   console.error('Error: No command specified');
   process.exit(1);
 }
 
-// The command to run is the first argument after the working directory
-const command = cmdParts.join(' ');
-
-console.log('Working directory:', workingDir);
-console.log('Command:', command);
-
 try {
   // Change to working directory
   process.chdir(workingDir);
+  console.log(`Working directory: ${workingDir}`);
+  console.log(`Executing: ${command}`);
   
-  // Execute the command using the shell
-  const result = spawnSync(command, [], {
-    shell: true,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      CI: 'true'
-    }
+  // Set environment variables for non-interactive use
+  const env = {
+    ...process.env,
+    CI: 'true',
+    NEXT_TELEMETRY_DISABLED: '1',
+    NODE_ENV: 'development'
+  };
+  
+  // Execute the command
+  execSync(command, {
+    env,
+    stdio: 'inherit'
   });
   
-  process.exit(result.status || 0);
+  process.exit(0);
 } catch (error) {
-  console.error('Error executing command:', error.message);
+  console.error(`Error executing command: ${error.message}`);
   process.exit(1);
 } 

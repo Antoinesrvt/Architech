@@ -3,23 +3,29 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 Language/Framework Agnostic Rules (Clean Code Principles)
-	•	Follow DRY (Don't Repeat Yourself) principle by extracting reusable code into functions/components 	
-  •	Keep it simple (KISS principle) - avoid unnecessary complexity 	
-  •	Use consistent naming conventions for variables, functions, and components 	
-  •	Write self-documenting code with clear variable/function names 	
-  •	Implement proper error handling with meaningful error messages 	
-  •	Follow single responsibility principle - each function/component should do one thing well 	
-  •	Add comments only for complex logic, not for obvious operations 	
-  •	Prioritize code readability over clever solutions 
-
-  Web/App Design and UX Best Principles
-	•	Design for accessibility from the start (WCAG compliance) 	
-  •	Implement responsive design that works across all device sizes 	
-  •	Maintain consistent UI patterns throughout the application 	
-  •	Prioritize performance optimization (lazy loading, code splitting) 	
-  •	Follow the principle of progressive disclosure for complex interfaces 	
-  •	Design clear navigation paths with proper visual hierarchy 	
-  •	Provide immediate feedback for user actions 	
-  •	Use appropriate contrast ratios for text and background 
+1. SOLID Principles
+	•	Single Responsibility Principle (SRP): Each class/function should have only one reason to change 	•	Open/Closed Principle (OCP): Software entities should be open for extension but closed for modification 	•	Liskov Substitution Principle (LSP): Derived classes must be substitutable for their base classes 	•	Interface Segregation Principle (ISP): Clients shouldn't depend on interfaces they don't use 	•	Dependency Inversion Principle (DIP): High-level modules shouldn't depend on low-level modules; both should depend on abstractions 
+2. DRY (Don't Repeat Yourself)
+	•	Avoid code duplication by extracting repeated logic into reusable functions 	•	Create shared utilities for common operations 	•	Use inheritance and composition to prevent pattern duplication 	•	Implement consistent abstractions across the codebase 
+3. KISS (Keep It Simple, Stupid)
+	•	Choose straightforward solutions over complex ones 	•	Minimize nested conditionals (max 2-3 levels deep) 	•	Break complex functions into smaller, focused ones 	•	Avoid premature optimization and over-engineering 	•	Use clear variable and function names that convey purpose 
+4. YAGNI (You Aren't Gonna Need It)
+	•	Only implement features when they're actually needed 	•	Avoid speculative code that anticipates future requirements 	•	Focus on solving current problems, not potential future ones 	•	Start with minimal viable solutions and iterate as needed 
+5. Code Quality and Readability
+	•	Use consistent formatting and code style 	•	Follow language-specific conventions and best practices 	•	Choose descriptive variable, function, and class names 	•	Keep functions short (preferably < 20 lines) 	•	Add comments only for complex logic, not obvious operations 	•	Make code self-documenting when possible 
+6. Testing and Maintainability
+	•	Write testable code with clear dependencies 	•	Create unit tests for critical functions 	•	Use mocking for external dependencies 	•	Implement error handling with meaningful messages 	•	Catch exceptions at appropriate levels 
+Web/App Design and UX Best Principles
+1. Nielsen's 10 Usability Heuristics
+	•	Visibility of system status: Keep users informed about what's happening 	•	Match between system and real world: Use familiar concepts and language 	•	User control and freedom: Provide clear exits for mistaken actions 	•	Consistency and standards: Follow platform and industry conventions 	•	Error prevention: Eliminate error-prone conditions or confirm actions 	•	Recognition over recall: Minimize memory load with visible objects and options 	•	Flexibility and efficiency: Provide accelerators for expert users 	•	Aesthetic and minimalist design: Eliminate unnecessary elements 	•	Help users recognize and recover from errors: Use plain language for error messages 	•	Help and documentation: Provide easy-to-search help information 
+2. Gestalt Principles for Visual Design
+	•	Proximity: Group related items together 	•	Similarity: Similar elements are perceived as related 	•	Continuity: Elements arranged on a line are perceived as related 	•	Closure: People perceive complete shapes even when incomplete 	•	Figure/Ground: Elements are perceived as either figure (foreground) or ground (background) 	•	Symmetry: Symmetrical elements are perceived as unified wholes 	•	Common Fate: Elements moving in the same direction are perceived as related 
+3. Laws of UX
+	•	Fitts's Law: The time to acquire a target is a function of distance and size 	•	Hick's Law: Decision time increases with number of choices 	•	Jakob's Law: Users spend most time on other sites, so they expect your site to work the same way 	•	Miller's Law: Average person can hold 7±2 items in working memory 	•	Parkinson's Law: Work expands to fill the time available 	•	Tesler's Law: There's a certain amount of complexity that cannot be reduced 	•	Doherty Threshold: Productivity soars when computer response time is <400ms 
+4. Accessibility and Inclusivity
+	•	Follow WCAG 2.1 AA standards at minimum 	•	Provide sufficient color contrast (4.5:1 for text) 	•	Ensure keyboard navigability for all interactive elements 	•	Add proper alt text for images and aria-labels for interactive elements 	•	Design for screen readers and assistive technologies 	•	Support text resizing without breaking layouts 	•	Provide focus indicators for interactive elements 
+5. Responsive and Adaptive Design
+	•	Use mobile-first approach for layouts 	•	Implement fluid grids and flexible images 	•	Define appropriate breakpoints for different device categories 	•	Test on multiple screen sizes and devices 	•	Optimize touch targets for mobile (minimum 44×44px) 	•	Consider reduced motion preferences for animations 	•	Ensure consistent experience across platforms 
+6. Performance and Efficiency
+	•	Optimize loading times (<3 seconds ideal) 	•	Lazy load non-critical resources 	•	Compress and optimize images and media 	•	Minimize HTTP requests 	•	Implement proper caching strategies 	•	Prioritize critical rendering path 	•	Monitor and improve Core Web Vitals 

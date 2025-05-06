@@ -79,7 +79,57 @@ impl Task for ModuleTask {
     async fn execute(&self, context: &TaskContext) -> Result<(), String> {
         // Use only the needed context variables
         let app_handle = &context.app_handle;
-        let project_dir = &context.project_dir;
+        let base_dir = &context.project_dir;
+        let config = &context.config;
+        
+        // Create the full project path (base_dir/project_name)
+        let project_dir = base_dir.join(&config.name);
+        
+        // Log the actual directory we're working in
+        info!("Working directory for module {}: {}", self.module_id, project_dir.display());
+        app_handle.emit("log-message", format!("Working in directory: {}", project_dir.display())).unwrap();
+        
+        // Create the project directory if it doesn't exist (failsafe in case framework task failed)
+        if !project_dir.exists() {
+            let warning_msg = format!("Project directory does not exist, creating it now: {}", project_dir.display());
+            warn!("{}", warning_msg);
+            app_handle.emit("log-message", &warning_msg).unwrap();
+            
+            if let Err(e) = std::fs::create_dir_all(&project_dir) {
+                let error_msg = format!("Failed to create project directory: {}", e);
+                warn!("{}", error_msg);
+                app_handle.emit("log-message", &error_msg).unwrap();
+                return Err(error_msg);
+            }
+            
+            // Create a package.json file if it doesn't exist
+            let package_json_path = project_dir.join("package.json");
+            if !package_json_path.exists() {
+                info!("Creating default package.json file");
+                app_handle.emit("log-message", "Creating default package.json file").unwrap();
+                
+                let default_package = r#"{
+  "name": "project",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}"#;
+                
+                if let Err(e) = std::fs::write(&package_json_path, default_package) {
+                    let warning = format!("Warning: Failed to create package.json: {}", e);
+                    warn!("{}", warning);
+                    app_handle.emit("log-message", &warning).unwrap();
+                }
+            }
+        }
         
         // Get module details
         let all_modules = get_modules().await?;
@@ -134,7 +184,7 @@ impl Task for ModuleTask {
             
             let command_result = execute_node_command(
                 app_handle,
-                project_dir,
+                &project_dir,
                 cmd,
                 None
             ).await;

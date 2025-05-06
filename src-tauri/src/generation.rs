@@ -277,7 +277,7 @@ impl ProjectGenerator {
         tasks.push(framework_task);
         info!("Created framework task with ID: {}", framework_task_id);
         
-        // Step 2: Module setup tasks - Depend directly on framework task
+        // Step 2: Module setup tasks - Order matters for dependencies!
         debug!("Module count: {}", config.modules.len());
         debug!("Modules selected: {:?}", config.modules);
         
@@ -293,7 +293,7 @@ impl ProjectGenerator {
         // Resolve module dependencies
         let mut module_deps: HashMap<String, Vec<String>> = HashMap::new();
         
-        // First pass: Collect dependencies
+        // First pass: Collect dependencies for each module
         for module_id in &config.modules {
             let module = match all_modules.iter().find(|m| m.id == *module_id) {
                 Some(m) => m,
@@ -332,11 +332,78 @@ impl ProjectGenerator {
             }
         }
         
-        // Second pass: Create module tasks with dependencies
+        // Create a dependency graph for topological sorting
+        let mut dependency_graph: HashMap<String, HashSet<String>> = HashMap::new();
+        
+        // Initialize the graph with all modules
         for module_id in &config.modules {
-            let module_deps = module_deps.get(module_id).cloned().unwrap_or_default();
+            dependency_graph.insert(module_id.clone(), HashSet::new());
+        }
+        
+        // Add dependencies to the graph
+        for (module_id, deps) in &module_deps {
+            let dep_set = dependency_graph.get_mut(module_id).unwrap();
             
-            // All module tasks must depend on framework task
+            for dep in deps {
+                if let Some(stripped_dep) = dep.strip_prefix("module:") {
+                    if config.modules.iter().any(|m| m == stripped_dep) {
+                        dep_set.insert(stripped_dep.to_string());
+                    }
+                }
+            }
+        }
+        
+        // Perform topological sort to get modules in dependency order
+        let mut sorted_modules = Vec::new();
+        let mut temp_marked = HashSet::new();
+        let mut perm_marked = HashSet::new();
+        
+        // Visit function for depth-first search
+        fn visit(
+            node: &str, 
+            graph: &HashMap<String, HashSet<String>>,
+            sorted: &mut Vec<String>,
+            temp_marked: &mut HashSet<String>,
+            perm_marked: &mut HashSet<String>
+        ) -> Result<(), String> {
+            if temp_marked.contains(node) {
+                return Err(format!("Cyclic dependency detected at module: {}", node));
+            }
+            
+            if !perm_marked.contains(node) {
+                temp_marked.insert(node.to_string());
+                
+                if let Some(dependencies) = graph.get(node) {
+                    for dep in dependencies {
+                        visit(dep, graph, sorted, temp_marked, perm_marked)?;
+                    }
+                }
+                
+                temp_marked.remove(node);
+                perm_marked.insert(node.to_string());
+                sorted.push(node.to_string());
+            }
+            
+            Ok(())
+        }
+        
+        // Sort all modules
+        for module_id in config.modules.clone() {
+            if !perm_marked.contains(&module_id) {
+                visit(&module_id, &dependency_graph, &mut sorted_modules, &mut temp_marked, &mut perm_marked)?;
+            }
+        }
+        
+        // Log the sorted order
+        debug!("Module ordering after topological sort: {:?}", sorted_modules);
+        
+        // Second pass: Create module tasks with dependencies in sorted order
+        // All module tasks must depend on framework task
+        for module_id in sorted_modules {
+            // Get the module's dependencies
+            let module_deps = module_deps.get(&module_id).cloned().unwrap_or_default();
+            
+            // Ensure the framework task is a dependency
             let mut all_deps = vec![framework_task_id.clone()];
             all_deps.extend(module_deps);
             
@@ -477,11 +544,87 @@ impl ProjectGenerator {
         let total_tasks = executor.get_task_count();
         let mut completed_tasks = 0;
         
+        // Start a background task to periodically broadcast the current state
+        // This ensures the frontend always has the latest state, even if events are missed
+        let project_id_clone = project_id.to_string();
+        let app_state_clone = app_state.clone();
+        let app_handle_clone = app_handle.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(1000));
+            
+            // Broadcast for 5 minutes max (300 seconds)
+            let mut count = 0;
+            while count < 300 {
+                interval.tick().await;
+                count += 1;
+                
+                // Get all task states FRESH each time - don't use cached data
+                let task_states = app_state_clone.get_all_task_states(&project_id_clone).await;
+                
+                // Skip if no task states found
+                if task_states.is_empty() {
+                    debug!("No task states to broadcast for project {}", project_id_clone);
+                    continue;
+                }
+                
+                debug!("Periodic state broadcast: {} task states", task_states.len());
+                
+                // Also emit a direct debug event to help diagnose issues
+                let _ = app_handle_clone.emit("tauri://debug", format!("Broadcasting {} task states", task_states.len()));
+                
+                // Broadcast each task state
+                for (task_id, state) in task_states {
+                    debug!("Re-broadcasting task state: {} -> {:?}", task_id, state);
+                    
+                    // Emit the task state event
+                    app_state_clone.emit_event(crate::state::ProjectEvent::TaskStateChanged {
+                        project_id: project_id_clone.clone(),
+                        task_id: task_id.clone(),
+                        state: state.clone()
+                    }).await;
+                    
+                    // For debugging, also emit direct task status events
+                    let status_event = match state {
+                        crate::tasks::TaskState::Pending => "task-pending",
+                        crate::tasks::TaskState::Running => "task-running",
+                        crate::tasks::TaskState::Completed => "task-completed",
+                        crate::tasks::TaskState::Failed(_) => "task-failed",
+                    };
+                    
+                    let payload = serde_json::json!({
+                        "project_id": project_id_clone,
+                        "task_id": task_id,
+                        "state": format!("{:?}", state),
+                    });
+                    
+                    if let Err(e) = app_handle_clone.emit(status_event, payload) {
+                        error!("Failed to emit {} event: {}", status_event, e);
+                    } else {
+                        debug!("Direct {} event emitted for {}", status_event, task_id);
+                    }
+                }
+                
+                // Stop broadcasting if the project is complete or failed
+                match app_state_clone.get_project_status(&project_id_clone).await {
+                    crate::state::ProjectStatus::Completed { .. } | 
+                    crate::state::ProjectStatus::Failed { .. } | 
+                    crate::state::ProjectStatus::Cancelled => {
+                        debug!("Project status is terminal, stopping periodic state broadcast");
+                        break;
+                    },
+                    _ => {}
+                }
+            }
+            
+            debug!("Periodic state broadcast completed after {} iterations", count);
+        });
+        
         // Execute all tasks
         debug!("Executing all tasks (total: {})", total_tasks);
         let results = match executor.execute_all().await {
             Ok(results) => {
                 info!("Task execution completed with {} results", results.len());
+                debug!("Task execution results summary: {:?}", results.iter().map(|r| (r.task_id.clone(), r.success)).collect::<Vec<_>>());
                 
                 // Process each task result
                 for result in &results {
@@ -496,18 +639,40 @@ impl ProjectGenerator {
                         warn!("❌ Task {} failed: {}", result.task_id, result.message);
                     }
                     
-                    // Explicitly update task state in the app state
+                    // Update the task state in the app state and log it
                     let new_state = if result.success {
                         TaskState::Completed
                     } else {
                         TaskState::Failed(result.message.clone())
                     };
                     
-                    // Update the task state in the app state and log it
+                    // Update state to trigger proper event broadcasting
                     info!("Updating task state in app state: {} -> {:?}", result.task_id, new_state);
                     app_state.set_task_state(project_id, &result.task_id, new_state.clone()).await;
+                    debug!("Task state updated in app_state");
                     
-                    // Emit event for task completion
+                    // Process the task result to generate logs
+                    app_state.process_task_result(project_id, result.clone()).await;
+                    debug!("Task result processed");
+                    
+                    // Add explicit log message for task completion
+                    let log_message = format!("Task '{}' {}", 
+                        result.task_id,
+                        if result.success { "completed successfully" } else { "failed" }
+                    );
+                    app_state.add_log(project_id, &log_message).await;
+                    debug!("Added log entry: {}", log_message);
+                    
+                    // Explicitly emit a state update event to ensure frontend is notified
+                    info!("Emitting TaskStateChanged event for {}: {:?}", result.task_id, new_state);
+                    app_state.emit_event(crate::state::ProjectEvent::TaskStateChanged {
+                        project_id: project_id.to_string(),
+                        task_id: result.task_id.clone(),
+                        state: new_state.clone()
+                    }).await;
+                    debug!("TaskStateChanged event emitted for {}", result.task_id);
+                    
+                    // For debugging, emit direct events as well (can be removed later)
                     let status_event = if result.success {
                         "task-completed"
                     } else {
@@ -522,6 +687,8 @@ impl ProjectGenerator {
                     
                     if let Err(e) = app_handle.emit(status_event, payload) {
                         error!("Failed to emit {} event: {}", status_event, e);
+                    } else {
+                        debug!("Direct {} event emitted for {}", status_event, result.task_id);
                     }
                 }
                 

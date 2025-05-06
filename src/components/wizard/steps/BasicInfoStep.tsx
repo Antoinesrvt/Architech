@@ -27,13 +27,16 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
   const [formErrors, setFormErrors] = useState({
     name: '',
     path: '',
+    directory: ''
   });
+  const [isCheckingDirectory, setIsCheckingDirectory] = useState(false);
 
   // Initialize form errors on mount
   useEffect(() => {
     setFormErrors({
       name: validateProjectName(projectName),
-      path: projectPath ? '' : 'Project path is required'
+      path: projectPath ? '' : 'Project path is required',
+      directory: ''
     });
   }, [projectName, projectPath]);
 
@@ -137,8 +140,49 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
     return () => clearTimeout(timeoutId);
   };
 
+  // Check if the project directory already exists
+  const checkDirectoryExists = async (name: string, path: string) => {
+    if (!name || !path) return;
+    
+    setIsCheckingDirectory(true);
+    
+    try {
+      // Use the more efficient API method to check directory existence
+      const result = await frameworkService.checkDirectoryExists(name, path);
+      
+      if (result.error) {
+        // This is a path existence error
+        setFormErrors(prev => ({
+          ...prev,
+          directory: result.error || '',
+        }));
+      } else if (result.exists) {
+        // The directory exists already 
+        setFormErrors(prev => ({
+          ...prev,
+          directory: `Project directory '${path}/${name}' already exists`,
+        }));
+      } else {
+        // Path is valid and directory doesn't exist - perfect!
+        setFormErrors(prev => ({
+          ...prev,
+          directory: '',
+        }));
+      }
+    } catch (error) {
+      console.error('Error checking directory:', error);
+      // Don't set an error for unexpected issues - they'll be caught during project creation
+      setFormErrors(prev => ({
+        ...prev,
+        directory: '',
+      }));
+    } finally {
+      setIsCheckingDirectory(false);
+    }
+  };
+
   // Is the form valid?
-  const isFormValid = !formErrors.name && !formErrors.path && projectName && projectPath;
+  const isFormValid = !formErrors.name && !formErrors.path && !formErrors.directory && projectName && projectPath;
 
   // Handle next button
   const handleNext = () => {

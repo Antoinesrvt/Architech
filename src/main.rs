@@ -30,7 +30,6 @@
                                 "reason": reason
                             }));
                         }, 
-
 #[tauri::command]
 async fn test_node_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
     // Use the current working directory instead of app_dir which doesn't exist

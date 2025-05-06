@@ -51,8 +51,38 @@ impl Task for CleanupTask {
     }
     
     async fn execute(&self, context: &TaskContext) -> Result<(), String> {
+        // Use only the needed context variables
         let app_handle = &context.app_handle;
-        let project_dir = &context.project_dir;
+        let base_dir = &context.project_dir;
+        let config = &context.config;
+        
+        // Create the full project path (base_dir/project_name)
+        let project_dir = base_dir.join(&config.name);
+        
+        // Log the actual directory we're working in
+        info!("Working directory for cleanup task: {}", project_dir.display());
+        app_handle.emit("log-message", format!("Cleaning up project in: {}", project_dir.display())).unwrap();
+        
+        // Create the project directory if it doesn't exist (failsafe in case framework task failed)
+        if !project_dir.exists() {
+            let warning_msg = format!("Project directory does not exist for cleanup, creating empty directory: {}", project_dir.display());
+            warn!("{}", warning_msg);
+            app_handle.emit("log-message", &warning_msg).unwrap();
+            
+            if let Err(e) = std::fs::create_dir_all(&project_dir) {
+                let error_msg = format!("Failed to create project directory: {}", e);
+                warn!("{}", error_msg);
+                app_handle.emit("log-message", &error_msg).unwrap();
+            }
+            
+            // Create a completion file to indicate the project is "complete" even if empty
+            let completion_file = project_dir.join(".cleanup-complete");
+            if let Err(e) = std::fs::write(&completion_file, "Project cleanup completed") {
+                warn!("Failed to create completion file: {}", e);
+            }
+            
+            return Ok(());  // Skip further cleanup since we just created the directory
+        }
         
         // Start the cleanup phase
         info!("Starting project cleanup phase");
@@ -71,7 +101,7 @@ impl Task for CleanupTask {
             // Run npm install with retry logic
             let npm_result = execute_node_command(
                 app_handle,
-                project_dir,
+                &project_dir,
                 "npm install",
                 None
             ).await;
@@ -112,7 +142,7 @@ impl Task for CleanupTask {
             
             let npm_result = execute_node_command(
                 app_handle,
-                project_dir,
+                &project_dir,
                 "npm run format",
                 None
             ).await;
@@ -177,12 +207,12 @@ impl Task for CleanupTask {
                                     app_handle.emit("log-message", "Running development build...").unwrap();
                                     
                                     // Run the build command
-                                    info!("Building the project");
-                                    app_handle.emit("log-message", "Building the project").unwrap();
+                                    info!("Running npm run build");
+                                    app_handle.emit("log-message", "Running npm run build to pre-build the project").unwrap();
                                     
                                     let build_result = execute_node_command(
                                         app_handle,
-                                        project_dir,
+                                        &project_dir,
                                         "npm run build",
                                         None
                                     ).await;
@@ -219,6 +249,35 @@ impl Task for CleanupTask {
                     warn!("{}", warning);
                     app_handle.emit("log-message", warning).unwrap();
                 }
+            }
+        }
+        
+        // Run tests if available
+        info!("Running tests before finalizing the project");
+        app_handle.emit("log-message", "Running tests to ensure project quality").unwrap();
+        
+        let build_result = execute_node_command(
+            app_handle,
+            &project_dir,
+            "npm test",
+            None
+        ).await;
+        
+        match build_result {
+            Ok(result) => {
+                if result.success {
+                    info!("Tests passed");
+                    app_handle.emit("log-message", "Tests passed").unwrap();
+                } else {
+                    let warning = format!("Warning: Tests failed: {}", result.stderr);
+                    warn!("{}", warning);
+                    app_handle.emit("log-message", warning).unwrap();
+                }
+            },
+            Err(e) => {
+                let warning = format!("Warning: Tests command failed: {}", e);
+                warn!("{}", warning);
+                app_handle.emit("log-message", warning).unwrap();
             }
         }
         

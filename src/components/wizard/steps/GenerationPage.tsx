@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
 import { useProjectStore } from '@/lib/store/project-store';
 import { frameworkService } from '@/lib/api';
-import { Terminal, FolderOpen, RefreshCw, ArrowLeft, HomeIcon, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Terminal, FolderOpen, RefreshCw, ArrowLeft, HomeIcon, CheckCircle, AlertTriangle, XCircle, SkipForward } from 'lucide-react';
 import { TaskStatus, TaskStatusHelpers, TASK_STATUS } from '@/lib/api/local';
 import { 
   executeNodeCommandStreaming, 
@@ -441,6 +441,19 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       return 'Initializing...';
     }
     
+    // For completed state
+    if (generationState.status === TASK_STATUS.COMPLETED) {
+      return 'Generation Complete';
+    }
+    
+    // Check if all tasks are completed even if overall status isn't updated yet
+    const tasks = Object.values(generationState.tasks || {});
+    if (tasks.length > 0 && tasks.every(task => TaskStatusHelpers.isCompleted(task.status) || 
+                                        TaskStatusHelpers.isSkipped(task.status) ||
+                                        TaskStatusHelpers.isFailed(task.status))) {
+      return 'Generation Complete';
+    }
+    
     // For initialization phase
     if (generationState.status === 'Initializing') {
       return initStep || 'Setting up project tasks...';
@@ -476,172 +489,115 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   };
 
   const renderTaskList = () => {
-    console.log('GenerationPage - renderTaskList - generationState:', generationState);
+    if (!generationState || !generationState.tasks) {
+      return <div className="mt-4">Initializing tasks...</div>;
+    }
+
+    // Get the task IDs, ensuring we have tasks
+    const taskEntries = Object.entries(generationState.tasks || {});
     
-    if (!generationState) {
-      console.log('GenerationPage - No generation state available yet');
-      return (
-        <div className="mt-4 space-y-2">
-          <h4 className="font-medium">Generation Tasks</h4>
-          <div className="p-4 text-center bg-base-300 rounded-lg">
-            <div className="flex flex-col items-center gap-2">
-              <span className="loading loading-spinner loading-md"></span>
-              <p className="text-sm opacity-75">Waiting for generation to start...</p>
-            </div>
-            <button
-              onClick={() => {
-                console.log('Manual debug refresh triggered');
-                getGenerationStatus();
-                getGenerationLogs();
-              }}
-              className="btn btn-xs btn-ghost mt-2"
-            >
-              Refresh Status
-            </button>
-          </div>
-        </div>
-      );
+    // If no tasks, show initialization message
+    if (taskEntries.length === 0) {
+      return <div className="mt-4">Initializing tasks...</div>;
     }
     
-    if (!generationState.tasks || Object.keys(generationState.tasks).length === 0) {
-      console.log('GenerationPage - No tasks available yet, waiting for initialization...');
-      console.log('GenerationState status:', generationState.status);
-      
-      // Check if we're in an initialization phase
-      const status = generationState?.status;
-      if (status === 'Initializing') {
-        return (
-          <div className="mt-4 space-y-2">
-            <h4 className="font-medium">Initializing Project</h4>
-            <div className="p-4 bg-base-300 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <span className="loading loading-spinner loading-md"></span>
-                <p>Creating project structure and initializing tasks...</p>
-              </div>
-              <div className="mt-3">
-                <progress className="progress progress-primary w-full" value="5" max="100"></progress>
-              </div>
-            </div>
-            <div className="px-4 pt-2 text-sm">
-              <p className="text-info">
-                {initStep || 'Preparing project tasks...'}
-              </p>
-            </div>
-            <div className="mt-2 p-2 border border-base-300 rounded-md">
-              <p className="text-xs text-base-content">Debug Info:</p>
-              <pre className="text-xs overflow-auto bg-base-200 p-2 rounded mt-1">
-                {JSON.stringify({
-                  status: generationState.status,
-                  progress: generationState.progress,
-                  taskCount: Object.keys(generationState.tasks || {}).length,
-                  currentTask: generationState.current_task,
-                  id: generationState.id
-                }, null, 2)}
-              </pre>
-              <button
-                onClick={() => {
-                  console.log('Manual tasks refresh triggered');
-                  // Force creating placeholder tasks if initialization is complete
-                  if (generationState && generationState.status === 'Initializing') {
-                    console.log('Requesting task initialization status manually');
-                    getGenerationStatus();
-                    getGenerationLogs();
-                  }
-                }}
-                className="btn btn-xs btn-primary mt-2"
-              >
-                Force Refresh
-              </button>
-            </div>
-          </div>
-        );
-      }
-      
-      return (
-        <div className="mt-4 space-y-2">
-          <h4 className="font-medium">Generation Tasks</h4>
-          <div className="p-4 text-center bg-base-300 rounded-lg">
-            <p className="text-sm opacity-75">Waiting for tasks to initialize...</p>
-            <div className="mt-2 p-2 border border-base-300 rounded-md">
-              <p className="text-xs text-base-content">Debug Info:</p>
-              <pre className="text-xs overflow-auto bg-base-200 p-2 rounded mt-1">
-                {JSON.stringify({
-                  status: generationState.status,
-                  progress: generationState.progress,
-                  id: generationState.id
-                }, null, 2)}
-              </pre>
-            </div>
-            <button
-              onClick={() => {
-                console.log('Manual debug refresh triggered');
-                getGenerationStatus();
-                getGenerationLogs();
-              }}
-              className="btn btn-xs btn-ghost mt-2"
-            >
-              Refresh Status
-            </button>
-          </div>
-        </div>
-      );
-    }
-    
-    // Sort tasks by status: running first, then pending, then completed, then failed
-    const sortedTasks = Object.values(generationState.tasks).sort((a, b) => {
-      const getStatusPriority = (status: TaskStatus | string) => {
-        if (status === TASK_STATUS.RUNNING) return 0;
-        if (status === TASK_STATUS.PENDING) return 1;
-        if (status === TASK_STATUS.COMPLETED) return 2;
-        if (TaskStatusHelpers.isSkipped(status)) return 3;
-        return 4; // Failed or other
-      };
-      
-      return getStatusPriority(a.status) - getStatusPriority(b.status);
-    });
-    
+    // Log for debugging
+    console.log("Rendering tasks:", JSON.stringify(taskEntries.map(([id, task]) => ({
+      id,
+      name: task.name,
+      status: task.status,
+      progress: task.progress
+    })), null, 2));
+
     return (
-      <div className="mt-4 space-y-2">
-        <h4 className="font-medium">Generation Tasks</h4>
-        <div className="space-y-2 max-h-40 overflow-y-auto p-2 bg-base-300 rounded-lg">
-          {sortedTasks.map(task => (
-            <div 
-              key={task.id} 
-              className={`flex items-center justify-between p-2 rounded ${
-                task.status === TASK_STATUS.RUNNING ? 'bg-primary/10 border border-primary/30' :
-                task.status === TASK_STATUS.COMPLETED ? 'bg-success/10 border border-success/30' :
-                TaskStatusHelpers.isFailed(task.status) ? 'bg-error/10 border border-error/30' :
-                TaskStatusHelpers.isSkipped(task.status) ? 'bg-base-100' :
-                'bg-base-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {task.status === TASK_STATUS.RUNNING && (
-                  <div className="w-4 h-4 rounded-full bg-primary animate-pulse"></div>
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-3">Generation Tasks</h3>
+        <div className="space-y-2 rounded-lg">
+          {taskEntries.map(([id, task]) => {
+            const isCurrentTask = generationState.current_task === id;
+            
+            // Determine which icon to show based on task status
+            const getStatusIcon = () => {
+              // Add debug log for task status
+              console.log(`Rendering task status for ${id}: "${task.status}" (${typeof task.status})`);
+              
+              if (TaskStatusHelpers.isCompleted(task.status)) {
+                return <CheckCircle className="text-success h-5 w-5" />;
+              } else if (TaskStatusHelpers.isFailed(task.status)) {
+                return <XCircle className="text-error h-5 w-5" />;
+              } else if (TaskStatusHelpers.isRunning(task.status)) {
+                return <RefreshCw className="text-primary h-5 w-5 animate-spin" />;
+              } else if (TaskStatusHelpers.isSkipped(task.status)) {
+                return <SkipForward className="text-warning h-5 w-5" />;
+              } else {
+                return <div className="h-5 w-5 rounded-full border-2 border-base-300"></div>;
+              }
+            };
+            
+            // Get background color class based on status
+            const getStatusClass = () => {
+              if (isCurrentTask) {
+                return "bg-primary bg-opacity-10 border-primary";
+              } else if (TaskStatusHelpers.isCompleted(task.status)) {
+                return "bg-success bg-opacity-5 border-success border-opacity-30";
+              } else if (TaskStatusHelpers.isFailed(task.status)) {
+                return "bg-error bg-opacity-5 border-error border-opacity-30";
+              } else {
+                return "bg-base-200 border-base-300";
+              }
+            };
+            
+            return (
+              <div 
+                key={id}
+                className={`p-3 rounded-lg border ${getStatusClass()} relative overflow-hidden transition-all duration-200`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    {getStatusIcon()}
+                  </div>
+                  <div className="flex-grow">
+                    <div className="font-medium">{task.name}</div>
+                    {TaskStatusHelpers.isFailed(task.status) && (
+                      <div className="text-sm text-error mt-1">
+                        {task.status.replace('Failed:', 'Error:')}
+                      </div>
+                    )}
+                  </div>
+                  {isCurrentTask && TaskStatusHelpers.isRunning(task.status) && (
+                    <div className="badge badge-primary">In Progress</div>
+                  )}
+                  {TaskStatusHelpers.isCompleted(task.status) && (
+                    <div className="badge badge-success">Completed</div>
+                  )}
+                </div>
+                
+                {/* Progress bar for running tasks */}
+                {TaskStatusHelpers.isRunning(task.status) && (
+                  <div className="w-full bg-base-300 h-1 mt-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-primary h-full transition-all duration-300 rounded-full"
+                      style={{ width: `${Math.max(5, task.progress * 100)}%` }}
+                    ></div>
+                  </div>
                 )}
-                {task.status === TASK_STATUS.COMPLETED && (
-                  <CheckCircle size={16} className="text-success" />
+                
+                {/* Completed indicator for completed tasks */}
+                {TaskStatusHelpers.isCompleted(task.status) && (
+                  <div className="w-full bg-base-300 h-1 mt-2 rounded-full overflow-hidden">
+                    <div className="bg-success h-full w-full"></div>
+                  </div>
                 )}
+                
+                {/* Failed indicator for failed tasks */}
                 {TaskStatusHelpers.isFailed(task.status) && (
-                  <AlertTriangle size={16} className="text-error" />
+                  <div className="w-full bg-base-300 h-1 mt-2 rounded-full overflow-hidden">
+                    <div className="bg-error h-full w-full"></div>
+                  </div>
                 )}
-                {TaskStatusHelpers.isSkipped(task.status) && (
-                  <XCircle size={16} className="text-base-content/50" />
-                )}
-                {task.status === TASK_STATUS.PENDING && (
-                  <div className="w-4 h-4 rounded-full border border-base-content/30"></div>
-                )}
-                <span className="text-sm">{task.name}</span>
               </div>
-              <div className="text-xs opacity-75">
-                {task.status === TASK_STATUS.RUNNING && `${Math.round(task.progress * 100)}%`}
-                {task.status === TASK_STATUS.COMPLETED && 'Done'}
-                {TaskStatusHelpers.isFailed(task.status) && 'Failed'}
-                {TaskStatusHelpers.isSkipped(task.status) && 'Skipped'}
-                {task.status === TASK_STATUS.PENDING && 'Pending'}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

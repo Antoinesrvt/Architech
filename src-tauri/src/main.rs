@@ -12,6 +12,11 @@ use crate::state::AppState;
 use tauri::{Emitter, Manager};
 use tauri_plugin_log::Builder as LogBuilder;
 use std::sync::Once;
+use serde::{Serialize, Deserialize};
+use std::path::PathBuf;
+use tauri_plugin_shell::process::{Command, CommandEvent};
+use tauri_plugin_log::{Target as LogTarget};
+use chrono::{Duration, Utc};
 
 mod commands;
 mod state;
@@ -104,6 +109,111 @@ fn log_event_emission(event_name: &str, data: &impl std::fmt::Debug) {
     log::info!("🔔 EMITTING EVENT: {} with data: {:?}", event_name, data);
 }
 
+// Register the event listeners
+fn register_event_listeners(app_handle: &tauri::AppHandle, app_state: Arc<AppState>) {
+    // Create a channel for events
+    let mut rx = app_state.subscribe();
+    let handle = app_handle.clone();
+    
+    // Spawn a background task to listen for events
+    tauri::async_runtime::spawn(async move {
+        while let Ok(event) = rx.recv().await {
+            match event {
+                crate::state::ProjectEvent::TaskStateChanged { project_id, task_id, state } => {
+                    // Convert state to a format suitable for JSON
+                    let state_str = match &state {
+                        crate::tasks::TaskState::Pending => "Pending".to_string(),
+                        crate::tasks::TaskState::Running => "Running".to_string(),
+                        crate::tasks::TaskState::Completed => "Completed".to_string(),
+                        crate::tasks::TaskState::Failed(msg) => format!("Failed: {}", msg),
+                    };
+                    
+                    // Emit the event to the frontend
+                    log::debug!("Emitting task-state-changed event for task {} with state {}", task_id, state_str);
+                    
+                    if let Err(e) = handle.emit("task-state-changed", serde_json::json!({
+                        "project_id": project_id,
+                        "task_id": task_id,
+                        "state": state_str
+                    })) {
+                        log::error!("Failed to emit task-state-changed event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::Started { project_id } => {
+                    if let Err(e) = handle.emit("generation-started", project_id) {
+                        log::error!("Failed to emit generation-started event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::Progress { project_id, step, progress } => {
+                    if let Err(e) = handle.emit("generation-progress", serde_json::json!({
+                        "project_id": project_id,
+                        "step": step,
+                        "progress": progress as f32 / 100.0,
+                        "message": format!("{}% - {}", progress, step)
+                    })) {
+                        log::error!("Failed to emit generation-progress event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::Completed { project_id, path } => {
+                    if let Err(e) = handle.emit("generation-complete", project_id) {
+                        log::error!("Failed to emit generation-complete event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::Failed { project_id, error, resumable } => {
+                    if let Err(e) = handle.emit("generation-failed", serde_json::json!([project_id, error])) {
+                        log::error!("Failed to emit generation-failed event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::Cancelled { project_id } => {
+                    if let Err(e) = handle.emit("generation-cancelled", project_id) {
+                        log::error!("Failed to emit generation-cancelled event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::LogMessage { project_id, message } => {
+                    if let Err(e) = handle.emit("log-message", serde_json::json!({
+                        "project_id": project_id,
+                        "message": message
+                    })) {
+                        log::error!("Failed to emit log-message event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::TaskInitializationStarted { project_id } => {
+                    if let Err(e) = handle.emit("task-initialization-started", serde_json::json!({
+                        "project_id": project_id
+                    })) {
+                        log::error!("Failed to emit task-initialization-started event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::TaskInitializationProgress { project_id, message } => {
+                    if let Err(e) = handle.emit("task-initialization-progress", serde_json::json!({
+                        "project_id": project_id,
+                        "message": message
+                    })) {
+                        log::error!("Failed to emit task-initialization-progress event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::TaskInitializationCompleted { project_id, task_count, task_names } => {
+                    if let Err(e) = handle.emit("task-initialization-completed", serde_json::json!({
+                        "project_id": project_id,
+                        "task_count": task_count,
+                        "task_names": task_names
+                    })) {
+                        log::error!("Failed to emit task-initialization-completed event: {}", e);
+                    }
+                },
+                crate::state::ProjectEvent::TaskInitializationFailed { project_id, reason } => {
+                    if let Err(e) = handle.emit("task-initialization-failed", serde_json::json!({
+                        "project_id": project_id,
+                        "reason": reason
+                    })) {
+                        log::error!("Failed to emit task-initialization-failed event: {}", e);
+                    }
+                },
+            }
+        }
+    });
+}
+
 fn main() {
     // Remove manual env var setting and use the plugin properly
     // std::env::set_var("RUST_LOG", "debug,tailwind_tauri_template=debug");
@@ -136,124 +246,8 @@ fn main() {
             let app_handle = app.handle().clone();
             let state_clone = app_state.clone();
             
-            // Subscribe to project events from state
-            let mut event_receiver = app_state.subscribe();
-            
-            tauri::async_runtime::spawn(async move {
-                while let Ok(event) = event_receiver.recv().await {
-                    // Log the event
-                    log::debug!("PROJECT EVENT: {:?}", event);
-                    
-                    // Forward events to frontend
-                    match &event {
-                        crate::state::ProjectEvent::Progress { project_id, step, progress } => {
-                            let payload = serde_json::json!({
-                                "step": step,
-                                "message": format!("Progress: {}% - {}", progress, step),
-                                "progress": *progress as f32 / 100.0
-                            });
-                            log_event_emission("generation-progress", &payload);
-                            let result = app_handle.emit("generation-progress", payload);
-                            if let Err(e) = &result {
-                                log::error!("❌ Failed to emit generation-progress event: {:?}", e);
-                            } else {
-                                log::debug!("✅ Successfully emitted generation-progress event");
-                            }
-                        },
-                        crate::state::ProjectEvent::Completed { project_id, path } => {
-                            log::debug!("Emitting generation-complete event to frontend: {}", project_id);
-                            let _ = app_handle.emit("generation-complete", project_id);
-                        },
-                        crate::state::ProjectEvent::Failed { project_id, error, resumable } => {
-                            log::debug!("Emitting generation-failed event to frontend: {} - {}", project_id, error);
-                            let _ = app_handle.emit("generation-failed", (project_id, error));
-                        },
-                        crate::state::ProjectEvent::LogMessage { project_id, message } => {
-                            log::debug!("Emitting log-message event to frontend: {}", message);
-                            let _ = app_handle.emit("log-message", message);
-                        },
-                        crate::state::ProjectEvent::Started { project_id } => {
-                            log::debug!("Emitting project-started event to frontend: {}", project_id);
-                            let _ = app_handle.emit("project-started", project_id);
-                        },
-                        crate::state::ProjectEvent::TaskStateChanged { project_id, task_id, state } => {
-                            log::debug!("Task state changed: {} - {}: {:?}", project_id, task_id, state);
-                            // Convert the task state to a format the frontend understands
-                            let task_state_json = match state {
-                                crate::tasks::TaskState::Pending => "Pending",
-                                crate::tasks::TaskState::Running => "Running",
-                                crate::tasks::TaskState::Completed => "Completed",
-                                crate::tasks::TaskState::Failed(ref msg) => "Failed",
-                            };
-                            
-                            // Emit both events - one for the global system, and one specific for task state changes
-                            let payload = serde_json::json!({
-                                "project_id": project_id,
-                                "task_id": task_id,
-                                "state": task_state_json
-                            });
-                            log_event_emission("task-state-changed", &payload);
-                            let result = app_handle.emit("task-state-changed", payload);
-                            if let Err(e) = &result {
-                                log::error!("❌ Failed to emit task-state-changed event: {:?}", e);
-                            } else {
-                                log::debug!("✅ Successfully emitted task-state-changed event");
-                            }
-                        },
-                        crate::state::ProjectEvent::TaskInitializationStarted { project_id } => {
-                            DETAILED_DEBUG.call_once(|| {
-                                println!("===== DETAILED EVENT DEBUGGING ENABLED =====");
-                            });
-                            
-                            println!("EVENT: TaskInitializationStarted for project: {}", project_id);
-                            log::info!("Task initialization started for project: {}", project_id);
-                            
-                            if app_handle.emit("task-initialization-started", 
-                                serde_json::json!({ "project_id": project_id })).is_err() {
-                                log::error!("Failed to emit task-initialization-started event");
-                            } else {
-                                println!("SUCCESS: Emitted task-initialization-started to frontend");
-                            }
-                        },
-                        crate::state::ProjectEvent::TaskInitializationProgress { project_id, message } => {
-                            println!("EVENT: TaskInitializationProgress for project: {} - {}", project_id, message);
-                            log::info!("Task initialization progress for project {}: {}", project_id, message);
-                            
-                            if app_handle.emit("task-initialization-progress", 
-                                serde_json::json!({ "project_id": project_id, "message": message })).is_err() {
-                                log::error!("Failed to emit task-initialization-progress event");
-                            } else {
-                                println!("SUCCESS: Emitted task-initialization-progress to frontend");
-                            }
-                        },
-                        crate::state::ProjectEvent::TaskInitializationCompleted { project_id, task_count, task_names } => {
-                            println!("EVENT: TaskInitializationCompleted for project: {} with {} tasks", project_id, task_count);
-                            log::info!("Task initialization completed for project {} with {} tasks", project_id, task_count);
-                            
-                            if app_handle.emit("task-initialization-completed", 
-                                serde_json::json!({ "project_id": project_id, "task_count": task_count, "task_names": task_names })).is_err() {
-                                log::error!("Failed to emit task-initialization-completed event");
-                            } else {
-                                println!("SUCCESS: Emitted task-initialization-completed to frontend with {} tasks", task_count);
-                            }
-                        },
-                        crate::state::ProjectEvent::TaskInitializationFailed { project_id, reason } => {
-                            println!("EVENT: TaskInitializationFailed for project: {} - {}", project_id, reason);
-                            log::error!("Task initialization failed for project {}: {}", project_id, reason);
-                            
-                            if app_handle.emit("task-initialization-failed", 
-                                serde_json::json!({ "project_id": project_id, "reason": reason })).is_err() {
-                                log::error!("Failed to emit task-initialization-failed event");
-                            } else {
-                                println!("SUCCESS: Emitted task-initialization-failed to frontend");
-                            }
-                        },
-                        _ => {
-                            log::debug!("Other event: {:?}", event);
-                        }
-                    }
-                }
-            });
+            // Register event listeners
+            register_event_listeners(&app_handle, state_clone.clone());
             
             // Add window event handlers for resource cleanup
             let app_handle = app.handle();

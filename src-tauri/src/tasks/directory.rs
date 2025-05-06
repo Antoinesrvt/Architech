@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
 
 use async_trait::async_trait;
-use log::{info, error};
+use log::{info, error, warn};
 
 use super::{Task, TaskContext};
 
@@ -56,9 +56,31 @@ impl Task for DirectoryTask {
     }
     
     async fn execute(&self, context: &TaskContext) -> Result<(), String> {
-        let config = &context.config;
+        // Use only the needed context variables
         let app_handle = &context.app_handle;
-        let project_dir = &context.project_dir;
+        let base_dir = &context.project_dir;
+        let config = &context.config;
+        
+        // Create the full project path (base_dir/project_name)
+        let project_dir = base_dir.join(&config.name);
+        
+        // Log the actual directory we're working in
+        info!("Working directory for directory task: {}", project_dir.display());
+        app_handle.emit("log-message", format!("Creating project structure in: {}", project_dir.display())).unwrap();
+        
+        // Create the project directory if it doesn't exist (failsafe in case framework task failed)
+        if !project_dir.exists() {
+            let warning_msg = format!("Project directory does not exist, creating it now: {}", project_dir.display());
+            warn!("{}", warning_msg);
+            app_handle.emit("log-message", &warning_msg).unwrap();
+            
+            if let Err(e) = std::fs::create_dir_all(&project_dir) {
+                let error_msg = format!("Failed to create project directory: {}", e);
+                warn!("{}", error_msg);
+                app_handle.emit("log-message", &error_msg).unwrap();
+                return Err(error_msg);
+            }
+        }
         
         // Get framework details
         let frameworks = get_frameworks().await?;

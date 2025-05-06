@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+use std::collections::HashSet;
 
 use async_trait::async_trait;
 use tauri::{AppHandle, Emitter};
@@ -157,6 +158,7 @@ impl TaskExecutor {
     pub async fn execute_all(&self) -> Result<Vec<TaskResult>, String> {
         use futures::future::join_all;
         use tokio::sync::Semaphore;
+        use log::{debug, error, info, warn};
         
         let mut results = Vec::new();
         let max_concurrent_tasks = 4; // Configurable
@@ -164,6 +166,8 @@ impl TaskExecutor {
         
         // Find all root tasks (no dependencies)
         let mut ready_tasks = self.find_ready_tasks().await;
+        info!("Initial ready tasks: {:?}", ready_tasks);
+        
         let mut pending_tasks: HashMap<String, Vec<String>> = HashMap::new();
         
         // Build dependency map for non-ready tasks
@@ -178,13 +182,34 @@ impl TaskExecutor {
             }
         }
         
+        info!("Dependency map: {:?}", pending_tasks);
+        
         // Process tasks until all are complete or we can't make progress
         let mut iteration_count = 0;
+        let mut completed_tasks = HashSet::new();
+        let mut failed_tasks = HashSet::new(); // Track failed tasks to prevent infinite retries
+        
         while !ready_tasks.is_empty() {
             iteration_count += 1;
-            log::info!("Starting iteration {} with {} ready tasks", iteration_count, ready_tasks.len());
+            info!("Starting iteration {} with {} ready tasks", iteration_count, ready_tasks.len());
+            debug!("Ready tasks: {:?}", ready_tasks);
+            
+            // Check for maximum iterations to prevent infinite loops
+            if iteration_count > 10 {
+                warn!("Reached maximum iterations (10), breaking to prevent infinite loop");
+                break;
+            }
+            
+            // Filter out previously failed tasks
+            ready_tasks.retain(|task_id| !failed_tasks.contains(task_id));
+            
+            if ready_tasks.is_empty() {
+                info!("No viable ready tasks remain after filtering out failed tasks");
+                break;
+            }
             
             let task_futures = ready_tasks
+                .clone()
                 .into_iter()
                 .map(|id| {
                     let task = self.tasks.get(&id).unwrap();
@@ -192,7 +217,6 @@ impl TaskExecutor {
                     let task_id = id.clone();
                     let state = self.state.clone();
                     let context = &self.context;
-                    let _pending_map = pending_tasks.clone();
                     
                     async move {
                         let _permit = sem_permit.await.unwrap();
@@ -201,27 +225,30 @@ impl TaskExecutor {
                         {
                             let mut state_map = state.lock().await;
                             state_map.insert(task_id.clone(), TaskState::Running);
+                            info!("Set task {} state to Running", task_id);
                         }
                         
                         // Execute the task
+                        info!("Executing task: {}", task_id);
                         let result = task.execute(context).await;
                         
                         // Update state based on result
-                        let (new_state, message) = match result {
-                            Ok(()) => (TaskState::Completed, format!("Task {} completed successfully", task.name())),
-                            Err(e) => (TaskState::Failed(e.clone()), e),
+                        let (new_state, message, success) = match result {
+                            Ok(()) => (TaskState::Completed, format!("Task {} completed successfully", task.name()), true),
+                            Err(e) => (TaskState::Failed(e.clone()), e, false),
                         };
                         
-                        log::info!("Task {} finished with state: {:?}", task_id, new_state);
+                        info!("Task {} finished with state: {:?}", task_id, new_state);
                         
                         {
                             let mut state_map = state.lock().await;
                             state_map.insert(task_id.clone(), new_state.clone());
+                            debug!("Updated task state in state map");
                         }
                         
                         TaskResult {
                             task_id,
-                            success: matches!(new_state, TaskState::Completed),
+                            success,
                             message,
                         }
                     }
@@ -230,182 +257,126 @@ impl TaskExecutor {
             
             // Wait for all current tasks to complete
             let batch_results = join_all(task_futures).await;
-            results.extend(batch_results);
+            info!("Completed batch of {} tasks in iteration {}", batch_results.len(), iteration_count);
             
-            // Find tasks that are now ready to execute
-            ready_tasks = self.find_ready_tasks().await;
-            
-            // Check if we're making progress
-            let can_progress = self.can_make_progress().await;
-            if ready_tasks.is_empty() && !can_progress {
-                // Break early if we can't make progress and no ready tasks
-                log::warn!("No more ready tasks and can't make progress, breaking execution loop");
-                break;
-            }
-        }
-        
-        // Check the final state to determine what happened
-        let state_map = self.state.lock().await;
-        
-        // Count tasks by state
-        let mut pending_count = 0;
-        let mut completed_count = 0;
-        let mut failed_count = 0;
-        let mut failed_tasks = Vec::new();
-        
-        for (id, state) in state_map.iter() {
-            match state {
-                TaskState::Pending => pending_count += 1,
-                TaskState::Completed => completed_count += 1,
-                TaskState::Failed(err) => {
-                    failed_count += 1;
-                    failed_tasks.push(format!("{} ({})", id, err));
-                },
-                _ => {}
-            }
-        }
-        
-        log::info!("Final task state: {} completed, {} failed, {} pending", 
-                  completed_count, failed_count, pending_count);
-        
-        // If we still have pending tasks, check if it's due to failed dependencies or a cycle
-        if pending_count > 0 {
-            // Find pending tasks with failed dependencies for better error reporting
-            let pending_with_failed_deps: Vec<(String, Vec<String>)> = self.tasks.iter()
-                .filter(|(id, task)| {
-                    matches!(state_map.get(*id), Some(TaskState::Pending)) && 
-                    task.dependencies().iter().any(|dep| {
-                        matches!(state_map.get(dep), Some(TaskState::Failed(_)))
-                    })
-                })
-                .map(|(id, task)| {
-                    let failed_deps: Vec<String> = task.dependencies().iter()
-                        .filter(|dep| matches!(state_map.get(*dep), Some(TaskState::Failed(_))))
-                        .map(|s| s.to_string())
-                        .collect();
-                    (id.clone(), failed_deps)
-                })
-                .collect();
-            
-            if !pending_with_failed_deps.is_empty() {
-                // This is not a cycle, it's a cascade failure due to a prerequisite task failing
-                let mut error_msg = String::from("Execution halted because some tasks couldn't run due to failed dependencies:\n");
-                
-                for (task_id, deps) in pending_with_failed_deps {
-                    let task_name = self.tasks.get(&task_id)
-                        .map(|t| t.name())
-                        .unwrap_or("Unknown");
-                    
-                    error_msg.push_str(&format!("  - Task '{}' ({}) is pending because the following dependencies failed:\n", 
-                                              task_name, task_id));
-                    
-                    for dep in deps {
-                        let dep_name = self.tasks.get(&dep)
-                            .map(|t| t.name())
-                            .unwrap_or("Unknown");
-                            
-                        let failure_reason = state_map.get(&dep)
-                            .and_then(|s| if let TaskState::Failed(reason) = s { Some(reason) } else { None })
-                            .map_or("Unknown reason", |r| r.as_str());
-                            
-                        error_msg.push_str(&format!("    - '{}' ({}) failed: {}\n", dep_name, dep, failure_reason));
-                    }
+            // Mark completed tasks and add to results
+            for result in batch_results {
+                info!("Processing result for task {}: success={}", result.task_id, result.success);
+                if result.success {
+                    completed_tasks.insert(result.task_id.clone());
+                } else {
+                    failed_tasks.insert(result.task_id.clone());
+                    warn!("Task {} failed: {}", result.task_id, result.message);
                 }
+                results.push(result.clone());
                 
-                return Err(error_msg);
-            }
-            
-            // If we have pending tasks but no failed dependencies, it's a cycle
-            let mut pending_tasks: Vec<String> = state_map
-                .iter()
-                .filter(|(_, state)| matches!(state, TaskState::Pending))
-                .map(|(id, _)| id.clone())
-                .collect();
-            
-            if !pending_tasks.is_empty() {
-                // Find and print dependency relationships for better debugging
-                let mut cycle_details = String::new();
-                
-                for task_id in &pending_tasks {
-                    if let Some(task) = self.tasks.get(task_id) {
-                        cycle_details.push_str(&format!("Task '{}' ({}) is pending with dependencies:\n", 
-                                                     task.name(), task_id));
+                // Check if any tasks are unlocked by this completion
+                if let Some(dependents) = pending_tasks.get(&result.task_id) {
+                    info!("Task {} has {} dependents", result.task_id, dependents.len());
+                    
+                    // For each dependent task, check if all its dependencies are now satisfied
+                    for dependent_id in dependents {
+                        debug!("Checking if task {} can now be executed", dependent_id);
+                        let dependent_task = self.tasks.get(dependent_id).unwrap();
+                        let deps_satisfied = dependent_task.dependencies().iter().all(|dep| {
+                            completed_tasks.contains(dep)
+                        });
                         
-                        for dep_id in task.dependencies() {
-                            let dep_state = state_map.get(dep_id)
-                                .map(|s| format!("{:?}", s))
-                                .unwrap_or_else(|| "Missing".to_string());
-                                
-                            cycle_details.push_str(&format!("  - '{}' with state: {}\n", dep_id, dep_state));
-                            
-                            // Check for circular dependencies
-                            if let Some(dep_task) = self.tasks.get(dep_id) {
-                                if dep_task.dependencies().contains(task_id) {
-                                    cycle_details.push_str(&format!("    CIRCULAR DEPENDENCY DETECTED: '{}' depends on '{}' and vice versa\n", 
-                                                                 task_id, dep_id));
-                                }
-                            }
+                        // If all dependencies are satisfied, add to ready tasks
+                        if deps_satisfied {
+                            info!("All dependencies for task {} are satisfied, adding to ready tasks", dependent_id);
+                            ready_tasks.push(dependent_id.clone());
+                        } else {
+                            debug!("Not all dependencies for task {} are satisfied yet", dependent_id);
                         }
                     }
                 }
-                
-                // Sort tasks for more consistent error reporting
-                pending_tasks.sort();
-                
-                let error_msg = format!("Dependency cycle detected. The following tasks could not be executed:\n{}", cycle_details);
-                log::error!("{}", error_msg);
-                return Err(error_msg);
             }
+            
+            // Check if we can make progress
+            if ready_tasks.is_empty() && !self.can_make_progress().await {
+                break;
+            }
+            
+            // Remove already processed tasks from ready tasks to avoid duplicates
+            ready_tasks.retain(|id| !completed_tasks.contains(id));
+            debug!("After filtering, {} ready tasks remain", ready_tasks.len());
         }
         
-        // If there are failed tasks but we completed all we could, report it differently
-        if failed_count > 0 {
-            log::warn!("Some tasks failed during execution: {:?}", failed_tasks);
-            // We still return Ok with results so the frontend can see what happened
-            // This is handled separately in the state management
-        }
-        
+        info!("Task execution completed with {} results", results.len());
         Ok(results)
     }
     
-    /// Find tasks that are ready to execute (all dependencies satisfied)
+    /// Find tasks that are ready to be executed (all dependencies are satisfied)
     async fn find_ready_tasks(&self) -> Vec<String> {
+        use log::{debug, info};
+        
+        // Get the state map to check task statuses
         let state_map = self.state.lock().await;
+        let mut ready_tasks = Vec::new();
         
-        // Detailed debugging for all tasks and their states
-        log::info!("Current task states: {:#?}", state_map);
-        
-        let ready_tasks: Vec<String> = self.tasks
-            .iter()
-            .filter(|(id, task)| {
-                // Task must be pending
-                let is_pending = matches!(state_map.get(*id), Some(TaskState::Pending));
-                
-                // Check dependencies
-                let dependencies_satisfied = task.dependencies().iter().all(|dep| {
-                    let dep_state = state_map.get(dep);
-                    let is_satisfied = matches!(dep_state, Some(TaskState::Completed));
-                    
-                    if !is_satisfied {
-                        log::warn!("Task {} is waiting for dependency {} (current state: {:?})", 
-                           id, dep, dep_state);
-                    }
-                    
-                    is_satisfied
-                });
-                
-                if is_pending && dependencies_satisfied {
-                    log::info!("Task {} is ready to execute", id);
-                } else if is_pending {
-                    log::info!("Task {} is pending but dependencies are not satisfied", id);
+        // Check each task
+        for (id, task) in &self.tasks {
+            debug!("Checking if task {} is ready", id);
+            
+            // Skip tasks that are already completed or failed
+            if let Some(state) = state_map.get(id) {
+                match state {
+                    TaskState::Completed => {
+                        debug!("Task {} is already completed, skipping", id);
+                        continue;
+                    },
+                    TaskState::Failed(_) => {
+                        debug!("Task {} has failed, skipping", id);
+                        continue;
+                    },
+                    TaskState::Running => {
+                        debug!("Task {} is currently running, skipping", id);
+                        continue;
+                    },
+                    TaskState::Pending => {
+                        debug!("Task {} is pending", id);
+                        // Continue checking dependencies
+                    },
                 }
+            }
+            
+            // Check dependencies
+            let mut all_deps_satisfied = true;
+            for dep in task.dependencies() {
+                debug!("Checking dependency {} for task {}", dep, id);
                 
-                is_pending && dependencies_satisfied
-            })
-            .map(|(id, _)| id.clone())
-            .collect();
+                // Check if the dependency is satisfied
+                if let Some(dep_state) = state_map.get(dep) {
+                    match dep_state {
+                        TaskState::Completed => {
+                            debug!("Dependency {} is completed", dep);
+                            // This dependency is satisfied
+                        },
+                        _ => {
+                            debug!("Dependency {} is not completed (state: {:?})", dep, dep_state);
+                            all_deps_satisfied = false;
+                            break;
+                        },
+                    }
+                } else {
+                    // Dependency not found in state map
+                    debug!("Dependency {} not found in state map", dep);
+                    all_deps_satisfied = false;
+                    break;
+                }
+            }
+            
+            // If all dependencies are satisfied, this task is ready
+            if all_deps_satisfied {
+                info!("Task {} is ready for execution (all dependencies satisfied)", id);
+                ready_tasks.push(id.clone());
+            } else {
+                debug!("Task {} is not ready (some dependencies not satisfied)", id);
+            }
+        }
         
-        log::info!("Found {} ready tasks", ready_tasks.len());
+        info!("Found {} ready tasks", ready_tasks.len());
         ready_tasks
     }
     

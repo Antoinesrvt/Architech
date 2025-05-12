@@ -1,7 +1,29 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
+  "description": "Capability for the main window",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default"]
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "binaries/nodejs-sidecar",
+          "sidecar": true,
+          "args": [
+            {
+              "validator": "^([A-Za-z0-9\\-_/.]+)$"
+            },
+            {
+              "validator": "^(npm|npx|yarn|pnpm|node)\\s[A-Za-z0-9\\-_/.\\s\\\"'=@]+$"
+            }
+          ],
+          "executeDirectly": true,
+          "scope": ["executable"]
+        }
+      ]
+    },
+    "shell:allow-open"
+  ]
 }

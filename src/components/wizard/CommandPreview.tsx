@@ -199,10 +199,10 @@ export default function CommandPreview({
           <Button 
             variant="ghost"
             size="sm"
-            onClick={() => setExpanded(!expanded)}
+          onClick={() => setExpanded(!expanded)}
             disabled={isCommandRunning}
-          >
-            {expanded ? "Collapse" : "Expand"}
+        >
+          {expanded ? "Collapse" : "Expand"}
           </Button>
         </div>
       </div>

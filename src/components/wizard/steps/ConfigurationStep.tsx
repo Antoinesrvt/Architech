@@ -186,7 +186,7 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
   
   // Form validation
   const isFormValid = Object.keys(formErrors).length === 0;
-  
+
   return (
     <WizardCard
       title="Project Configuration"
@@ -232,13 +232,13 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
         )}
 
         {/* Language Settings */}
-        <div className="form-control">
+            <div className="form-control">
           <h3 className="text-lg font-medium mb-2">Language Settings</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="label cursor-pointer justify-start gap-4">
-                <input
-                  type="checkbox"
+                <input 
+                  type="checkbox" 
                   className="checkbox"
                   checked={form.useTypescript}
                   onChange={(e) => { handleChange('useTypescript', e.target.checked); }}
@@ -257,10 +257,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
               )}
             </div>
           </div>
-        </div>
-
+            </div>
+            
         {/* Development Tools */}
-        <div className="form-control">
+              <div className="form-control">
           <h3 className="text-lg font-medium mb-2">Development Tools</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="label cursor-pointer justify-start gap-4">
@@ -279,8 +279,8 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
             </label>
 
             <label className="label cursor-pointer justify-start gap-4">
-              <input
-                type="checkbox"
+                  <input 
+                    type="checkbox" 
                 className="checkbox"
                 checked={form.useEslint}
                 onChange={(e) => { handleChange('useEslint', e.target.checked); }}
@@ -291,7 +291,7 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                   Add code linting
                 </p>
               </div>
-            </label>
+                </label>
 
             <label className="label cursor-pointer justify-start gap-4">
               <input
@@ -307,10 +307,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 </p>
               </div>
             </label>
-
+            
             <label className="label cursor-pointer justify-start gap-4">
-              <input
-                type="checkbox"
+                <input 
+                  type="checkbox" 
                 className="checkbox"
                 checked={form.useDocker}
                 onChange={(e) => { handleChange('useDocker', e.target.checked); }}
@@ -321,8 +321,8 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                   Add Docker configuration
                 </p>
               </div>
-            </label>
-          </div>
+              </label>
+            </div>
         </div>
 
         {/* Package Manager */}
@@ -400,8 +400,8 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
               />
               <span className="label-text font-medium">Plain CSS</span>
             </label>
-          </div>
-        </div>
+                    </div>
+                </div>
 
         {/* Deployment Target */}
         <div className="form-control">
@@ -441,7 +441,7 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
             </label>
           </div>
         </div>
-      </div>
+    </div>
     </WizardCard>
   );
 } 

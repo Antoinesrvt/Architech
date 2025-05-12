@@ -5,33 +5,19 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
-use tokio::sync::mpsc;
 use tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use log::{debug, info, warn, error};
-use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
-use std::thread::sleep as thread_sleep;
-use std::time::Duration as StdDuration;
 
 use crate::state::{AppState, ProjectStatus};
 use crate::commands::framework::{get_framework_by_id as get_framework, get_modules};
-use crate::commands::command_runner::{modify_file, modify_import};
 use crate::tasks::{
-    Task, TaskContext, TaskExecutor, TaskResult, TaskState,
-    FrameworkTask, ModuleTask, DirectoryTask, CleanupTask
+    Task, TaskContext, TaskExecutor, TaskState,
+    FrameworkTask, ModuleTask, CleanupTask
 };
-use crate::commands::command_runner::{CommandBuilder, CommandResult as CommandRunnerResult};
-
-// Task result type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommandResult {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-    pub exit_code: i32,
-}
+use crate::commands::node_commands::{CommandResult, execute_node_command};
+use crate::commands::file::modify_file;
 
 // Project generator
 pub struct ProjectGenerator {
@@ -267,14 +253,15 @@ impl ProjectGenerator {
         // Log the config for debugging
         debug!("Project config: {:?}", config);
         
-        // Project directory path
-        let project_path = PathBuf::from(&config.path).join(&config.name);
+        // Project directory path - Use only the parent directory path, not including the project name
+        // This is critical for framework generators like create-next-app that need to run from parent directory
+        let project_path = PathBuf::from(&config.path);
         debug!("Project path will be: {}", project_path.display());
         
         // Create task context
         let context = TaskContext {
             project_id: project_id.to_string(),
-            project_dir: project_path.into(),
+            project_dir: project_path.clone().into(),
             app_handle: self.app_handle.clone(),
             config: Arc::new(config.clone()),
         };
@@ -285,12 +272,12 @@ impl ProjectGenerator {
         
         // Step 1: Framework setup task - No dependencies
         debug!("Creating framework task for: {}", config.framework);
-        let framework_task = Box::new(FrameworkTask::new(context.clone()));
+        let framework_task = Box::new(FrameworkTask::from_context(context.clone()));
         let framework_task_id = framework_task.id().to_string();
         tasks.push(framework_task);
         info!("Created framework task with ID: {}", framework_task_id);
         
-        // Step 2: Module setup tasks - Depend directly on framework task
+        // Step 2: Module setup tasks - Order matters for dependencies!
         debug!("Module count: {}", config.modules.len());
         debug!("Modules selected: {:?}", config.modules);
         
@@ -306,7 +293,7 @@ impl ProjectGenerator {
         // Resolve module dependencies
         let mut module_deps: HashMap<String, Vec<String>> = HashMap::new();
         
-        // First pass: Collect dependencies
+        // First pass: Collect dependencies for each module
         for module_id in &config.modules {
             let module = match all_modules.iter().find(|m| m.id == *module_id) {
                 Some(m) => m,
@@ -345,11 +332,78 @@ impl ProjectGenerator {
             }
         }
         
-        // Second pass: Create module tasks with dependencies
+        // Create a dependency graph for topological sorting
+        let mut dependency_graph: HashMap<String, HashSet<String>> = HashMap::new();
+        
+        // Initialize the graph with all modules
         for module_id in &config.modules {
-            let module_deps = module_deps.get(module_id).cloned().unwrap_or_default();
+            dependency_graph.insert(module_id.clone(), HashSet::new());
+        }
+        
+        // Add dependencies to the graph
+        for (module_id, deps) in &module_deps {
+            let dep_set = dependency_graph.get_mut(module_id).unwrap();
             
-            // All module tasks must depend on framework task
+            for dep in deps {
+                if let Some(stripped_dep) = dep.strip_prefix("module:") {
+                    if config.modules.iter().any(|m| m == stripped_dep) {
+                        dep_set.insert(stripped_dep.to_string());
+                    }
+                }
+            }
+        }
+        
+        // Perform topological sort to get modules in dependency order
+        let mut sorted_modules = Vec::new();
+        let mut temp_marked = HashSet::new();
+        let mut perm_marked = HashSet::new();
+        
+        // Visit function for depth-first search
+        fn visit(
+            node: &str, 
+            graph: &HashMap<String, HashSet<String>>,
+            sorted: &mut Vec<String>,
+            temp_marked: &mut HashSet<String>,
+            perm_marked: &mut HashSet<String>
+        ) -> Result<(), String> {
+            if temp_marked.contains(node) {
+                return Err(format!("Cyclic dependency detected at module: {}", node));
+            }
+            
+            if !perm_marked.contains(node) {
+                temp_marked.insert(node.to_string());
+                
+                if let Some(dependencies) = graph.get(node) {
+                    for dep in dependencies {
+                        visit(dep, graph, sorted, temp_marked, perm_marked)?;
+                    }
+                }
+                
+                temp_marked.remove(node);
+                perm_marked.insert(node.to_string());
+                sorted.push(node.to_string());
+            }
+            
+            Ok(())
+        }
+        
+        // Sort all modules
+        for module_id in config.modules.clone() {
+            if !perm_marked.contains(&module_id) {
+                visit(&module_id, &dependency_graph, &mut sorted_modules, &mut temp_marked, &mut perm_marked)?;
+            }
+        }
+        
+        // Log the sorted order
+        debug!("Module ordering after topological sort: {:?}", sorted_modules);
+        
+        // Second pass: Create module tasks with dependencies in sorted order
+        // All module tasks must depend on framework task
+        for module_id in sorted_modules {
+            // Get the module's dependencies
+            let module_deps = module_deps.get(&module_id).cloned().unwrap_or_default();
+            
+            // Ensure the framework task is a dependency
             let mut all_deps = vec![framework_task_id.clone()];
             all_deps.extend(module_deps);
             
@@ -454,15 +508,15 @@ impl ProjectGenerator {
         config: crate::commands::project::ProjectConfig,
         tasks: Vec<Box<dyn Task>>
     ) -> Result<(), String> {
-        // Create project path
-        let project_path = PathBuf::from(&config.path).join(&config.name);
+        // Create project path - use only the parent directory, not including project name
+        // This is critical for framework generators like create-next-app
+        let project_path = PathBuf::from(&config.path);
         debug!("Project path for task execution: {}", project_path.display());
-        let project_path_arc = Arc::from(project_path.as_path());
         
         // Create task context
         let context = TaskContext {
             project_id: project_id.to_string(),
-            project_dir: project_path_arc,
+            project_dir: project_path.clone().into(),
             app_handle: app_handle.clone(),
             config: Arc::new(config.clone()),
         };
@@ -490,22 +544,154 @@ impl ProjectGenerator {
         let total_tasks = executor.get_task_count();
         let mut completed_tasks = 0;
         
+        // Start a background task to periodically broadcast the current state
+        // This ensures the frontend always has the latest state, even if events are missed
+        let project_id_clone = project_id.to_string();
+        let app_state_clone = app_state.clone();
+        let app_handle_clone = app_handle.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(1000));
+            
+            // Broadcast for 5 minutes max (300 seconds)
+            let mut count = 0;
+            while count < 300 {
+                interval.tick().await;
+                count += 1;
+                
+                // Get all task states FRESH each time - don't use cached data
+                let task_states = app_state_clone.get_all_task_states(&project_id_clone).await;
+                
+                // Skip if no task states found
+                if task_states.is_empty() {
+                    debug!("No task states to broadcast for project {}", project_id_clone);
+                    continue;
+                }
+                
+                debug!("Periodic state broadcast: {} task states", task_states.len());
+                
+                // Also emit a direct debug event to help diagnose issues
+                let _ = app_handle_clone.emit("tauri://debug", format!("Broadcasting {} task states", task_states.len()));
+                
+                // Broadcast each task state
+                for (task_id, state) in task_states {
+                    debug!("Re-broadcasting task state: {} -> {:?}", task_id, state);
+                    
+                    // Emit the task state event
+                    app_state_clone.emit_event(crate::state::ProjectEvent::TaskStateChanged {
+                        project_id: project_id_clone.clone(),
+                        task_id: task_id.clone(),
+                        state: state.clone()
+                    }).await;
+                    
+                    // For debugging, also emit direct task status events
+                    let status_event = match state {
+                        crate::tasks::TaskState::Pending => "task-pending",
+                        crate::tasks::TaskState::Running => "task-running",
+                        crate::tasks::TaskState::Completed => "task-completed",
+                        crate::tasks::TaskState::Failed(_) => "task-failed",
+                    };
+                    
+                    let payload = serde_json::json!({
+                        "project_id": project_id_clone,
+                        "task_id": task_id,
+                        "state": format!("{:?}", state),
+                    });
+                    
+                    if let Err(e) = app_handle_clone.emit(status_event, payload) {
+                        error!("Failed to emit {} event: {}", status_event, e);
+                    } else {
+                        debug!("Direct {} event emitted for {}", status_event, task_id);
+                    }
+                }
+                
+                // Stop broadcasting if the project is complete or failed
+                match app_state_clone.get_project_status(&project_id_clone).await {
+                    crate::state::ProjectStatus::Completed { .. } | 
+                    crate::state::ProjectStatus::Failed { .. } | 
+                    crate::state::ProjectStatus::Cancelled => {
+                        debug!("Project status is terminal, stopping periodic state broadcast");
+                        break;
+                    },
+                    _ => {}
+                }
+            }
+            
+            debug!("Periodic state broadcast completed after {} iterations", count);
+        });
+        
         // Execute all tasks
         debug!("Executing all tasks (total: {})", total_tasks);
         let results = match executor.execute_all().await {
             Ok(results) => {
-                debug!("Task execution completed with {} results", results.len());
+                info!("Task execution completed with {} results", results.len());
+                debug!("Task execution results summary: {:?}", results.iter().map(|r| (r.task_id.clone(), r.success)).collect::<Vec<_>>());
+                
+                // Process each task result
                 for result in &results {
-                    // Update progress for each completed task
+                    // Log task results for debugging
                     if result.success {
+                        info!("✅ Task {} completed successfully", result.task_id);
                         completed_tasks += 1;
                         let progress = ((completed_tasks as f64 / total_tasks as f64) * 90.0) as u8 + 5;
                         debug!("Task completed: {}, progress: {}%", result.message, progress);
                         app_state.update_progress(project_id, &result.message, progress).await;
                     } else {
-                        warn!("Task failed: {}", result.message);
+                        warn!("❌ Task {} failed: {}", result.task_id, result.message);
+                    }
+                    
+                    // Update the task state in the app state and log it
+                    let new_state = if result.success {
+                        TaskState::Completed
+                    } else {
+                        TaskState::Failed(result.message.clone())
+                    };
+                    
+                    // Update state to trigger proper event broadcasting
+                    info!("Updating task state in app state: {} -> {:?}", result.task_id, new_state);
+                    app_state.set_task_state(project_id, &result.task_id, new_state.clone()).await;
+                    debug!("Task state updated in app_state");
+                    
+                    // Process the task result to generate logs
+                    app_state.process_task_result(project_id, result.clone()).await;
+                    debug!("Task result processed");
+                    
+                    // Add explicit log message for task completion
+                    let log_message = format!("Task '{}' {}", 
+                        result.task_id,
+                        if result.success { "completed successfully" } else { "failed" }
+                    );
+                    app_state.add_log(project_id, &log_message).await;
+                    debug!("Added log entry: {}", log_message);
+                    
+                    // Explicitly emit a state update event to ensure frontend is notified
+                    info!("Emitting TaskStateChanged event for {}: {:?}", result.task_id, new_state);
+                    app_state.emit_event(crate::state::ProjectEvent::TaskStateChanged {
+                        project_id: project_id.to_string(),
+                        task_id: result.task_id.clone(),
+                        state: new_state.clone()
+                    }).await;
+                    debug!("TaskStateChanged event emitted for {}", result.task_id);
+                    
+                    // For debugging, emit direct events as well (can be removed later)
+                    let status_event = if result.success {
+                        "task-completed"
+                    } else {
+                        "task-failed"
+                    };
+                    
+                    let payload = serde_json::json!({
+                        "project_id": project_id,
+                        "task_id": result.task_id,
+                        "message": result.message
+                    });
+                    
+                    if let Err(e) = app_handle.emit(status_event, payload) {
+                        error!("Failed to emit {} event: {}", status_event, e);
+                    } else {
+                        debug!("Direct {} event emitted for {}", status_event, result.task_id);
                     }
                 }
+                
                 results
             },
             Err(e) => {
@@ -743,7 +929,7 @@ impl ProjectGenerator {
         })).unwrap_or_else(|e| error!("Failed to emit progress event: {}", e));
         
         // Execute the command with reasonable timeout
-        let cmd_result = ProjectGenerator::execute_command(&cmd_name, &cmd_args, Path::new(&config.path)).await?;
+        let cmd_result = ProjectGenerator::execute_command(&cmd_name, &cmd_args, Path::new(&config.path), &app_handle).await?;
         
         // Ensure the command completed successfully
         if !cmd_result.success {
@@ -854,7 +1040,7 @@ impl ProjectGenerator {
             let mut success = false;
             
             for attempt in 1..=max_retries {
-                match ProjectGenerator::execute_command(cmd_name, cmd_args, project_dir).await {
+                match ProjectGenerator::execute_command(cmd_name, cmd_args, project_dir, &app_handle).await {
                     Ok(result) => {
                         if result.success {
                             success = true;
@@ -941,7 +1127,7 @@ impl ProjectGenerator {
                     if !file_path.exists() {
                         app_handle.emit("log-message", format!("File does not exist, cannot modify imports: {}", file_path.display())).unwrap();
                     } else {
-                        if let Err(e) = modify_import(&file_path, &op.action, &op.import) {
+                        if let Err(e) = Self::modify_import(&file_path, &op.action, &op.import) {
                             app_handle.emit("log-message", format!("Failed to modify import: {}", e)).unwrap();
                         } else {
                             app_handle.emit("log-message", format!("Modified imports in: {}", file_path.display())).unwrap();
@@ -992,7 +1178,7 @@ impl ProjectGenerator {
                 app_handle.emit("log-message", format!("Running npm install (attempt {}/{}, timeout {}s)...", 
                     attempt, max_retries, timeout_seconds)).unwrap();
                 
-                match ProjectGenerator::execute_command("npm", &["install"], project_dir).await {
+                match ProjectGenerator::execute_command("npm", &["install"], project_dir, &app_handle).await {
                     Ok(result) => {
                         if result.success {
                             app_handle.emit("log-message", "NPM dependencies installed successfully").unwrap();
@@ -1038,7 +1224,7 @@ impl ProjectGenerator {
             app_handle.emit("log-message", "Running code formatting...").unwrap();
             
             // Format the project code if possible
-            let format_result = ProjectGenerator::execute_command("npm", &["run", "format"], project_dir).await;
+            let format_result = ProjectGenerator::execute_command("npm", &["run", "format"], project_dir, &app_handle).await;
             
             match format_result {
                 Ok(result) => {
@@ -1085,201 +1271,23 @@ impl ProjectGenerator {
     async fn execute_command(
         command: &str,
         args: &[&str],
-        working_dir: &Path
-    ) -> Result<CommandRunnerResult, String> {
-        use std::io::{BufRead, BufReader};
-        use std::process::{Command, Stdio};
-        use std::thread::sleep as thread_sleep;
-        use std::time::Duration as StdDuration;
-        use tokio::time::{sleep, Duration};
+        working_dir: &Path,
+        app_handle: &AppHandle
+    ) -> Result<CommandResult, String> {
+        // Build full command string
+        let full_command = format!("{} {}", command, args.join(" "));
         
-        let command_display = format!("{} {}", command, args.join(" "));
-        println!("Executing command: {} in {}", command_display, working_dir.display());
-        
-        // Check if this is a create-next-app command or similar
-        let is_project_generator = 
-            (command == "npx" && args.len() > 0 && args[0].contains("create-")) ||
-            (command == "npm" && args.len() > 1 && args[0] == "init");
-            
-        // Check if this is a project directory that we need to verify gets created
-        let project_name = if is_project_generator && args.len() > 0 {
-            args.last().map(|s| s.to_string())
-        } else {
+        // Execute the command using the new API
+        execute_node_command(
+            app_handle,
+            working_dir,
+            &full_command,
             None
-        };
-        
-        // Adjust command for platform if needed
-        let platform_cmd = if (command == "npm" || command == "npx") && cfg!(windows) {
-            format!("{}.cmd", command)
-        } else {
-            command.to_string()
-        };
-        
-        // We'll try the command up to 2 times for generators
-        let max_retries = if is_project_generator { 2 } else { 1 };
-        
-        for attempt in 1..=max_retries {
-            // Create a new command instance for each attempt
-            let mut cmd = Command::new(&platform_cmd);
-            cmd.args(args)
-                .current_dir(working_dir)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
-            
-            // Set environment variables
-            if let Ok(path) = std::env::var("PATH") {
-                cmd.env("PATH", path);
-            }
-            
-            // Force interactive mode for npm
-            if command == "npm" || command == "npx" {
-                cmd.env("CI", "false");
-                cmd.env("NODE_ENV", "development");
-            }
-            
-            // Create a clone of cmd for this attempt
-            let mut cmd_for_closure = cmd;
-        
-            // Execute with a timeout
-            let spawn_result = tokio::task::spawn_blocking(move || {
-                match cmd_for_closure.spawn() {
-                    Ok(mut child) => {
-                        let mut stdout_lines = Vec::new();
-                        let mut stderr_lines = Vec::new();
-                        
-                        // Read stdout lines
-                        if let Some(stdout) = child.stdout.take() {
-                            let stdout_reader = BufReader::new(stdout);
-                            for line in stdout_reader.lines() {
-                                if let Ok(line) = line {
-                                    println!("[STDOUT] {}", line);
-                                    stdout_lines.push(line);
-                                }
-                            }
-                        }
-                        
-                        // Read stderr lines
-                        if let Some(stderr) = child.stderr.take() {
-                            let stderr_reader = BufReader::new(stderr);
-                            for line in stderr_reader.lines() {
-                                if let Ok(line) = line {
-                                    println!("[STDERR] {}", line);
-                                    stderr_lines.push(line);
-                                }
-                            }
-                        }
-                        
-                        // Wait for process to complete
-                        match child.wait() {
-                            Ok(status) => {
-                                let exit_code = status.code().unwrap_or(-1);
-                                let success = status.success();
-                                
-                                CommandRunnerResult {
-                                    success,
-                                    stdout: stdout_lines.join("\n"),
-                                    stderr: stderr_lines.join("\n"),
-                                    exit_code,
-                                }
-                            },
-                            Err(e) => {
-                                CommandRunnerResult {
-                                    success: false,
-                                    stdout: stdout_lines.join("\n"),
-                                    stderr: format!("Failed to wait for command: {}", e),
-                                    exit_code: -1,
-                                }
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        CommandRunnerResult {
-                            success: false,
-                            stdout: String::new(),
-                            stderr: format!("Failed to execute command: {}", e),
-                            exit_code: -1,
-                        }
-                    }
-                }
-            }).await;
-            
-            match spawn_result {
-                Ok(result) => {
-                    // Special handling for npm/npx commands - we need to ensure filesystem sync
-                    if command == "npm" || command == "npx" {
-                        // For project generators like create-next-app, we need to verify project creation
-                        if is_project_generator && result.success {
-                            // First wait longer for filesystem to settle
-                            println!("Project generator command completed, waiting for filesystem to settle...");
-                            sleep(Duration::from_secs(3)).await;
-                            
-                            // If we have a project name to verify, check that it exists
-                            if let Some(project_name) = &project_name {
-                                let project_dir = working_dir.join(project_name);
-                                println!("Verifying project directory exists: {}", project_dir.display());
-                                
-                                // Try multiple times with increasing delays
-                                let mut dir_exists = false;
-                                for i in 0..5 {
-                                    if project_dir.exists() && project_dir.is_dir() {
-                                        dir_exists = true;
-                                        println!("Project directory verified!");
-                                        break;
-                                    }
-                                    println!("Directory not found, waiting (attempt {}/5)...", i+1);
-                                    thread_sleep(StdDuration::from_millis(500 * (i+1)));
-                                }
-                                
-                                if !dir_exists {
-                                    // If we've done max retries, fail, otherwise retry the command
-                                    if attempt == max_retries {
-                                        return Err(format!("Project directory {} was not created even though command reported success", project_dir.display()));
-                                    } else {
-                                        println!("Retrying command due to missing project directory (attempt {}/{})", attempt, max_retries);
-                                        sleep(Duration::from_secs(1)).await;
-                                        continue;
-                                    }
-                                }
-                                
-                                // If project exists, check for package.json
-                                let package_json = project_dir.join("package.json");
-                                if !package_json.exists() {
-                                    println!("Warning: package.json not found in project directory");
-                                } else {
-                                    println!("package.json verified!");
-                                }
-                            } else {
-                                // No project name to verify, use a standard delay
-                                sleep(Duration::from_secs(2)).await;
-                            }
-                        } else {
-                            // Standard delay for other npm/npx commands
-                            sleep(Duration::from_secs(1)).await;
-                        }
-                    }
-                    
-                    // If successful or final attempt, return the result
-                    if result.success || attempt == max_retries {
-                        return Ok(result);
-                    } else {
-                        // If failed but we have retries left
-                        println!("Command failed, retrying (attempt {}/{})", attempt, max_retries);
-                        sleep(Duration::from_secs(1)).await;
-                    }
-                },
-                Err(e) => {
-                    // If this is the final retry, return error, otherwise try again
-                    if attempt == max_retries {
-                        return Err(format!("Failed to execute command: {}", e));
-                    } else {
-                        println!("Command execution error, retrying (attempt {}/{})", attempt, max_retries);
-                        sleep(Duration::from_secs(1)).await;
-                    }
-                }
-            }
-        }
-        
-        // We should never reach here (loop always returns), but satisfy the compiler
-        Err("Command execution failed after all retries".to_string())
+        ).await
+    }
+
+    /// Modify imports in a file
+    pub fn modify_import(file_path: &Path, old_import: &str, new_import: &str) -> Result<(), String> {
+        modify_file(file_path, old_import, new_import)
     }
 } 

@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { frameworkService } from '@/lib/api';
-import { ProjectGenerationState, TaskResult, TaskStatusHelpers } from '@/lib/api/local';
+import { ProjectGenerationState, TaskResult, TaskStatusHelpers, GenerationTask } from '@/lib/api/local';
+import { ProjectConfig } from '@/lib/api/types';
+import { useEffect } from 'react';
 
 export interface RecentProject {
   id: string;
@@ -85,12 +87,16 @@ interface ProjectState {
   getGenerationStatus: () => Promise<ProjectGenerationState | undefined>;
   getGenerationLogs: () => Promise<string[] | undefined>;
   cancelGeneration: () => Promise<void>;
+  resumeGeneration: () => Promise<void>;
   
   // Setup event listeners
   setupGenerationListeners: () => () => void;
   
   // Reset generation state
   resetGenerationState: () => void;
+  
+  // New helper method to listen to task initialization events
+  listenToTaskInitialization: () => Promise<() => void>;
 }
 
 // Default state for a new project
@@ -291,207 +297,128 @@ export const useProjectStore = create<ProjectState>()(
     },
     
     generateProject: async () => {
-      const { projectName, projectPath, selectedFrameworkId, selectedModuleIds, moduleConfigurations, currentDraftId } = get();
-      
-      // Validate required fields
-      if (!projectName) {
-        set({ error: 'Project name is required' });
-        return Promise.reject('Project name is required');
-      }
-      
-      if (!projectPath) {
-        set({ error: 'Project path is required' });
-        return Promise.reject('Project path is required');
-      }
-      
-      if (!selectedFrameworkId) {
-        set({ error: 'Framework selection is required' });
-        return Promise.reject('Framework selection is required');
-      }
-      
-      // Ensure we have a draft to track generation
-      const draftId = currentDraftId || get().createDraft();
-      
-      // Reset any previous generation state
-      get().resetGenerationState();
-      
-      // Start generation
       set({ isLoading: true, error: null });
       
       try {
-        // Create configuration based on store state
-        const config = {
-          name: projectName,
-          path: projectPath,
-          framework: selectedFrameworkId,
-          modules: selectedModuleIds.map(id => ({ 
-            id, 
-            options: moduleConfigurations[id] || {} 
-          })),
+        const config: ProjectConfig = {
+          name: get().projectName,
+          path: get().projectPath,
+          framework: get().selectedFrameworkId || '',
+          modules: get().selectedModuleIds,
           options: {
             typescript: true,
             app_router: true,
             eslint: true,
+            // Use module configurations for any additional options
+            ...get().moduleConfigurations?.options
           }
         };
         
-        console.log('Project generation config:', JSON.stringify(config, null, 2));
+        if (!config.name || !config.path || !config.framework) {
+          set({ 
+            isLoading: false, 
+            error: 'Please provide a name, path, and framework for your project'
+          });
+          return '';
+        }
         
-        // Call the backend to generate the project
+        // Phase 1: Get project ID
+        console.log('Starting project generation phase 1 (ID generation)', config);
         const projectId = await frameworkService.generateProject(config);
+        console.log('Received project ID from backend:', projectId);
+        
+        if (!projectId) {
+          console.error('Failed to get project ID from backend');
+          set({ 
+            isLoading: false, 
+            error: 'Failed to start project generation. No project ID returned.' 
+          });
+          return '';
+        }
+        
+        // Set the current generation ID
         set({ currentGenerationId: projectId });
+        console.log('Set currentGenerationId in store:', projectId);
         
-        // Update the draft with generation info
-        set((state) => ({
-          drafts: state.drafts.map(draft => 
-            draft.id === draftId
-              ? {
-                  ...draft,
-                  name: projectName || 'Untitled Project',
-                  path: projectPath,
-                  frameworkId: selectedFrameworkId,
-                  moduleIds: selectedModuleIds,
-                  moduleConfigurations: moduleConfigurations,
-                  lastUpdated: new Date().toISOString(),
-                  generationId: projectId,
-                  generationStatus: 'Running',
-                  generationProgress: 0,
-                  generationError: null
-                }
-              : draft
-          ),
-          lastSaved: new Date()
-        }));
+        // Update draft with generation ID
+        const currentDraftId = get().currentDraftId;
+        if (currentDraftId) {
+          set(state => ({
+            drafts: state.drafts.map(draft => 
+              draft.id === currentDraftId 
+                ? { 
+                    ...draft, 
+                    generationId: projectId,
+                    generationStatus: 'Initializing',
+                    generationProgress: 0
+                  }
+                : draft
+            )
+          }));
+        }
         
-        // Setup listeners for this generation
-        get().setupGenerationListeners();
-        
-        // Get initial status after a short delay to allow backend to initialize
-        setTimeout(async () => {
-          try {
-            await get().getGenerationStatus();
-            await get().getGenerationLogs();
-          } catch (error) {
-            console.error('Failed to get initial status/logs:', error);
-          }
-        }, 500);
+        // Phase 2: Initialize tasks
+        console.log('Starting project generation phase 2 (task initialization)');
+        try {
+          await frameworkService.initializeProjectTasks(projectId);
+          console.log('Project task initialization requested successfully');
+        } catch (error) {
+          console.error('Failed to initialize project tasks:', error);
+          set({ error: `Failed to initialize project tasks: ${error}` });
+          // Don't set isLoading to false here, as we want to keep listening for events
+        }
         
         return projectId;
       } catch (error) {
-        console.error('Project generation error:', error);
-        
-        // Provide a more helpful error message
-        let errorMessage = error instanceof Error ? error.message : String(error);
-        
-        // Update the draft with the error
-        set((state) => ({
-          drafts: state.drafts.map(draft => 
-            draft.id === draftId
-              ? {
-                  ...draft,
-                  generationStatus: 'Failed',
-                  generationError: errorMessage
-                }
-              : draft
-          ),
+        console.error('Project generation failed:', error);
+        set({ 
           isLoading: false, 
-          error: errorMessage
-        }));
-        
-        return Promise.reject(error);
+          error: `Project generation failed: ${error}` 
+        });
+        return '';
       }
     },
     
     getGenerationStatus: async () => {
       const { currentGenerationId } = get();
-      if (!currentGenerationId) return;
+      if (!currentGenerationId) {
+        console.log('No currentGenerationId, cannot get status');
+        return;
+      }
       
       try {
-        const status = await frameworkService.getProjectStatus(currentGenerationId);
-        set({ generationState: status });
-        
-        // Find draft with this generation ID
-        const drafts = get().drafts;
-        const draftWithGeneration = drafts.find(d => d.generationId === currentGenerationId);
-        
-        if (draftWithGeneration) {
-          // Update draft with generation progress
-          set((state) => ({
-            drafts: state.drafts.map(draft => 
-              draft.id === draftWithGeneration.id
-                ? {
-                    ...draft,
-                    generationStatus: status.status,
-                    generationProgress: status.progress,
-                    generationError: TaskStatusHelpers.isFailed(status.status) 
-                      ? TaskStatusHelpers.getReason(status.status) || 'Generation failed'
-                      : null
-                  }
-                : draft
-            )
-          }));
-          
-          // If generation completed successfully, create the project
-          if (status.status === 'Completed') {
-            // Create the project from the draft
-            const newProject: RecentProject = {
-              id: currentGenerationId,
-              name: status.name,
-              path: `${status.path}/${status.name}`,
-              framework: status.framework,
-              createdAt: new Date().toISOString(),
-              lastOpenedAt: new Date().toISOString()
-            };
-            
-            // Add to recent projects
-            get().addProject(newProject);
-            
-            // Delete the draft
-            get().deleteDraft(draftWithGeneration.id);
+        // Save the existing tasks to global state so the API can access them
+        if (typeof window !== 'undefined') {
+          // Store existing tasks in a global variable for the API function to use
+          const existingState = get().generationState;
+          if (existingState && existingState.tasks) {
+            (window as any).__PROJECT_STORE_TASKS = existingState.tasks;
           }
         }
         
-        // Update loading state based on generation status
-        if (status.status === 'Completed' || TaskStatusHelpers.isFailed(status.status)) {
-          set({ isLoading: false });
-        }
+        const status = await frameworkService.getProjectStatus(currentGenerationId);
+        
+        // Process status and merge with existing tasks
+        set((state) => {
+          const existingTasks = state.generationState?.tasks || {};
+          
+          // Merge tasks, preferring existing task data but getting state from backend
+          const mergedTasks = { ...existingTasks };
+          
+          // Update the generation state
+          return {
+            ...state,
+            generationState: {
+              ...status,
+              tasks: mergedTasks, // Preserve existing tasks
+            }
+          };
+        });
         
         return status;
       } catch (error) {
         console.error('Failed to get generation status:', error);
-        
-        // But if we've been failing repeatedly, we should update the UI
-        if (get().isLoading) {
-          // After 5 seconds of failing, give up and show error
-          setTimeout(() => {
-            if (get().isLoading) {
-              const errorMsg = error instanceof Error ? error.message : String(error);
-              
-              // Update any draft with this generation ID
-              const drafts = get().drafts;
-              const draftWithGeneration = drafts.find(d => d.generationId === currentGenerationId);
-              
-              if (draftWithGeneration) {
-                set((state) => ({
-                  drafts: state.drafts.map(draft => 
-                    draft.id === draftWithGeneration.id
-                      ? {
-                          ...draft,
-                          generationStatus: 'Failed',
-                          generationError: errorMsg
-                        }
-                      : draft
-                  )
-                }));
-              }
-              
-              set({ 
-                isLoading: false,
-                error: errorMsg
-              });
-            }
-          }, 5000);
-        }
+        set({ error: `Failed to get generation status: ${error}` });
       }
     },
     
@@ -566,90 +493,301 @@ export const useProjectStore = create<ProjectState>()(
       }
     },
     
+    resumeGeneration: async () => {
+      const { currentGenerationId, currentDraftId } = get();
+      if (!currentGenerationId) return;
+      
+      try {
+        set({ isLoading: true, error: null });
+        
+        // Update the draft status if we have one
+        if (currentDraftId) {
+          set((state) => ({
+            drafts: state.drafts.map(draft => 
+              draft.id === currentDraftId
+                ? {
+                    ...draft,
+                    generationStatus: 'Running',
+                    generationError: null
+                  }
+                : draft
+            )
+          }));
+        }
+        
+        // Call the service to resume generation
+        await frameworkService.resumeProjectGeneration(currentGenerationId);
+        
+        // Start polling for updates
+        await get().getGenerationStatus();
+        await get().getGenerationLogs();
+      } catch (error) {
+        console.error("Failed to resume project generation:", error);
+        set({ 
+          error: "Failed to resume project generation",
+          isLoading: false 
+        });
+        
+        // Update draft status on error
+        if (currentDraftId) {
+          set((state) => ({
+            drafts: state.drafts.map(draft => 
+              draft.id === currentDraftId
+                ? {
+                    ...draft,
+                    generationStatus: 'Failed',
+                    generationError: "Failed to resume project generation"
+                  }
+                : draft
+            )
+          }));
+        }
+      }
+    },
+    
     setupGenerationListeners: () => {
-      const { currentGenerationId } = get();
+      // Get current project ID before setting up listeners
+      const currentId = get().currentGenerationId;
       
-      // Set up event listeners for task updates, completion, and failure
-      const unlistenTaskUpdates = frameworkService.listenToTaskUpdates((result: TaskResult) => {
-        console.log('Task update received:', result);
-        // Update status whenever we get a task update
-        get().getGenerationStatus();
-        get().getGenerationLogs();
-      });
+      if (!currentId) {
+        console.warn('No current generation ID available for setting up listeners');
+        return () => {}; // Return a no-op cleanup function
+      }
       
-      const unlistenComplete = frameworkService.listenToGenerationComplete((projectId: string) => {
-        console.log('Generation completed:', projectId);
-        if (projectId === get().currentGenerationId) {
-          // Find draft with this generation ID
-          const drafts = get().drafts;
-          const draftWithGeneration = drafts.find(d => d.generationId === projectId);
-          
-          if (draftWithGeneration) {
-            // Create project from the draft
-            get().getGenerationStatus().then(status => {
-              if (status) {
-                // Create the project from the draft
-                const newProject: RecentProject = {
-                  id: projectId,
-                  name: status.name,
-                  path: `${status.path}/${status.name}`,
-                  framework: status.framework,
-                  createdAt: new Date().toISOString(),
-                  lastOpenedAt: new Date().toISOString()
-                };
-                
-                // Add to recent projects
-                get().addProject(newProject);
-                
-                // Delete the draft
-                get().deleteDraft(draftWithGeneration.id);
-              }
-            });
-          }
-          
-          set({ isLoading: false });
-          get().getGenerationStatus();
-          get().getGenerationLogs();
+      console.log(`Setting up generation listeners for project ${currentId}`);
+      
+      // Create array to hold cleanup functions
+      const cleanupFunctions: Array<() => void> = [];
+      
+      // Setup task update listener
+      frameworkService.listenToTaskUpdates((taskUpdate) => {
+        console.log(`Received task update:`, taskUpdate);
+        
+        // Check if this update is for our current generation
+        if (taskUpdate.project_id !== currentId) {
+          console.log(`Ignoring task update for different project: ${taskUpdate.project_id} vs current ${currentId}`);
+          return;
         }
-      });
-      
-      const unlistenFailed = frameworkService.listenToGenerationFailed(({ projectId, reason }) => {
-        console.log('Generation failed:', projectId, reason);
-        if (projectId === get().currentGenerationId) {
-          // Find draft with this generation ID
-          const drafts = get().drafts;
-          const draftWithGeneration = drafts.find(d => d.generationId === projectId);
-          
-          if (draftWithGeneration) {
-            // Update draft with failed status
-            set((state) => ({
-              drafts: state.drafts.map(draft => 
-                draft.id === draftWithGeneration.id
-                  ? {
-                      ...draft,
-                      generationStatus: 'Failed',
-                      generationError: reason
-                    }
-                  : draft
-              )
-            }));
+        
+        // Force uppercase first letter for UI consistency
+        const taskStatus = taskUpdate.status.charAt(0).toUpperCase() + taskUpdate.status.slice(1);
+        console.log(`Normalized task status to: ${taskStatus}`);
+        
+        // Update tasks in the generation state
+        set((state) => {
+          // Get the current generation state
+          const currentGenState = state.generationState;
+          if (!currentGenState) {
+            console.warn('No generation state to update task in');
+            return state;
           }
           
-          set({ 
-            isLoading: false,
-            error: `Generation failed: ${reason}`
+          // Ensure tasks object exists
+          const existingTasks = currentGenState.tasks || {};
+          
+          // Find the task to update or create a placeholder if it doesn't exist
+          const taskToUpdate = existingTasks[taskUpdate.task_id] || {
+            id: taskUpdate.task_id,
+            name: `Task ${taskUpdate.task_id}`,
+            description: `Task ${taskUpdate.task_id}`,
+            status: 'Pending',
+            progress: 0,
+            dependencies: []
+          };
+          
+          console.log(`Updating task ${taskUpdate.task_id} to status: ${taskStatus}`);
+          
+          // Create updated tasks map
+          const updatedTasks = {
+            ...existingTasks,
+            [taskUpdate.task_id]: {
+              ...taskToUpdate,
+              status: taskStatus,
+              // If task is now running, set progress
+              progress: taskStatus === 'Completed' ? 1.0 : 
+                        taskStatus === 'Running' ? 0.5 : 
+                        taskStatus.startsWith('Failed') ? 1.0 :
+                        taskStatus.startsWith('Skipped') ? 1.0 :
+                        taskToUpdate.progress
+            }
+          };
+          
+          // Sync with global store for API access
+          if (typeof window !== 'undefined') {
+            window.__PROJECT_STORE_TASKS = updatedTasks;
+          }
+          
+          // Check if we need to update current_task
+          let current_task = currentGenState.current_task;
+          
+          if (taskStatus === 'Running') {
+            // If task is running, set as current
+            current_task = taskUpdate.task_id;
+          } else if (current_task === taskUpdate.task_id && taskStatus !== 'Running') {
+            // If current task is no longer running, clear it
+            current_task = null;
+          }
+          
+          // Calculate overall progress based on task states
+          const taskValues = Object.values(updatedTasks);
+          const completedCount = taskValues.filter(t => 
+            t.status === 'Completed' || 
+            t.status.startsWith('Failed') || 
+            t.status.startsWith('Skipped')
+          ).length;
+          const totalCount = taskValues.length;
+          const progress = totalCount > 0 ? completedCount / totalCount : 0;
+          
+          console.log(`Task progress update: ${completedCount}/${totalCount} tasks completed, progress = ${progress}`);
+          
+          // Add to logs
+          const newLogs = [...state.generationLogs];
+          if (taskUpdate.message) {
+            newLogs.push(taskUpdate.message);
+          }
+          
+          const result = {
+            ...state,
+            generationState: {
+              ...currentGenState,
+              tasks: updatedTasks,
+              current_task,
+              progress,
+            },
+            generationLogs: newLogs
+          };
+          
+          console.log(`Updated generation state:`, {
+            taskCount: Object.keys(result.generationState.tasks).length,
+            progress: result.generationState.progress,
+            currentTask: result.generationState.current_task
           });
-          get().getGenerationStatus();
-          get().getGenerationLogs();
-        }
+          
+          return result;
+        });
+        
+        // Refresh full generation state after a brief delay
+        setTimeout(() => {
+          try {
+            get().getGenerationStatus();
+          } catch (error) {
+            console.error('Error refreshing generation status after task update:', error);
+          }
+        }, 1000);
+      }).then(cleanup => {
+        cleanupFunctions.push(cleanup);
+      }).catch(err => {
+        console.error('Error setting up task update listener:', err);
       });
       
-      // Return a function to unsubscribe from all listeners
+      // Setup task initialization started listener
+      frameworkService.listenToTaskInitializationStarted((data) => {
+        console.log('Task initialization started:', data);
+        
+        if (data.project_id !== currentId) return;
+        
+        // Update state to show initialization
+        set((state) => ({
+          ...state,
+          generationState: state.generationState ? {
+            ...state.generationState,
+            status: 'Initializing',
+            progress: 0.05
+          } : null
+        }));
+      }).then(cleanup => {
+        cleanupFunctions.push(cleanup);
+      }).catch(err => {
+        console.error('Error setting up task init start listener:', err);
+      });
+      
+      // Setup task initialization completed listener
+      frameworkService.listenToTaskInitializationCompleted((data) => {
+        console.log('Task initialization completed:', data);
+        
+        if (data.project_id !== currentId) return;
+        
+        console.log(`Creating ${data.task_count} tasks with names:`, data.task_names);
+        
+        // Create tasks from the name pairs
+        const initialTasks: Record<string, GenerationTask> = {};
+        
+        data.task_names.forEach(([taskId, taskName]) => {
+          initialTasks[taskId] = {
+            id: taskId,
+            name: taskName,
+            description: taskName,
+            status: 'Pending',
+            progress: 0,
+            dependencies: []
+          };
+        });
+        
+        // Store tasks globally for API access
+        if (typeof window !== 'undefined') {
+          window.__PROJECT_STORE_TASKS = initialTasks;
+        }
+        
+        // Update the generation state
+        set((state) => ({
+          ...state,
+          generationState: state.generationState ? {
+            ...state.generationState,
+            tasks: initialTasks,
+            status: 'Generating',
+            progress: 0.1
+          } : null,
+          generationLogs: [
+            ...(state.generationLogs || []),
+            `Created ${data.task_count} tasks for project generation`
+          ]
+        }));
+        
+        // Get the full status after tasks are created
+        setTimeout(() => {
+          get().getGenerationStatus();
+          get().getGenerationLogs();
+        }, 100);
+      }).then(cleanup => {
+        cleanupFunctions.push(cleanup);
+      }).catch(err => {
+        console.error('Error setting up task init completed listener:', err);
+      });
+      
+      // Return a cleanup function
       return () => {
-        unlistenTaskUpdates();
-        unlistenComplete();
-        unlistenFailed();
+        // Clean up all listeners
+        cleanupFunctions.forEach(cleanup => {
+          try {
+            cleanup();
+          } catch (err) {
+            console.error('Error cleaning up listener:', err);
+          }
+        });
       };
+    },
+    
+    // Add the new listenToTaskInitialization method
+    listenToTaskInitialization: async () => {
+      try {
+        const unlisteners = await Promise.all([
+          frameworkService.listenToTaskInitializationStarted((data: { project_id: string }) => {}),
+          frameworkService.listenToTaskInitializationProgress((data: { project_id: string, message: string }) => {}),
+          frameworkService.listenToTaskInitializationCompleted((data: { 
+            project_id: string, 
+            task_count: number,
+            task_names: Array<[string, string]>
+          }) => {}),
+          frameworkService.listenToTaskInitializationFailed((data: { project_id: string, reason: string }) => {})
+        ]);
+        
+        return () => {
+          unlisteners.forEach(unlisten => unlisten());
+        };
+      } catch (error) {
+        console.error("Error setting up task initialization listeners:", error);
+        return () => {}; // Return a no-op cleanup function on error
+      }
     }
   }), 
   { 
@@ -661,3 +799,23 @@ export const useProjectStore = create<ProjectState>()(
     })
   })
 ); 
+
+// Extend Window interface to include our global var
+declare global {
+  interface Window {
+    __PROJECT_STORE_TASKS?: Record<string, GenerationTask>;
+  }
+}
+
+// Create a project store with Zustand
+interface ProjectStoreState {
+  recentProjects: RecentProject[];
+  currentGenerationId: string | null;
+  generationState: ProjectGenerationState | null;
+  generationLogs: string[];
+  addRecentProject: (project: RecentProject) => void;
+  startGeneration: (id: string, config: ProjectConfig) => Promise<void>;
+  getGenerationStatus: () => Promise<any>;
+  getGenerationLogs: () => Promise<void>;
+  cancelGeneration: () => Promise<void>;
+} 

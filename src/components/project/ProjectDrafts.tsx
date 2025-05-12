@@ -10,10 +10,11 @@ import { createPortal } from 'react-dom';
 import { confirmDialog, messageDialog } from '@/lib/utils/dialog';
 
 // Add a GenerationStatusBadge component
-function GenerationStatusBadge({ status, error, progress }: { 
+function GenerationStatusBadge({ status, error, progress, resumable }: { 
   status?: string, 
   error?: string | null,
-  progress?: number 
+  progress?: number,
+  resumable?: boolean
 }) {
   if (!status) return null;
   
@@ -41,13 +42,14 @@ function GenerationStatusBadge({ status, error, progress }: {
       );
       break;
     case 'Failed':
-      badgeClass += ' badge-error';
+      badgeClass += resumable ? ' badge-warning' : ' badge-error';
       // Add error icon for failed
       icon = (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       );
+      label = resumable ? "Failed (Resumable)" : "Failed";
       break;
     case 'Cancelled':
       badgeClass += ' badge-warning';
@@ -67,6 +69,21 @@ function GenerationStatusBadge({ status, error, progress }: {
       {icon}
       {label}
     </div>
+  );
+}
+
+// Add a ResumeGenerationButton component
+function ResumeGenerationButton({ projectId, onClick }: { projectId: string, onClick: (e: React.MouseEvent) => void }) {
+  return (
+    <button 
+      className="btn btn-sm btn-warning justify-start gap-2 w-full my-1 hover:bg-warning/20"
+      onClick={onClick}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Resume Generation
+    </button>
   );
 }
 
@@ -204,6 +221,27 @@ export default function ProjectDrafts() {
     }
   };
 
+  const handleResumeDraft = async (e: React.MouseEvent, draftId: string, generationId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActiveDropdown(null);
+    
+    try {
+      loadDraft(draftId);
+      
+      // Use a slight delay to ensure the state is updated before navigation
+      setTimeout(() => {
+        router.push('/generation');
+      }, 100);
+    } catch (error) {
+      console.error("Error loading draft for resumption:", error);
+      await messageDialog(
+        "There was an error loading this draft for resumption. It may be corrupted.", 
+        { title: 'Error', type: 'error' }
+      );
+    }
+  };
+
   if (!mounted) {
     return (
       <div className="space-y-6">
@@ -225,6 +263,8 @@ export default function ProjectDrafts() {
     const activeDraft = drafts.find(d => d.id === activeDropdown);
     if (!activeDraft) return null;
     
+    const isResumable = activeDraft.generationStatus === 'Failed' && activeDraft.generationError?.includes('resumable');
+    
     return (
       <div 
         className="dropdown-content dropdown-menu menu p-2 shadow bg-base-100 rounded-box fixed w-48 z-[9999]"
@@ -245,20 +285,15 @@ export default function ProjectDrafts() {
           Continue
         </button>
         
-        {activeDraft.generationStatus === 'Failed' && activeDraft.generationId && (
-          <button 
-            className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-primary/10 text-primary"
-            onClick={(e) => handleContinueDraft(e, activeDropdown)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Resume Generation
-          </button>
+        {activeDraft.generationStatus === 'Failed' && activeDraft.generationId && isResumable && (
+          <ResumeGenerationButton 
+            projectId={activeDraft.generationId}
+            onClick={(e) => handleResumeDraft(e, activeDraft.id, activeDraft.generationId!)}
+          />
         )}
         
         <button 
-          className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
+          className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-error/10 text-error"
           onClick={(e) => handleDeleteDraft(e, activeDropdown)}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,6 +350,7 @@ export default function ProjectDrafts() {
                         status={draft.generationStatus} 
                         error={draft.generationError}
                         progress={draft.generationProgress}
+                        resumable={draft.generationError?.includes('resumable')}
                       />
                     </td>
                     <td className="relative">

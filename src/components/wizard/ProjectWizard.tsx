@@ -106,15 +106,19 @@ export function ProjectWizard() {
     progress,
   } = useWizardNavigation({
     steps: wizardSteps,
-    onComplete: () => {
+    onComplete: async () => {
       // Only save draft on completion when user has made changes
       if (hasUserMadeChanges) {
-        saveDraft();
-        toast({
-          type: "success",
-          title: "Draft Saved",
-          message: "Your project draft has been saved successfully.",
-        });
+        try {
+          await saveDraft();
+          toast({
+            type: "success",
+            title: "Draft Saved",
+            message: "Your project draft has been saved successfully.",
+          });
+        } catch (error) {
+          console.error('Failed to save draft:', error);
+        }
       }
     },
   });
@@ -137,8 +141,12 @@ export function ProjectWizard() {
   useEffect(() => {
     if (!hasUserMadeChanges) return;
     
-    const saveTimer = setTimeout(() => {
-      saveDraft();
+    const saveTimer = setTimeout(async () => {
+      try {
+        await saveDraft();
+      } catch (error) {
+        console.error('Failed to auto-save draft:', error);
+      }
     }, 30000); // Auto-save every 30 seconds if changes were made
     
     return () => clearTimeout(saveTimer);
@@ -166,15 +174,19 @@ export function ProjectWizard() {
     }
   };
 
-  const handleKeepDraft = () => {
+  const handleKeepDraft = async () => {
     // Only save if there are actual changes
     if (hasUserMadeChanges) {
-      saveDraft();
-      toast({
-        type: "info",
-        title: "Draft Saved",
-        message: "Your project draft has been saved.",
-      });
+      try {
+        await saveDraft();
+        toast({
+          type: "info",
+          title: "Draft Saved",
+          message: "Your project draft has been saved.",
+        });
+      } catch (error) {
+        console.error('Failed to save draft:', error);
+      }
     }
     
     // Close the modal first

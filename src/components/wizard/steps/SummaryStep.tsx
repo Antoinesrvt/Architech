@@ -34,9 +34,13 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
   const selectedModules = modules.filter(module => selectedModuleIds.includes(module.id));
 
   // Start generation and show the generation page
-  const handleStartGeneration = () => {
-    saveDraft();
-    setShowGenerationPage(true);
+  const handleStartGeneration = async () => {
+    try {
+      await saveDraft();
+      setShowGenerationPage(true);
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    }
   };
 
   // If we're showing the generation page, render that instead
@@ -181,4 +185,4 @@ export function SummaryStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
       </div>
     </WizardCard>
   );
-} 
+}

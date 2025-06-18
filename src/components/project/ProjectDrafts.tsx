@@ -163,7 +163,7 @@ export default function ProjectDrafts() {
     setActiveDropdown(null);
     
     try {
-      loadDraft(draftId);
+      await loadDraft(draftId);
       // Use a slight delay to ensure the state is updated before navigation
       setTimeout(() => {
         router.push('/new-project');
@@ -183,24 +183,39 @@ export default function ProjectDrafts() {
     setActiveDropdown(null);
     
     try {
-      const shouldDelete = await confirmDialog(
-        'Are you sure you want to delete this draft? This action cannot be undone.',
-        { title: 'Confirm Delete', type: 'warning' }
+      const confirmed = await confirmDialog(
+        "Are you sure you want to delete this draft? This action cannot be undone.",
+        {
+          title: "Delete Draft",
+          variant: "danger",
+          confirmText: "Delete",
+          cancelText: "Cancel"
+        }
       );
       
-      if (shouldDelete) {
+      if (confirmed) {
         try {
-          deleteDraft(draftId);
+          await deleteDraft(draftId);
         } catch (error) {
           console.error("Error deleting draft:", error);
           await messageDialog(
-            'There was an error deleting this draft.',
-            { title: 'Error', type: 'error' }
+            "Failed to delete draft. Please try again.",
+            {
+              title: "Error",
+              type: "error"
+            }
           );
         }
       }
     } catch (error) {
-      console.error("Dialog error:", error);
+      console.error("Error deleting draft:", error);
+      await messageDialog(
+        "Failed to delete draft. Please try again.",
+        {
+          title: "Error",
+          type: "error"
+        }
+      );
     }
   };
 
@@ -386,4 +401,4 @@ export default function ProjectDrafts() {
       {createPortal(renderDropdownMenu(), document.body)}
     </div>
   );
-} 
+}

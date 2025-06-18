@@ -26,7 +26,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       const success = await api.openInEditor(project.path);
       
       if (success) {
-        updateLastOpened(project.id);
+        await updateLastOpened(project.id);
         toast({
           type: "success",
           message: `Project "${project.name}" opened in editor`,
@@ -54,18 +54,28 @@ export default function ProjectCard({ project }: ProjectCardProps) {
     try {
       const shouldRemove = await confirmDialog(
         `Are you sure you want to remove "${project.name}" from recent projects?`,
-        { title: 'Confirm Remove', type: 'warning' }
+        { 
+          title: 'Remove Project', 
+          variant: 'default',
+          confirmText: 'Remove',
+          cancelText: 'Cancel'
+        }
       );
       
       if (shouldRemove) {
-        removeProject(project.id);
+        await removeProject(project.id);
         toast({
           type: "info",
           message: `Project "${project.name}" removed from recent projects`,
         });
       }
     } catch (error) {
-      console.error("Dialog error:", error);
+      console.error("Error removing project:", error);
+      toast({
+        type: "error",
+        title: "Error",
+        message: "Failed to remove project. Please try again.",
+      });
     }
   };
 
@@ -120,4 +130,4 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       </Card.Body>
     </Card>
   );
-} 
+}

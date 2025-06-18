@@ -1,7 +1,7 @@
-export * from './framework-store';
-export * from './project-store';
-export * from './settings-store';
+export * from './framework-store-sqlite';
+export * from './project-store-sqlite';
+export * from './settings-store-tauri';
 
 // For backward compatibility - alias useFrameworkStore as useTemplateStore
-import { useFrameworkStore } from './framework-store';
-export { useFrameworkStore as useTemplateStore }; 
+import { useFrameworkStore } from './framework-store-sqlite';
+export { useFrameworkStore as useTemplateStore };

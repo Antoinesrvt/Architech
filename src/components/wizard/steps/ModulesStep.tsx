@@ -149,9 +149,13 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
   );
 
   // Handle next step
-  const handleNext = () => {
-    saveDraft();
-    onNext();
+  const handleNext = async () => {
+    try {
+      await saveDraft();
+      onNext();
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    }
   };
 
   return (
@@ -322,4 +326,4 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
       </div>
     </WizardCard>
   );
-} 
+}

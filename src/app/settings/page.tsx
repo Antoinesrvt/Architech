@@ -32,15 +32,19 @@ export default function SettingsPage() {
   };
 
   // Save settings
-  const handleSave = () => {
-    setDefaultProjectPath(tempPath);
-    setEditorCommand(tempEditor);
-    setIsSaved(true);
-    
-    // Reset the saved indicator after a delay
-    setTimeout(() => {
-      setIsSaved(false);
-    }, 3000);
+  const handleSave = async () => {
+    try {
+      await setDefaultProjectPath(tempPath);
+      await setEditorCommand(tempEditor);
+      setIsSaved(true);
+      
+      // Reset the saved indicator after a delay
+      setTimeout(() => {
+        setIsSaved(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
   };
 
   return (
@@ -75,7 +79,13 @@ export default function SettingsPage() {
                     key={themeOption.id}
                     className={`border-2 cursor-pointer p-4 rounded-lg
                       ${theme === themeOption.id ? 'border-primary' : 'border-base-300'}`}
-                    onClick={() => setTheme(themeOption.id as 'architech' | 'architech-light')}
+                    onClick={async () => {
+                      try {
+                        await setTheme(themeOption.id as 'architech' | 'architech-light');
+                      } catch (error) {
+                        console.error('Failed to set theme:', error);
+                      }
+                    }}
                   >
                     <div className={`w-16 h-16 bg-primary rounded-md flex items-center justify-center`}>
                       {themeOption.icon === 'sun' ? (
@@ -145,7 +155,13 @@ export default function SettingsPage() {
                   type="checkbox" 
                   className="checkbox checkbox-primary" 
                   checked={autoOpenProjectAfterGeneration}
-                  onChange={(e) => setAutoOpenProjectAfterGeneration(e.target.checked)}
+                  onChange={async (e) => {
+                    try {
+                      await setAutoOpenProjectAfterGeneration(e.target.checked);
+                    } catch (error) {
+                      console.error('Failed to update auto-open setting:', error);
+                    }
+                  }}
                 />
                 <span className="label-text">Automatically open project after generation</span>
               </label>
@@ -157,7 +173,13 @@ export default function SettingsPage() {
                   type="checkbox" 
                   className="checkbox checkbox-primary" 
                   checked={useGit}
-                  onChange={(e) => setUseGit(e.target.checked)}
+                  onChange={async (e) => {
+                    try {
+                      await setUseGit(e.target.checked);
+                    } catch (error) {
+                      console.error('Failed to update Git setting:', error);
+                    }
+                  }}
                 />
                 <span className="label-text">Initialize Git repository for new projects</span>
               </label>
@@ -199,4 +221,4 @@ export default function SettingsPage() {
       </div>
     </MainLayout>
   );
-} 
+}

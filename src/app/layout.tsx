@@ -2,6 +2,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "@/styles/globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { DatabaseProvider } from "@/components/providers/DatabaseProvider";
+import { ModalProvider } from "@/components/providers/ModalProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,9 +24,12 @@ export default function RootLayout({
     <html lang="en" data-theme="architech">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
-          <ToastProvider position="bottom-right" maxToasts={5}>
-            {children}
-          </ToastProvider>
+          <DatabaseProvider>
+            <ToastProvider position="bottom-right" maxToasts={5}>
+              <ModalProvider />
+              {children}
+            </ToastProvider>
+          </DatabaseProvider>
         </ThemeProvider>
       </body>
     </html>

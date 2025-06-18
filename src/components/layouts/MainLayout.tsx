@@ -22,6 +22,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return null;
   }
 
+  const handleThemeToggle = async () => {
+    try {
+      await setTheme(theme === 'architech' ? 'architech-light' : 'architech');
+    } catch (error) {
+      console.error('Failed to set theme:', error);
+    }
+  };
+
   return (
     <div className="drawer lg:drawer-open">
       <input id="drawer-toggle" type="checkbox" className="drawer-toggle" />
@@ -40,7 +48,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Link href="/" className="btn btn-ghost text-xl">ArchiTech</Link>
           </div>
           <div className="flex-none">
-            <button className="btn btn-square btn-ghost" onClick={() => setTheme(theme === 'architech' ? 'architech-light' : 'architech')}>
+            <button className="btn btn-square btn-ghost" onClick={handleThemeToggle}>
               {theme === 'architech' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-6 h-6 stroke-current">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -70,7 +78,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <Link href="/" className="btn btn-ghost text-xl">ArchiTech</Link>
             </div>
             <div className="flex-none hidden lg:block">
-              <button className="btn btn-square btn-ghost" onClick={() => setTheme(theme === 'architech' ? 'architech-light' : 'architech')}>
+              <button className="btn btn-square btn-ghost" onClick={handleThemeToggle}>
                 {theme === 'architech' ? (
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-6 h-6 stroke-current">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -124,4 +132,4 @@ export default function MainLayout({ children }: MainLayoutProps) {
       </div>
     </div>
   );
-} 
+}

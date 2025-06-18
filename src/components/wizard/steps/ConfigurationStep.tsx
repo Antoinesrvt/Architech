@@ -169,8 +169,12 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
     // If no errors, update store
     if (Object.keys(newErrors).length === 0) {
       // Save module specific configurations via moduleConfigurations
-      saveDraft();
-      setHasChanges(false);
+      try {
+        await saveDraft();
+        setHasChanges(false);
+      } catch (error) {
+        console.error('Failed to save draft:', error);
+      }
     }
     
     return Object.keys(newErrors).length === 0;
@@ -444,4 +448,4 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
       </div>
     </WizardCard>
   );
-} 
+}

@@ -71,8 +71,12 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
     }));
     
     // Auto-save after a short delay
-    const timeoutId = setTimeout(() => {
-      saveDraft();
+    const timeoutId = setTimeout(async () => {
+      try {
+        await saveDraft();
+      } catch (error) {
+        console.error('Failed to save draft:', error);
+      }
     }, 500);
     
     // Clean up the timeout
@@ -92,7 +96,7 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
           ...prev,
           path: '',
         }));
-        saveDraft();
+        await saveDraft();
         
         toast({
           type: "success",
@@ -133,8 +137,12 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
     }
     
     // Auto-save after a short delay
-    const timeoutId = setTimeout(() => {
-      saveDraft();
+    const timeoutId = setTimeout(async () => {
+      try {
+        await saveDraft();
+      } catch (error) {
+        console.error('Failed to save draft:', error);
+      }
     }, 500);
     
     // Clean up the timeout
@@ -145,7 +153,7 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
   const isFormValid = !formErrors.name && !formErrors.path && projectName && projectPath;
 
   // Handle next button
-  const handleNext = () => {
+  const handleNext = async () => {
     // Check if form needs validation
     if (!isTouched.name || !isTouched.path) {
       setIsTouched({ name: true, path: true, description: true });
@@ -162,8 +170,17 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
     }
     
     if (isFormValid) {
-      saveDraft();
-      onNext();
+      try {
+        await saveDraft();
+        onNext();
+      } catch (error) {
+        console.error('Failed to save draft:', error);
+        toast({
+          type: "error",
+          title: "Save Error",
+          message: "Failed to save draft. Please try again."
+        });
+      }
     }
   };
 
@@ -384,4 +401,4 @@ export function BasicInfoStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
       </div>
     </div>
   );
-} 
+}

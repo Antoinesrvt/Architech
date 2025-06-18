@@ -34,7 +34,7 @@ export function useFrameworkSelection() {
 
     try {
       const loadedFrameworks = await frameworkService.getFrameworks();
-      setFrameworks(loadedFrameworks);
+      await setFrameworks(loadedFrameworks);
     } catch (err) {
       setError('Failed to load frameworks');
       console.error(err);
@@ -49,9 +49,13 @@ export function useFrameworkSelection() {
   }, []);
 
   // Select a framework
-  const selectFramework = (frameworkId: string) => {
-    setSelectedFramework(frameworkId);
-    // Draft is automatically saved by the setSelectedFramework method
+  const selectFramework = async (frameworkId: string) => {
+    try {
+      await setSelectedFramework(frameworkId);
+      // Draft is automatically saved by the setSelectedFramework method
+    } catch (error) {
+      console.error('Failed to select framework:', error);
+    }
   };
 
   return {
@@ -66,4 +70,4 @@ export function useFrameworkSelection() {
     selectFramework,
     loadFrameworks,
   };
-} 
+}

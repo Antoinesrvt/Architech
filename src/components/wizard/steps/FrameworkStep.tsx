@@ -22,10 +22,14 @@ export function FrameworkStep({ onNext, onPrevious, canGoNext, canGoPrevious, on
   const isSelectionValid = !!selectedFrameworkId;
 
   // Handle next button
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isSelectionValid) {
-      saveDraft();
-      onNext();
+      try {
+        await saveDraft();
+        onNext();
+      } catch (error) {
+        console.error('Failed to save draft:', error);
+      }
     }
   };
 

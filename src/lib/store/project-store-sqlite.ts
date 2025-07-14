@@ -164,16 +164,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadRecentProjects: async () => {
     const db = await getDatabase();
-    const result = await db.select<{
-      id: string;
-      name: string;
-      path: string;
-      framework: string;
-      created_at: string;
-      last_opened_at: string;
-    }[]>(
-      "SELECT * FROM recent_projects ORDER BY last_opened_at DESC LIMIT 10",
-    );
+    const result = await db.select<
+      {
+        id: string;
+        name: string;
+        path: string;
+        framework: string;
+        created_at: string;
+        last_opened_at: string;
+      }[]
+    >("SELECT * FROM recent_projects ORDER BY last_opened_at DESC LIMIT 10");
 
     set({
       recentProjects: result.map((row) => ({
@@ -221,11 +221,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     );
 
     // Keep only the 3 most recent drafts
-    const allDrafts = await db.select<{
-      id: string;
-    }[]>(
-      "SELECT id FROM project_drafts ORDER BY last_updated DESC",
-    );
+    const allDrafts = await db.select<
+      {
+        id: string;
+      }[]
+    >("SELECT id FROM project_drafts ORDER BY last_updated DESC");
 
     if (allDrafts.length > 3) {
       const draftsToDelete = allDrafts.slice(3);
@@ -288,19 +288,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadDraft: async (draftId) => {
     const db = await getDatabase();
-    const result = await db.select<{
-      id: string;
-      name: string;
-      path: string;
-      description: string | null;
-      framework_id: string | null;
-      module_ids: string;
-      module_configurations: string;
-      last_updated: string;
-    }[]>(
-      "SELECT * FROM project_drafts WHERE id = ?",
-      [draftId],
-    );
+    const result = await db.select<
+      {
+        id: string;
+        name: string;
+        path: string;
+        description: string | null;
+        framework_id: string | null;
+        module_ids: string;
+        module_configurations: string;
+        last_updated: string;
+      }[]
+    >("SELECT * FROM project_drafts WHERE id = ?", [draftId]);
 
     if (result.length === 0) return;
 
@@ -334,22 +333,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadDrafts: async () => {
     const db = await getDatabase();
-    const result = await db.select<{
-      id: string;
-      name: string;
-      path: string;
-      description: string | null;
-      framework_id: string | null;
-      module_ids: string;
-      module_configurations: string;
-      last_updated: string;
-      generation_id: string | null;
-      generation_status: string | null;
-      generation_progress: number | null;
-      generation_error: string | null;
-    }[]>(
-      "SELECT * FROM project_drafts ORDER BY last_updated DESC LIMIT 3",
-    );
+    const result = await db.select<
+      {
+        id: string;
+        name: string;
+        path: string;
+        description: string | null;
+        framework_id: string | null;
+        module_ids: string;
+        module_configurations: string;
+        last_updated: string;
+        generation_id: string | null;
+        generation_status: string | null;
+        generation_progress: number | null;
+        generation_error: string | null;
+      }[]
+    >("SELECT * FROM project_drafts ORDER BY last_updated DESC LIMIT 3");
 
     set({
       drafts: result.map((row) => ({
@@ -423,7 +422,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       generationState: {
         ...state.generationState,
         tasks: state.generationState.tasks.map((task) =>
-          (task as TaskResult & { id: string }).id === taskId ? { ...task, ...updates } : task,
+          (task as TaskResult & { id: string }).id === taskId
+            ? { ...task, ...updates }
+            : task,
         ),
       },
     }));

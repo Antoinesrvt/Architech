@@ -144,7 +144,9 @@ export default function FrameworksPage() {
             <select
               className="select select-bordered w-full"
               value={selectedType ?? ""}
-              onChange={(e) => setSelectedType(e.target.value === "" ? null : e.target.value)}
+              onChange={(e) =>
+                setSelectedType(e.target.value === "" ? null : e.target.value)
+              }
             >
               <option value="">All Types</option>
               {frameworkTypes.map((type) => (
@@ -305,8 +307,8 @@ export default function FrameworksPage() {
                     >
                       {framework.type}
                     </div>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn btn-sm btn-primary"
                       onClick={(e) => {
                         e.stopPropagation();

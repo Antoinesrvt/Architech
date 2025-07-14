@@ -117,7 +117,10 @@ export default function FrameworkCard({
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  role="img"
+                  aria-label="Collapse icon"
                 >
+                  <title>Collapse icon</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -132,7 +135,10 @@ export default function FrameworkCard({
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  role="img"
+                  aria-label="Expand icon"
                 >
+                  <title>Expand icon</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

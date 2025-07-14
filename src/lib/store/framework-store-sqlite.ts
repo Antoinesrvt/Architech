@@ -198,20 +198,20 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
   // Data loading
   loadFrameworks: async () => {
     const db = await getDatabase();
-    const result = await db.select<{
-      id: string;
-      name: string;
-      description: string;
-      version: string;
-      type: string;
-      tags: string;
-      cli: string;
-      compatible_modules: string;
-      directory_structure: string;
-      logo: string | null;
-    }[]>(
-      "SELECT * FROM frameworks ORDER BY name",
-    );
+    const result = await db.select<
+      {
+        id: string;
+        name: string;
+        description: string;
+        version: string;
+        type: string;
+        tags: string;
+        cli: string;
+        compatible_modules: string;
+        directory_structure: string;
+        logo: string | null;
+      }[]
+    >("SELECT * FROM frameworks ORDER BY name");
 
     const frameworks: Framework[] = result.map((row) => ({
       id: row.id,
@@ -231,18 +231,18 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
 
   loadModules: async () => {
     const db = await getDatabase();
-    const result = await db.select<{
-      id: string;
-      name: string;
-      description: string;
-      version: string;
-      category: string;
-      dependencies: string;
-      file_operations: string;
-      options: string;
-    }[]>(
-      "SELECT * FROM modules ORDER BY category, name",
-    );
+    const result = await db.select<
+      {
+        id: string;
+        name: string;
+        description: string;
+        version: string;
+        category: string;
+        dependencies: string;
+        file_operations: string;
+        options: string;
+      }[]
+    >("SELECT * FROM modules ORDER BY category, name");
 
     const modules: Module[] = result.map((row) => ({
       id: row.id,
@@ -260,11 +260,11 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
 
   loadFavorites: async () => {
     const db = await getDatabase();
-    const result = await db.select<{
-      framework_id: string;
-    }[]>(
-      "SELECT framework_id FROM favorite_frameworks ORDER BY created_at DESC",
-    );
+    const result = await db.select<
+      {
+        framework_id: string;
+      }[]
+    >("SELECT framework_id FROM favorite_frameworks ORDER BY created_at DESC");
 
     const favoriteFrameworks = result.map((row) => row.framework_id);
     set({ favoriteFrameworks });

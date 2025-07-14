@@ -450,7 +450,9 @@ export const useProjectStore = create<ProjectState>()(
             error: errorMessage,
           }));
 
-          return Promise.reject(new Error(error instanceof Error ? error.message : String(error)));
+          return Promise.reject(
+            new Error(error instanceof Error ? error.message : String(error)),
+          );
         }
       },
 
@@ -479,7 +481,8 @@ export const useProjectStore = create<ProjectState>()(
                       generationStatus: status.status,
                       generationProgress: status.progress,
                       generationError: TaskStatusHelpers.isFailed(status.status)
-                        ? (TaskStatusHelpers.getReason(status.status) ?? "Generation failed")
+                        ? (TaskStatusHelpers.getReason(status.status) ??
+                          "Generation failed")
                         : null,
                     }
                   : draft,
@@ -679,7 +682,10 @@ export const useProjectStore = create<ProjectState>()(
                     }
                   })
                   .catch((error) => {
-                    console.error("Failed to handle generation completion:", error);
+                    console.error(
+                      "Failed to handle generation completion:",
+                      error,
+                    );
                   });
               }
 

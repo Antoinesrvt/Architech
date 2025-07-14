@@ -223,7 +223,11 @@ export default function LandingPage() {
 
       {/* Scroll progress indicator */}
       <div className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-gray-900/60 backdrop-blur-sm rounded-full border border-gray-800 flex items-center justify-center shadow-lg">
-        <svg className="w-8 h-8" viewBox="0 0 36 36" aria-label="Scroll progress indicator">
+        <svg
+          className="w-8 h-8"
+          viewBox="0 0 36 36"
+          aria-label="Scroll progress indicator"
+        >
           <title>Scroll progress indicator</title>
           <circle
             cx="18"

@@ -24,6 +24,14 @@
       "correctness": {
         "useHookAtTopLevel": "error"
       },
+      "style": {
+        "useSelfClosingElements": "warn"
+      },
+      "a11y": {
+        "useButtonType": "warn",
+        "useValidAnchor": "warn",
+        "noSvgWithoutTitle": "warn"
+      },
       "nursery": {
         "useGoogleFontDisplay": "error",
         "noDocumentImportInPage": "error",

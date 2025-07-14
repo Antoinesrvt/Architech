@@ -10,9 +10,9 @@ export default function MigrationPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Data Migration</h1>
           <p className="text-base-content/70 max-w-2xl mx-auto">
-            Welcome to the improved version of Architech! We&apos;ve upgraded our
-            data storage to use SQLite for better performance and reliability.
-            Use the tool below to migrate your existing data.
+            Welcome to the improved version of Architech! We&apos;ve upgraded
+            our data storage to use SQLite for better performance and
+            reliability. Use the tool below to migrate your existing data.
           </p>
         </div>
 

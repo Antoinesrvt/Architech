@@ -137,7 +137,10 @@ export function DataMigration() {
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            role="img"
+            aria-label="Loading spinner"
           >
+            <title>Loading spinner</title>
             <circle
               className="opacity-25"
               cx="12"
@@ -161,7 +164,10 @@ export function DataMigration() {
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            role="img"
+            aria-label="Success checkmark"
           >
+            <title>Success checkmark</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -178,7 +184,10 @@ export function DataMigration() {
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            role="img"
+            aria-label="Error X mark"
           >
+            <title>Error X mark</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -195,7 +204,10 @@ export function DataMigration() {
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            role="img"
+            aria-label="Database icon"
           >
+            <title>Database icon</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -217,7 +229,10 @@ export function DataMigration() {
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            role="img"
+            aria-label="Upload icon"
           >
+            <title>Upload icon</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -247,24 +262,31 @@ export function DataMigration() {
       <div className="flex gap-3">
         {migrationStatus.status === "idle" && !migrationStatus.hasData && (
           <button
+            type="button"
             onClick={checkForLocalStorageData}
             className="btn btn-primary"
-            disabled={migrationStatus.status === "checking"}
           >
             Check for Data
+          </button>
+        )}
+
+        {migrationStatus.status === "checking" && (
+          <button type="button" className="btn btn-primary" disabled>
+            Checking for Data...
           </button>
         )}
 
         {migrationStatus.status === "idle" && migrationStatus.hasData && (
           <>
             <button
+              type="button"
               onClick={() => void performMigration()}
               className="btn btn-primary"
-              disabled={migrationStatus.status === "migrating"}
             >
               Start Migration
             </button>
             <button
+              type="button"
               onClick={checkForLocalStorageData}
               className="btn btn-outline"
             >
@@ -273,8 +295,15 @@ export function DataMigration() {
           </>
         )}
 
+        {migrationStatus.status === "migrating" && (
+          <button type="button" className="btn btn-primary" disabled>
+            Migrating Data...
+          </button>
+        )}
+
         {migrationStatus.status === "error" && (
           <button
+            type="button"
             onClick={checkForLocalStorageData}
             className="btn btn-primary"
           >
@@ -284,6 +313,7 @@ export function DataMigration() {
 
         {migrationStatus.status === "completed" && (
           <button
+            type="button"
             onClick={() => window.location.reload()}
             className="btn btn-primary"
           >

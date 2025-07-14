@@ -225,7 +225,9 @@ export default function SettingsPage() {
                   onChange={(e) => {
                     void (async () => {
                       try {
-                        await setAutoOpenProjectAfterGeneration(e.target.checked);
+                        await setAutoOpenProjectAfterGeneration(
+                          e.target.checked,
+                        );
                       } catch (error) {
                         console.error(
                           "Failed to update auto-open setting:",

@@ -106,7 +106,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                role="img"
+                aria-label="Delete icon"
               >
+                <title>Delete icon</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -132,7 +135,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  role="img"
+                  aria-label="Open icon"
                 >
+                  <title>Open icon</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

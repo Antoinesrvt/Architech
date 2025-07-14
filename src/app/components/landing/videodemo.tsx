@@ -10,6 +10,15 @@ const VideoDemo = ({ setShowDemo }: Props) => {
       <div
         className="w-full aspect-video rounded-lg overflow-hidden border border-gray-700 bg-gray-900/60 backdrop-blur-sm cursor-pointer hover:border-purple-500 transition-colors shadow-2xl transform hover:scale-[1.01] hover:shadow-purple-700/20 duration-300"
         onClick={() => setShowDemo(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setShowDemo(true);
+          }
+        }}
+        tabIndex={0}
+        role="button"
+        aria-label="Play demo video"
       >
         <div className="absolute inset-0 flex items-center justify-center flex-col">
           <div className="w-20 h-20 rounded-full bg-purple-600/20 backdrop-blur-sm flex items-center justify-center p-1 border border-purple-500/30">
@@ -48,7 +57,7 @@ const VideoDemo = ({ setShowDemo }: Props) => {
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
                       <div
-                        key={i}
+                        key={`skeleton-line-${i}`}
                         className="w-full h-6 bg-gray-800 rounded-md"
                       />
                     ))}
@@ -62,7 +71,7 @@ const VideoDemo = ({ setShowDemo }: Props) => {
                     <div className="grid grid-cols-3 gap-2 mb-3">
                       {[...Array(3)].map((_, i) => (
                         <div
-                          key={i}
+                          key={`grid-item-${i}`}
                           className={`h-8 rounded-md ${
                             i === 0 ? "bg-blue-900/40" : "bg-gray-800"
                           }`}

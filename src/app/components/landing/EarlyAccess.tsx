@@ -1,9 +1,8 @@
 import {
   ClipboardCheck,
-  Github,
+  ExternalLink,
   Mail,
   Rocket,
-  Twitter,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
@@ -142,14 +141,14 @@ export const EarlyAccess = ({ sectionRef, isVisible }: SectionProps) => {
               type="button"
               className="text-blue-400 hover:text-blue-300 flex items-center transition-colors"
             >
-              <Github size={20} className="mr-2" />
+              <ExternalLink size={20} className="mr-2" />
               <span>GitHub</span>
             </button>
             <button
               type="button"
               className="text-blue-400 hover:text-blue-300 flex items-center transition-colors"
             >
-              <Twitter size={20} className="mr-2" />
+              <ExternalLink size={20} className="mr-2" />
               <span>Twitter</span>
             </button>
             <button
@@ -332,10 +331,10 @@ const SuccessMessage = () => {
         </svg>
       </div>
       <h3 className="text-2xl font-bold text-white mb-2">
-        You're on the list!
+        You&apos;re on the list!
       </h3>
       <p className="text-gray-300 mb-8">
-        We've received your request for early access. You'll be among the first
+        We&apos;ve received your request for early access. You&apos;ll be among the first
         to know when The Architect is ready.
       </p>
       <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">

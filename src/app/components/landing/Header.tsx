@@ -23,7 +23,7 @@ export const Header = ({
 }: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+  const toggleMobileMenu = () => { setMobileMenuOpen(!mobileMenuOpen); };
 
   return (
     <header
@@ -37,7 +37,7 @@ export const Header = ({
         {/* Logo */}
         <button
           type="button"
-          onClick={() => scrollToSection("hero")}
+          onClick={() => { scrollToSection("hero"); }}
           className={
             "text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600 transition-all duration-300 transform hover:scale-105"
           }
@@ -51,7 +51,7 @@ export const Header = ({
             <button
               key={item.id}
               type="button"
-              onClick={() => scrollToSection(item.id)}
+              onClick={() => { scrollToSection(item.id); }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 relative group ${
                 activeSection === item.id
                   ? "text-white"
@@ -73,7 +73,7 @@ export const Header = ({
         {/* CTA button */}
         <button
           type="button"
-          onClick={() => scrollToSection("access")}
+          onClick={() => { scrollToSection("access"); }}
           className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-700 to-indigo-700 text-white text-sm font-medium transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-lg hover:shadow-purple-900/30 hover:from-purple-600 hover:to-indigo-600 active:translate-y-0 active:shadow-none"
         >
           Early Access
@@ -96,7 +96,7 @@ export const Header = ({
             <button
               key={item.id}
               type="button"
-              onClick={() => scrollToSection(item.id)}
+              onClick={() => { scrollToSection(item.id); }}
               className="block w-full text-left px-3 py-2 text-base font-medium text-white hover:bg-gray-800 rounded-md"
             >
               {item.name}
@@ -105,7 +105,7 @@ export const Header = ({
           <div className="px-3 py-2">
             <button
               type="button"
-              onClick={() => scrollToSection("access")}
+              onClick={() => { scrollToSection("access"); }}
               className="w-full px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all"
             >
               Get Early Access

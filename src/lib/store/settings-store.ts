@@ -16,9 +16,9 @@ interface SettingsState {
   setUseGit: (value: boolean) => void;
 }
 
-// @ts-ignore Ignoring type errors due to zustand version compatibility issues
+// @ts-expect-error - Zustand version compatibility issues with persist middleware
 export const useSettingsStore = create<SettingsState>()(
-  // @ts-ignore
+  // @ts-expect-error - Persist middleware typing issue
   persist(
     (set) => ({
       theme: "architech", // Use your custom dark theme as default
@@ -26,12 +26,13 @@ export const useSettingsStore = create<SettingsState>()(
       editorCommand: "code", // Default to VS Code
       autoOpenProjectAfterGeneration: true,
       useGit: true,
-      setTheme: (theme) => set({ theme }),
-      setDefaultProjectPath: (path) => set({ defaultProjectPath: path }),
-      setEditorCommand: (command) => set({ editorCommand: command }),
-      setAutoOpenProjectAfterGeneration: (value) =>
-        set({ autoOpenProjectAfterGeneration: value }),
-      setUseGit: (value) => set({ useGit: value }),
+      setTheme: (theme) => { set({ theme }); },
+      setDefaultProjectPath: (path) => { set({ defaultProjectPath: path }); },
+      setEditorCommand: (command) => { set({ editorCommand: command }); },
+      setAutoOpenProjectAfterGeneration: (value) => {
+        set({ autoOpenProjectAfterGeneration: value });
+      },
+      setUseGit: (value) => { set({ useGit: value }); },
     }),
     {
       name: "architech-settings",

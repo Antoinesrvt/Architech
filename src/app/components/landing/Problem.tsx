@@ -795,6 +795,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
         <div className="mb-10 flex justify-center">
           <div className="inline-flex bg-gray-900/50 p-1 rounded-lg border border-gray-800">
             <button
+              type="button"
               onClick={() => setShowAdvancedComparison(false)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 !showAdvancedComparison
@@ -805,6 +806,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
               Side-by-Side
             </button>
             <button
+              type="button"
               onClick={() => setShowAdvancedComparison(true)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 showAdvancedComparison
@@ -826,6 +828,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
             {/* Tab selector for mobile */}
             <div className="mb-10 flex md:hidden">
               <button
+                type="button"
                 onClick={() => setActiveTab("before")}
                 className={`flex-1 py-3 text-center font-medium rounded-l-lg transition-colors ${
                   activeTab === "before"
@@ -836,6 +839,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
                 Traditional
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab("after")}
                 className={`flex-1 py-3 text-center font-medium rounded-r-lg transition-colors ${
                   activeTab === "after"
@@ -941,7 +945,7 @@ const TraditionalDevelopment = ({ isVisible }: { isVisible?: boolean }) => {
             "docker-compose.yml",
           ].map((file, i) => (
             <div
-              key={i}
+              key={`file-tab-${file}`}
               className={`px-3 py-1 rounded-t-lg mr-2 text-sm whitespace-nowrap ${
                 i === 0 ? "bg-gray-800 text-white" : "text-gray-400"
               }`}
@@ -1021,7 +1025,7 @@ const TraditionalDevelopment = ({ isVisible }: { isVisible?: boolean }) => {
       <div className="space-y-3">
         {painPoints.map((point, i) => (
           <div
-            key={`pain-point-${i}`}
+            key={`pain-point-${point.slice(0, 20)}`}
             className="flex items-center text-gray-300"
           >
             <X size={16} className="text-red-400 mr-2 flex-shrink-0" />
@@ -1159,7 +1163,7 @@ const WithArchitect = ({ isVisible }: { isVisible?: boolean }) => {
       {/* Benefits */}
       <div className="space-y-3">
         {benefits.map((point, i) => (
-          <div key={`benefit-${i}`} className="flex items-center text-gray-300">
+          <div key={`benefit-${point.slice(0, 20)}`} className="flex items-center text-gray-300">
             <Check size={16} className="text-blue-400 mr-2 flex-shrink-0" />
             <span className="text-sm">{point}</span>
           </div>

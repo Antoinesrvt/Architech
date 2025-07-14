@@ -8,7 +8,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle};
 use tokio::sync::Mutex;
 
 // Re-export task modules

@@ -346,7 +346,7 @@ const FrameworkShowcase = ({
       </div>
 
       <div className="mt-6 text-gray-400 text-sm text-center">
-        Don't see your favorite technology?{" "}
+        Don&apos;t see your favorite technology?{" "}
         <button type="button" className="text-purple-400 hover:underline">
           Request it here
         </button>

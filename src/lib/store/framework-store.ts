@@ -99,9 +99,7 @@ interface FrameworkState {
   removeFavorite: (frameworkId: string) => void;
 }
 
-// @ts-ignore Ignoring type errors due to zustand version compatibility issues
 export const useFrameworkStore = create<FrameworkState>()(
-  // @ts-ignore
   persist(
     (set) => ({
       frameworks: [],

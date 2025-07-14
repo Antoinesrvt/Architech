@@ -21,9 +21,8 @@ interface SettingsState {
 let store: Store | null = null;
 
 const initStore = async (): Promise<Store> => {
-  if (!store) {
-    store = await Store.load("settings.json", { autoSave: true });
-  }
+  store ??= await Store.load("settings.json", { autoSave: true });
+
   return store;
 };
 
@@ -39,34 +38,44 @@ const defaultSettings = {
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   ...defaultSettings,
 
-  setTheme: async (theme) => {
+  setTheme: (theme) => {
     set({ theme });
-    const storeInstance = await initStore();
-    await storeInstance.set("theme", theme);
+    void (async () => {
+      const storeInstance = await initStore();
+      await storeInstance.set("theme", theme);
+    })();
   },
 
-  setDefaultProjectPath: async (path) => {
+  setDefaultProjectPath: (path) => {
     set({ defaultProjectPath: path });
-    const storeInstance = await initStore();
-    await storeInstance.set("defaultProjectPath", path);
+    void (async () => {
+      const storeInstance = await initStore();
+      await storeInstance.set("defaultProjectPath", path);
+    })();
   },
 
-  setEditorCommand: async (command) => {
+  setEditorCommand: (command) => {
     set({ editorCommand: command });
-    const storeInstance = await initStore();
-    await storeInstance.set("editorCommand", command);
+    void (async () => {
+      const storeInstance = await initStore();
+      await storeInstance.set("editorCommand", command);
+    })();
   },
 
-  setAutoOpenProjectAfterGeneration: async (value) => {
+  setAutoOpenProjectAfterGeneration: (value) => {
     set({ autoOpenProjectAfterGeneration: value });
-    const storeInstance = await initStore();
-    await storeInstance.set("autoOpenProjectAfterGeneration", value);
+    void (async () => {
+      const storeInstance = await initStore();
+      await storeInstance.set("autoOpenProjectAfterGeneration", value);
+    })();
   },
 
-  setUseGit: async (value) => {
+  setUseGit: (value) => {
     set({ useGit: value });
-    const storeInstance = await initStore();
-    await storeInstance.set("useGit", value);
+    void (async () => {
+      const storeInstance = await initStore();
+      await storeInstance.set("useGit", value);
+    })();
   },
 
   loadSettings: async () => {
@@ -105,5 +114,5 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
 // Initialize settings on store creation
 if (typeof window !== "undefined") {
-  useSettingsStore.getState().loadSettings();
+  void useSettingsStore.getState().loadSettings();
 }

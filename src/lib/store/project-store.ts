@@ -111,9 +111,9 @@ const DEFAULT_PROJECT_STATE = {
   lastSaved: null,
 };
 
-// @ts-ignore Ignoring type errors due to zustand version compatibility issues
+// @ts-expect-error - Zustand version compatibility issues with persist middleware
 export const useProjectStore = create<ProjectState>()(
-  // @ts-ignore
+  // @ts-expect-error - Persist middleware typing issue
   persist(
     (set, get) => ({
       // Recent projects

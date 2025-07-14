@@ -7,7 +7,7 @@ import {
 } from "@tauri-apps/plugin-dialog";
 
 // Modal state management for UI modals
-type ModalState = {
+interface ModalState {
   isOpen: boolean;
   resolve?: (value: boolean) => void;
   config?: {
@@ -38,7 +38,9 @@ export const getModalState = () => modalState;
 // Update modal state
 const updateModalState = (newState: Partial<ModalState>) => {
   modalState = { ...modalState, ...newState };
-  modalStateListeners.forEach((listener) => listener(modalState));
+  modalStateListeners.forEach((listener) => {
+    listener(modalState);
+  });
 };
 
 /**

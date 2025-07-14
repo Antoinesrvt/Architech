@@ -1,8 +1,6 @@
 //! Framework setup task implementation
 
-use std::path::{Path, PathBuf};
-use std::fs;
-use tauri::{AppHandle, Emitter};
+use tauri::{ Emitter};
 
 use async_trait::async_trait;
 use log::{info, error, warn};
@@ -11,8 +9,6 @@ use crate::commands::command_runner::CommandBuilder;
 use crate::commands::framework::{Framework as FrameworkDetails, get_frameworks};
 use super::{Task, TaskContext};
 
-use std::collections::HashMap;
-use std::time::Duration;
 
 /// Task for setting up the framework
 pub struct FrameworkTask {

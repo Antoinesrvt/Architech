@@ -145,9 +145,9 @@ export const Testimonials = ({
         {!compact && testimonials.length > 1 && (
           <div className="flex justify-between items-center pt-4 border-t border-gray-800">
             <div className="flex space-x-1">
-              {testimonials.map((_, i) => (
+              {testimonials.map((testimonial, i) => (
                 <button
-                  key={i}
+                  key={`testimonial-btn-${testimonial.name}`}
                   type="button"
                   onClick={() => setActiveIndex(i)}
                   className={`w-2 h-2 rounded-full transition-colors ${

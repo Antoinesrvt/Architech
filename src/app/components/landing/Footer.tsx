@@ -1,4 +1,4 @@
-import { Braces, Github, Mail, Twitter } from "lucide-react";
+import { Braces, ExternalLink, Mail } from "lucide-react";
 
 interface FooterProps {
   scrollToSection: (sectionId: string) => void;
@@ -41,7 +41,7 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
                 <li key={link.id}>
                   <button
                     type="button"
-                    onClick={() => scrollToSection(link.id)}
+                    onClick={() => { scrollToSection(link.id); }}
                     className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-950 rounded-md px-2 py-1"
                     aria-label={`Go to ${link.label} section`}
                   >
@@ -64,14 +64,14 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
               className="text-gray-500 hover:text-gray-300 transition-colors p-2 hover:bg-gray-800 rounded-full"
               aria-label="GitHub"
             >
-              <Github size={20} aria-hidden="true" />
+              <ExternalLink size={20} aria-hidden="true" />
             </button>
             <button
               type="button"
               className="text-gray-500 hover:text-gray-300 transition-colors p-2 hover:bg-gray-800 rounded-full"
               aria-label="Twitter"
             >
-              <Twitter size={20} aria-hidden="true" />
+              <ExternalLink size={20} aria-hidden="true" />
             </button>
             <button
               type="button"

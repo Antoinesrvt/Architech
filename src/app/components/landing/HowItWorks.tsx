@@ -590,7 +590,7 @@ const OutputPreview = ({
           <span className="w-10 h-10 rounded-full bg-blue-900/50 text-blue-300 flex items-center justify-center mr-3">
             <Code size={20} />
           </span>
-          What You'll Get
+          What You&apos;ll Get
         </h3>
 
         <div className="grid md:grid-cols-2 gap-8">

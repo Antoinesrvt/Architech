@@ -51,14 +51,14 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
           <button
             type="button"
-            onClick={() => scrollToSection("access")}
+            onClick={() => { scrollToSection("access"); }}
             className="px-6 py-3 bg-gradient-to-r from-purple-700 to-indigo-700 rounded-lg text-white font-medium shadow-lg shadow-purple-900/20 transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-xl hover:shadow-purple-900/30 hover:from-purple-600 hover:to-indigo-600 active:translate-y-0 active:shadow-md"
           >
             Get Early Access
           </button>
           <button
             type="button"
-            onClick={() => scrollToSection("howItWorks")}
+            onClick={() => { scrollToSection("howItWorks"); }}
             className="px-6 py-3 bg-gray-800/80 rounded-lg text-white font-medium transition-all duration-300 group relative overflow-hidden"
           >
             <span className="relative z-10">See How It Works</span>
@@ -109,7 +109,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
       {showDemo && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowDemo(false)}
+          onClick={() => { setShowDemo(false); }}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               setShowDemo(false);
@@ -127,7 +127,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
             <button
               type="button"
               className="absolute -top-10 right-0 text-white hover:text-purple-400 transition-colors"
-              onClick={() => setShowDemo(false)}
+              onClick={() => { setShowDemo(false); }}
               aria-label="Close demo preview"
             >
               Close preview
@@ -147,7 +147,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
                   The Architect in Action
                 </h3>
                 <p className="text-gray-400 mb-6">
-                  In this demo, you'll see how The Architect turns a simple
+                  In this demo, you&apos;ll see how The Architect turns a simple
                   project description into a complete, production-ready
                   application foundation in under a minute.
                 </p>
@@ -162,7 +162,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
                   <button
                     type="button"
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors"
-                    onClick={() => scrollToSection("access")}
+                    onClick={() => { scrollToSection("access"); }}
                   >
                     Get notified when full demo is released
                   </button>

@@ -17,7 +17,7 @@ export const testimonials: Testimonial[] = [
     company: "DataFlow",
     image: "",
     quote:
-      "I've used many code generators and starters in the past, but The Architect is different. It doesn't just provide boilerplate—it creates a complete, production-ready foundation with best practices built in.",
+      "I&apos;ve used many code generators and starters in the past, but The Architect is different. It doesn&apos;t just provide boilerplate—it creates a complete, production-ready foundation with best practices built in.",
   },
   {
     id: 3,

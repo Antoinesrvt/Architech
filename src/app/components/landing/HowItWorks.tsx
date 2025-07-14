@@ -269,6 +269,7 @@ const WorkflowDemo = ({
                 {[0, 1, 2].map((step) => (
                   <button
                     key={step}
+                    type="button"
                     onClick={() => setActiveStep(step)}
                     className={`w-full flex items-center p-3 rounded-lg transition-all ${
                       activeStep === step
@@ -545,6 +546,7 @@ const WorkflowDemo = ({
               {/* Next button */}
               <div className="mt-6 flex justify-end">
                 <button
+                  type="button"
                   className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-all flex items-center ${
                     isTyping
                       ? "bg-gray-700 cursor-not-allowed"

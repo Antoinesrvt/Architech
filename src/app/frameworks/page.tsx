@@ -286,7 +286,7 @@ export default function FrameworksPage() {
                     >
                       {framework.type}
                     </div>
-                    <button className="btn btn-sm btn-primary">
+                    <button type="button" className="btn btn-sm btn-primary">
                       Use Framework
                     </button>
                   </div>

@@ -95,7 +95,7 @@ export default function ProgressIndicator({
             )}
 
             {onRetry && (
-              <button onClick={onRetry} className="btn btn-sm btn-primary mt-2">
+              <button type="button" onClick={onRetry} className="btn btn-sm btn-primary mt-2">
                 Try Again
               </button>
             )}

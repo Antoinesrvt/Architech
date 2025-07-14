@@ -232,7 +232,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="card-actions justify-end mt-4">
-              <button className="btn btn-primary" onClick={handleSave}>
+              <button type="button" className="btn btn-primary" onClick={handleSave}>
                 Save Changes
               </button>
             </div>

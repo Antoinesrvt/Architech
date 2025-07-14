@@ -103,6 +103,7 @@ export const Testimonials = ({
         <Quote
           size={24}
           className="absolute text-purple-400 opacity-30 -top-3 -left-3 transform rotate-180"
+          aria-label="Quote icon"
         />
 
         {/* Testimonial content */}
@@ -147,6 +148,7 @@ export const Testimonials = ({
               {testimonials.map((_, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => setActiveIndex(i)}
                   className={`w-2 h-2 rounded-full transition-colors ${
                     i === activeIndex
@@ -160,14 +162,18 @@ export const Testimonials = ({
 
             <div className="flex space-x-2">
               <button
+                type="button"
                 onClick={prevTestimonial}
                 className={`p-2 rounded-full ${styles.navButton} transition-colors`}
+                aria-label="Previous testimonial"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
+                type="button"
                 onClick={nextTestimonial}
                 className={`p-2 rounded-full ${styles.navButton} transition-colors`}
+                aria-label="Next testimonial"
               >
                 <ChevronRight size={16} />
               </button>

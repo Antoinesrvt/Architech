@@ -243,6 +243,7 @@ export default function Dashboard() {
               <div className="text-sm">{error}</div>
             </div>
             <button
+              type="button"
               className="btn btn-sm btn-outline"
               onClick={() => {
                 setError(null);

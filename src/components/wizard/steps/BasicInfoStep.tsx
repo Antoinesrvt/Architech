@@ -209,6 +209,7 @@ export function BasicInfoStep({
           </p>
         </div>
         <button
+          type="button"
           onClick={onBackToDashboard}
           className="btn btn-ghost btn-sm"
           aria-label="Back to dashboard"
@@ -316,6 +317,7 @@ export function BasicInfoStep({
                 readOnly
               />
               <button
+                type="button"
                 className={cn(
                   "btn join-item",
                   isSelectingPath ? "loading" : "",

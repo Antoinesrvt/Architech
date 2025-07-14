@@ -231,7 +231,7 @@ export function ModulesStep({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="btn btn-square">
+            <button type="button" className="btn btn-square">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -253,12 +253,14 @@ export function ModulesStep({
         {/* Category tabs */}
         <div className="tabs tabs-boxed overflow-x-auto">
           <button
+            type="button"
             className={cn("tab", selectedCategory === "all" && "tab-active")}
             onClick={() => setSelectedCategory("all")}
           >
             All ({countsByCategory.all || 0})
           </button>
           <button
+            type="button"
             className={cn(
               "tab",
               selectedCategory === "styling" && "tab-active",
@@ -268,30 +270,35 @@ export function ModulesStep({
             Styling ({countsByCategory.styling || 0})
           </button>
           <button
+            type="button"
             className={cn("tab", selectedCategory === "ui" && "tab-active")}
             onClick={() => setSelectedCategory("ui")}
           >
             UI ({countsByCategory.ui || 0})
           </button>
           <button
+            type="button"
             className={cn("tab", selectedCategory === "state" && "tab-active")}
             onClick={() => setSelectedCategory("state")}
           >
             State ({countsByCategory.state || 0})
           </button>
           <button
+            type="button"
             className={cn("tab", selectedCategory === "i18n" && "tab-active")}
             onClick={() => setSelectedCategory("i18n")}
           >
             i18n ({countsByCategory.i18n || 0})
           </button>
           <button
+            type="button"
             className={cn("tab", selectedCategory === "forms" && "tab-active")}
             onClick={() => setSelectedCategory("forms")}
           >
             Forms ({countsByCategory.forms || 0})
           </button>
           <button
+            type="button"
             className={cn(
               "tab",
               selectedCategory === "testing" && "tab-active",
@@ -301,6 +308,7 @@ export function ModulesStep({
             Testing ({countsByCategory.testing || 0})
           </button>
           <button
+            type="button"
             className={cn(
               "tab",
               selectedCategory === "advanced" && "tab-active",

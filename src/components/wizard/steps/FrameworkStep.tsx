@@ -60,18 +60,21 @@ export function FrameworkStep({
         {/* Framework type selector */}
         <div className="tabs tabs-boxed">
           <button
+            type="button"
             className={cn("tab", selectedType === "web" && "tab-active")}
             onClick={() => setSelectedType("web")}
           >
             Web
           </button>
           <button
+            type="button"
             className={cn("tab", selectedType === "app" && "tab-active")}
             onClick={() => setSelectedType("app")}
           >
             Mobile
           </button>
           <button
+            type="button"
             className={cn("tab", selectedType === "desktop" && "tab-active")}
             onClick={() => setSelectedType("desktop")}
           >

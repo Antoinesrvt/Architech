@@ -71,6 +71,7 @@ export function WizardSideNavigation({
     <>
       {/* Previous button */}
       <button
+        type="button"
         onClick={() => handleNavClick("prev", onPrevious)}
         disabled={!canGoPrevious}
         aria-label="Previous step"
@@ -114,6 +115,7 @@ export function WizardSideNavigation({
 
       {/* Next button */}
       <button
+        type="button"
         onClick={() => handleNavClick("next", onNext)}
         disabled={!canGoNext}
         aria-label="Next step"

@@ -205,7 +205,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
           </div>
 
           <div className="mt-6 text-center">
-            <button className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-700 to-blue-700 hover:from-purple-600 hover:to-blue-600 text-white font-medium transition-all">
+            <button type="button" className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-700 to-blue-700 hover:from-purple-600 hover:to-blue-600 text-white font-medium transition-all">
               <span>Get your personalized ROI report</span>
               <ChevronRight size={16} className="ml-1" />
             </button>

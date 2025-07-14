@@ -50,12 +50,14 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         {/* CTA section */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
           <button
+            type="button"
             onClick={() => scrollToSection("access")}
             className="px-6 py-3 bg-gradient-to-r from-purple-700 to-indigo-700 rounded-lg text-white font-medium shadow-lg shadow-purple-900/20 transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-xl hover:shadow-purple-900/30 hover:from-purple-600 hover:to-indigo-600 active:translate-y-0 active:shadow-md"
           >
             Get Early Access
           </button>
           <button
+            type="button"
             onClick={() => scrollToSection("howItWorks")}
             className="px-6 py-3 bg-gray-800/80 rounded-lg text-white font-medium transition-all duration-300 group relative overflow-hidden"
           >
@@ -70,7 +72,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
             <div className="flex -space-x-2 mr-3">
               {[...Array(5)].map((_, i) => (
                 <div
-                  key={i}
+                  key={`avatar-${i}`}
                   className={`w-8 h-8 rounded-full bg-gradient-to-br border-2 border-gray-800 ${
                     i % 2 === 0
                       ? "from-blue-500 to-purple-600"
@@ -113,6 +115,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              type="button"
               className="absolute -top-10 right-0 text-white hover:text-purple-400 transition-colors"
               onClick={() => setShowDemo(false)}
             >
@@ -141,7 +144,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
                   </div>
                 </div>
                 <div className="flex justify-center">
-                  <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors">
+                  <button type="button" className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors">
                     Get notified when full demo is released
                   </button>
                 </div>
@@ -176,11 +179,11 @@ const FeatureHighlights = () => {
   return (
     <div className="absolute bottom-16 left-0 right-0">
       <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 px-4">
-        {features.map((feature, index) => {
+        {features.map((feature) => {
           const FeatureIcon = feature.icon;
           return (
             <div
-              key={index}
+              key={feature.title}
               className="bg-gray-900/40 backdrop-blur-sm p-4 rounded-lg border border-gray-800 flex items-center transform hover:translate-y-[-2px] hover:bg-gray-900/60 hover:border-gray-700 transition-all duration-300"
             >
               <FeatureIcon

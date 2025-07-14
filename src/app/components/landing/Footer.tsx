@@ -40,6 +40,7 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
               ].map((link) => (
                 <li key={link.id}>
                   <button
+                    type="button"
                     onClick={() => scrollToSection(link.id)}
                     className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-950 rounded-md px-2 py-1"
                     aria-label={`Go to ${link.label} section`}
@@ -58,36 +59,34 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
             reserved.
           </div>
           <div className="flex space-x-6">
-            <a
-              href="#"
+            <button
+              type="button"
               className="text-gray-500 hover:text-gray-300 transition-colors p-2 hover:bg-gray-800 rounded-full"
               aria-label="GitHub"
-              rel="noopener noreferrer"
             >
               <Github size={20} aria-hidden="true" />
-            </a>
-            <a
-              href="#"
+            </button>
+            <button
+              type="button"
               className="text-gray-500 hover:text-gray-300 transition-colors p-2 hover:bg-gray-800 rounded-full"
               aria-label="Twitter"
-              rel="noopener noreferrer"
             >
               <Twitter size={20} aria-hidden="true" />
-            </a>
-            <a
-              href="#"
+            </button>
+            <button
+              type="button"
               className="text-gray-500 hover:text-gray-300 transition-colors p-2 hover:bg-gray-800 rounded-full"
               aria-label="Email"
-              rel="noopener noreferrer"
             >
               <Mail size={20} aria-hidden="true" />
-            </a>
+            </button>
           </div>
         </div>
 
         {/* Vision hint */}
         <div className="mt-8 text-center">
           <button
+            type="button"
             className="text-gray-600 hover:text-blue-400 text-sm transition-colors py-2 px-4 rounded-full hover:bg-gray-900/50"
             aria-label="View future vision"
           >

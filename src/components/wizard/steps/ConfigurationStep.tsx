@@ -1,61 +1,77 @@
-import { useFrameworkStore } from '@/lib/store/framework-store';
-import type { Module, ModuleOption } from '@/lib/store/framework-store';
-import { useProjectStore } from '@/lib/store/project-store';
-import { cn } from '@/lib/utils/cn';
-import { useEffect, useState } from 'react';
-import WizardCard from '../WizardCard';
-import type { WizardStepProps } from '../types';
+import { useFrameworkStore } from "@/lib/store/framework-store";
+import type { Module, ModuleOption } from "@/lib/store/framework-store";
+import { useProjectStore } from "@/lib/store/project-store";
+import { cn } from "@/lib/utils/cn";
+import { useEffect, useState } from "react";
+import WizardCard from "../WizardCard";
+import type { WizardStepProps } from "../types";
 
-export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBackToDashboard }: WizardStepProps) {
+export function ConfigurationStep({
+  onNext,
+  onPrevious,
+  canGoNext,
+  canGoPrevious,
+  onBackToDashboard,
+}: WizardStepProps) {
   const { modules, frameworks } = useFrameworkStore();
-  const { 
+  const {
     selectedFrameworkId,
     selectedModuleIds,
     moduleConfigurations,
     setModuleConfiguration,
     projectName,
     saveDraft,
-    lastSaved
+    lastSaved,
   } = useProjectStore();
 
   // State for framework options (though they're fixed for now)
   const [frameworkOptions, setFrameworkOptions] = useState({
     typescript: true,
     app_router: true,
-    eslint: true
+    eslint: true,
   });
 
   // Get the selected framework
-  const selectedFramework = frameworks.find(f => f.id === selectedFrameworkId);
+  const selectedFramework = frameworks.find(
+    (f) => f.id === selectedFrameworkId,
+  );
 
   // Get the selected modules
-  const selectedModules = modules.filter(module => selectedModuleIds.includes(module.id));
+  const selectedModules = modules.filter((module) =>
+    selectedModuleIds.includes(module.id),
+  );
 
   // Handle configuration change for a module option
-  const handleModuleOptionChange = (moduleId: string, optionId: string, value: unknown) => {
+  const handleModuleOptionChange = (
+    moduleId: string,
+    optionId: string,
+    value: unknown,
+  ) => {
     const updatedOptions = {
       ...(moduleConfigurations[moduleId] || {}),
-      [optionId]: value
+      [optionId]: value,
     };
     setModuleConfiguration(moduleId, updatedOptions);
   };
 
   // Handle framework option change
   const handleFrameworkOptionChange = (option: string, value: boolean) => {
-    setFrameworkOptions(prev => ({
+    setFrameworkOptions((prev) => ({
       ...prev,
-      [option]: value
+      [option]: value,
     }));
   };
 
   // Render different input types based on option type
   const renderOptionInput = (module: Module, option: ModuleOption) => {
-    const currentValue = moduleConfigurations[module.id] && moduleConfigurations[module.id][option.id] !== undefined 
-      ? moduleConfigurations[module.id][option.id] 
-      : option.default;
-    
+    const currentValue =
+      moduleConfigurations[module.id] &&
+      moduleConfigurations[module.id][option.id] !== undefined
+        ? moduleConfigurations[module.id][option.id]
+        : option.default;
+
     switch (option.type) {
-      case 'boolean':
+      case "boolean":
         return (
           <div className="form-control">
             <label className="label cursor-pointer justify-start">
@@ -63,26 +79,40 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="checkbox"
                 className="toggle toggle-primary"
                 checked={!!currentValue}
-                onChange={(e) => { handleModuleOptionChange(module.id, option.id, e.target.checked); }}
+                onChange={(e) => {
+                  handleModuleOptionChange(
+                    module.id,
+                    option.id,
+                    e.target.checked,
+                  );
+                }}
               />
-              <span className="label-text ml-2">{option.label || option.description}</span>
+              <span className="label-text ml-2">
+                {option.label || option.description}
+              </span>
             </label>
           </div>
         );
-        
-      case 'select':
+
+      case "select":
         return (
           <div className="form-control w-full">
             <label className="label">
-              <span className="label-text">{option.label || option.description}</span>
+              <span className="label-text">
+                {option.label || option.description}
+              </span>
             </label>
             <select
               className="select select-bordered w-full"
               value={currentValue as string}
-              onChange={(e) => { handleModuleOptionChange(module.id, option.id, e.target.value); }}
+              onChange={(e) => {
+                handleModuleOptionChange(module.id, option.id, e.target.value);
+              }}
             >
-              {option.choices?.map(choice => (
-                <option key={choice.value} value={choice.value}>{choice.label}</option>
+              {option.choices?.map((choice) => (
+                <option key={choice.value} value={choice.value}>
+                  {choice.label}
+                </option>
               ))}
             </select>
           </div>
@@ -91,13 +121,17 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
         return (
           <div className="form-control w-full">
             <label className="label">
-              <span className="label-text">{option.label || option.description}</span>
+              <span className="label-text">
+                {option.label || option.description}
+              </span>
             </label>
             <input
               type="text"
               className="input input-bordered w-full"
               value={currentValue as string}
-              onChange={(e) => { handleModuleOptionChange(module.id, option.id, e.target.value); }}
+              onChange={(e) => {
+                handleModuleOptionChange(module.id, option.id, e.target.value);
+              }}
             />
           </div>
         );
@@ -106,7 +140,7 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   // Initial form setup
   const [form, setForm] = useState({
     useTypescript: true,
@@ -114,11 +148,11 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
     useEslint: true,
     useDocker: false,
     includeTests: false,
-    packageManager: 'npm',
-    deployTarget: 'vercel',
-    cssProcessor: 'tailwind',
+    packageManager: "npm",
+    deployTarget: "vercel",
+    cssProcessor: "tailwind",
   });
-  
+
   // When configuration changes in store, update form
   useEffect(() => {
     // Initialize form with defaults
@@ -128,20 +162,20 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
       useEslint: true,
       useDocker: false,
       includeTests: false,
-      packageManager: 'npm',
-      deployTarget: 'vercel',
-      cssProcessor: 'tailwind',
+      packageManager: "npm",
+      deployTarget: "vercel",
+      cssProcessor: "tailwind",
     });
   }, []);
 
   // Handle field change
   const handleChange = (field: string, value: string | boolean) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
-    
+
     // Clear any error for this field
     if (formErrors[field]) {
-      setFormErrors(prev => {
+      setFormErrors((prev) => {
         const newErrors = { ...prev };
         // Use a proper way to remove a property instead of dynamic delete
         const { [field]: _, ...rest } = newErrors;
@@ -149,21 +183,23 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
       });
     }
   };
-  
+
   // Handle form submission
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate form
     const newErrors: Record<string, string> = {};
-    
+
     // Check if any modules require TypeScript but TypeScript is disabled
-    const requiresTs = selectedModuleIds.some(id => id === 'typescript' || id === 'zod' || id === 'tRPC');
+    const requiresTs = selectedModuleIds.some(
+      (id) => id === "typescript" || id === "zod" || id === "tRPC",
+    );
     if (requiresTs && !form.useTypescript) {
-      newErrors.useTypescript = 'Some selected modules require TypeScript';
+      newErrors.useTypescript = "Some selected modules require TypeScript";
     }
-    
+
     // Update errors state
     setFormErrors(newErrors);
-    
+
     // If no errors, update store
     if (Object.keys(newErrors).length === 0) {
       // Save module specific configurations via moduleConfigurations
@@ -171,24 +207,24 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
         await saveDraft();
         setHasChanges(false);
       } catch (error) {
-        console.error('Failed to save draft:', error);
+        console.error("Failed to save draft:", error);
       }
     }
-    
+
     return Object.keys(newErrors).length === 0;
   };
-  
+
   // Handle next button click
-  const handleNext = () => {
-    const isValid = handleSave();
+  const handleNext = async () => {
+    const isValid = await handleSave();
     if (isValid) {
       onNext();
     }
   };
-  
+
   // Form validation
   const isFormValid = Object.keys(formErrors).length === 0;
-  
+
   return (
     <WizardCard
       title="Project Configuration"
@@ -243,7 +279,9 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                   type="checkbox"
                   className="checkbox"
                   checked={form.useTypescript}
-                  onChange={(e) => { handleChange('useTypescript', e.target.checked); }}
+                  onChange={(e) => {
+                    handleChange("useTypescript", e.target.checked);
+                  }}
                 />
                 <div>
                   <span className="label-text font-medium">Use TypeScript</span>
@@ -270,7 +308,9 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="checkbox"
                 className="checkbox"
                 checked={form.usePrettier}
-                onChange={(e) => { handleChange('usePrettier', e.target.checked); }}
+                onChange={(e) => {
+                  handleChange("usePrettier", e.target.checked);
+                }}
               />
               <div>
                 <span className="label-text font-medium">Use Prettier</span>
@@ -285,13 +325,13 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="checkbox"
                 className="checkbox"
                 checked={form.useEslint}
-                onChange={(e) => { handleChange('useEslint', e.target.checked); }}
+                onChange={(e) => {
+                  handleChange("useEslint", e.target.checked);
+                }}
               />
               <div>
                 <span className="label-text font-medium">Use ESLint</span>
-                <p className="text-xs text-base-content/70">
-                  Add code linting
-                </p>
+                <p className="text-xs text-base-content/70">Add code linting</p>
               </div>
             </label>
 
@@ -300,7 +340,9 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="checkbox"
                 className="checkbox"
                 checked={form.includeTests}
-                onChange={(e) => { handleChange('includeTests', e.target.checked); }}
+                onChange={(e) => {
+                  handleChange("includeTests", e.target.checked);
+                }}
               />
               <div>
                 <span className="label-text font-medium">Include Tests</span>
@@ -315,7 +357,9 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="checkbox"
                 className="checkbox"
                 checked={form.useDocker}
-                onChange={(e) => { handleChange('useDocker', e.target.checked); }}
+                onChange={(e) => {
+                  handleChange("useDocker", e.target.checked);
+                }}
               />
               <div>
                 <span className="label-text font-medium">Use Docker</span>
@@ -336,8 +380,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="packageManager"
                 className="radio"
-                checked={form.packageManager === 'npm'}
-                onChange={() => { handleChange('packageManager', 'npm'); }}
+                checked={form.packageManager === "npm"}
+                onChange={() => {
+                  handleChange("packageManager", "npm");
+                }}
               />
               <span className="label-text font-medium">npm</span>
             </label>
@@ -347,8 +393,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="packageManager"
                 className="radio"
-                checked={form.packageManager === 'yarn'}
-                onChange={() => { handleChange('packageManager', 'yarn'); }}
+                checked={form.packageManager === "yarn"}
+                onChange={() => {
+                  handleChange("packageManager", "yarn");
+                }}
               />
               <span className="label-text font-medium">Yarn</span>
             </label>
@@ -358,8 +406,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="packageManager"
                 className="radio"
-                checked={form.packageManager === 'pnpm'}
-                onChange={() => { handleChange('packageManager', 'pnpm'); }}
+                checked={form.packageManager === "pnpm"}
+                onChange={() => {
+                  handleChange("packageManager", "pnpm");
+                }}
               />
               <span className="label-text font-medium">pnpm</span>
             </label>
@@ -375,8 +425,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="cssProcessor"
                 className="radio"
-                checked={form.cssProcessor === 'tailwind'}
-                onChange={() => { handleChange('cssProcessor', 'tailwind'); }}
+                checked={form.cssProcessor === "tailwind"}
+                onChange={() => {
+                  handleChange("cssProcessor", "tailwind");
+                }}
               />
               <span className="label-text font-medium">Tailwind CSS</span>
             </label>
@@ -386,8 +438,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="cssProcessor"
                 className="radio"
-                checked={form.cssProcessor === 'scss'}
-                onChange={() => { handleChange('cssProcessor', 'scss'); }}
+                checked={form.cssProcessor === "scss"}
+                onChange={() => {
+                  handleChange("cssProcessor", "scss");
+                }}
               />
               <span className="label-text font-medium">SCSS</span>
             </label>
@@ -397,8 +451,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="cssProcessor"
                 className="radio"
-                checked={form.cssProcessor === 'css'}
-                onChange={() => { handleChange('cssProcessor', 'css'); }}
+                checked={form.cssProcessor === "css"}
+                onChange={() => {
+                  handleChange("cssProcessor", "css");
+                }}
               />
               <span className="label-text font-medium">Plain CSS</span>
             </label>
@@ -414,8 +470,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="deployTarget"
                 className="radio"
-                checked={form.deployTarget === 'vercel'}
-                onChange={() => { handleChange('deployTarget', 'vercel'); }}
+                checked={form.deployTarget === "vercel"}
+                onChange={() => {
+                  handleChange("deployTarget", "vercel");
+                }}
               />
               <span className="label-text font-medium">Vercel</span>
             </label>
@@ -425,8 +483,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="deployTarget"
                 className="radio"
-                checked={form.deployTarget === 'netlify'}
-                onChange={() => { handleChange('deployTarget', 'netlify'); }}
+                checked={form.deployTarget === "netlify"}
+                onChange={() => {
+                  handleChange("deployTarget", "netlify");
+                }}
               />
               <span className="label-text font-medium">Netlify</span>
             </label>
@@ -436,8 +496,10 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
                 type="radio"
                 name="deployTarget"
                 className="radio"
-                checked={form.deployTarget === 'none'}
-                onChange={() => { handleChange('deployTarget', 'none'); }}
+                checked={form.deployTarget === "none"}
+                onChange={() => {
+                  handleChange("deployTarget", "none");
+                }}
               />
               <span className="label-text font-medium">None</span>
             </label>

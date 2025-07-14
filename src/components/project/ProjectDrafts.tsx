@@ -283,6 +283,7 @@ export default function ProjectDrafts() {
         }}
       >
         <button
+          type="button"
           className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-base-200"
           onClick={(e) => handleContinueDraft(e, activeDropdown)}
         >
@@ -306,6 +307,7 @@ export default function ProjectDrafts() {
         {activeDraft.generationStatus === "Failed" &&
           activeDraft.generationId && (
             <button
+              type="button"
               className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-primary/10 text-primary"
               onClick={(e) => handleContinueDraft(e, activeDropdown)}
             >
@@ -328,6 +330,7 @@ export default function ProjectDrafts() {
           )}
 
         <button
+          type="button"
           className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
           onClick={(e) => handleDeleteDraft(e, activeDropdown)}
         >
@@ -412,6 +415,7 @@ export default function ProjectDrafts() {
                     <td className="relative">
                       <div className="dropdown dropdown-end">
                         <button
+                          type="button"
                           ref={(el) => {
                             buttonRefs.current[draft.id] = el;
                           }}
@@ -474,6 +478,7 @@ export default function ProjectDrafts() {
                             draft.generationStatus === "Failed" && (
                               <div className="mt-4">
                                 <button
+                                  type="button"
                                   className="btn btn-sm btn-error"
                                   onClick={(e) => {
                                     e.stopPropagation();

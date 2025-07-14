@@ -297,6 +297,7 @@ const FrameworkShowcase = ({
         {categories.map((category) => (
           <button
             key={category.id}
+            type="button"
             onClick={() => setActiveCategory(category.id as any)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeCategory === category.id
@@ -342,7 +343,7 @@ const FrameworkShowcase = ({
 
       <div className="mt-6 text-gray-400 text-sm text-center">
         Don't see your favorite technology?{" "}
-        <button className="text-purple-400 hover:underline">
+        <button type="button" className="text-purple-400 hover:underline">
           Request it here
         </button>
       </div>

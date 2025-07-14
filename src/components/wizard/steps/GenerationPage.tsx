@@ -321,6 +321,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
           <h1 className="text-2xl font-bold">Project Generator</h1>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={handleBackToDashboard}
               className="btn btn-sm btn-ghost gap-2"
             >
@@ -329,6 +330,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               <span className="sm:hidden">Back</span>
             </button>
             <button
+              type="button"
               onClick={handleBackToDashboard}
               className="btn btn-sm btn-ghost"
             >
@@ -417,6 +419,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                       {getActiveTaskName()}
                     </p>
                     <button
+                      type="button"
                       onClick={handleCancelGeneration}
                       className="btn btn-sm btn-outline btn-error gap-2"
                     >
@@ -444,6 +447,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
                     <button
+                      type="button"
                       onClick={handleOpenInEditor}
                       className="btn btn-sm btn-outline"
                     >
@@ -451,6 +455,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                       Open in Editor
                     </button>
                     <button
+                      type="button"
                       onClick={handleOpenInFolder}
                       className="btn btn-sm btn-outline"
                     >
@@ -458,6 +463,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                       Open Folder
                     </button>
                     <button
+                      type="button"
                       onClick={handleBackToDashboard}
                       className="btn btn-sm btn-outline"
                     >
@@ -481,6 +487,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                   <p className="text-sm opacity-75 mb-4">{getErrorDetails()}</p>
                   <div className="flex justify-center gap-2">
                     <button
+                      type="button"
                       onClick={handleRetry}
                       className="btn btn-sm btn-error gap-2"
                     >
@@ -494,6 +501,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               {/* Toggle Console Button */}
               <div className="flex justify-center mt-4">
                 <button
+                  type="button"
                   onClick={() => setShowConsole(!showConsole)}
                   className="btn btn-sm btn-ghost gap-2"
                 >

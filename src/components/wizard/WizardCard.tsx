@@ -161,6 +161,7 @@ export default function WizardCard({
                   {canGoPrevious && (
                     <li>
                       <button
+                        type="button"
                         className="flex items-center"
                         onClick={handleGoToPreviousStep}
                       >
@@ -184,6 +185,7 @@ export default function WizardCard({
                   )}
                   <li>
                     <button
+                      type="button"
                       className="flex items-center"
                       onClick={handleBackToDashboard}
                     >

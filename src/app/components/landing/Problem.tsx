@@ -1020,7 +1020,10 @@ const TraditionalDevelopment = ({ isVisible }: { isVisible?: boolean }) => {
       {/* Pain points */}
       <div className="space-y-3">
         {painPoints.map((point, i) => (
-          <div key={`pain-point-${i}`} className="flex items-center text-gray-300">
+          <div
+            key={`pain-point-${i}`}
+            className="flex items-center text-gray-300"
+          >
             <X size={16} className="text-red-400 mr-2 flex-shrink-0" />
             <span className="text-sm">{point}</span>
           </div>
@@ -1195,7 +1198,7 @@ const StatsComparison = ({ isVisible }: { isVisible?: boolean }) => {
     <div className="mt-16 grid md:grid-cols-3 gap-6">
       {stats.map((stat, index) => (
         <div
-          key={`stat-${stat.value.replace(/[^a-zA-Z0-9]/g, '')}`}
+          key={`stat-${stat.value.replace(/[^a-zA-Z0-9]/g, "")}`}
           className={`p-6 rounded-xl bg-gray-800/50 border border-gray-700 text-center transform transition-all duration-500 ${stat.delay} ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}

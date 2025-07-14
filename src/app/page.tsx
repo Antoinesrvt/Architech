@@ -91,7 +91,9 @@ export default function Dashboard() {
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-label="Plus icon"
             >
+              <title>Plus icon</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -126,7 +128,9 @@ export default function Dashboard() {
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
+                      aria-label="Frameworks icon"
                     >
+                      <title>Frameworks icon</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -162,7 +166,9 @@ export default function Dashboard() {
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
+                      aria-label="Modules icon"
                     >
+                      <title>Modules icon</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -198,7 +204,9 @@ export default function Dashboard() {
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
+                      aria-label="Quick start icon"
                     >
+                      <title>Quick start icon</title>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -230,7 +238,9 @@ export default function Dashboard() {
               className="stroke-current shrink-0 h-6 w-6"
               fill="none"
               viewBox="0 0 24 24"
+              aria-label="Error icon"
             >
+              <title>Error icon</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

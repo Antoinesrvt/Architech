@@ -1,10 +1,4 @@
-import {
-  ClipboardCheck,
-  ExternalLink,
-  Mail,
-  Rocket,
-  Zap,
-} from "lucide-react";
+import { ClipboardCheck, ExternalLink, Mail, Rocket, Zap } from "lucide-react";
 import { useState } from "react";
 import { Testimonials } from "./Testimonials";
 import { testimonials } from "./testimonialData";
@@ -334,8 +328,8 @@ const SuccessMessage = () => {
         You&apos;re on the list!
       </h3>
       <p className="text-gray-300 mb-8">
-        We&apos;ve received your request for early access. You&apos;ll be among the first
-        to know when The Architect is ready.
+        We&apos;ve received your request for early access. You&apos;ll be among
+        the first to know when The Architect is ready.
       </p>
       <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
         <p className="text-gray-300 text-sm">

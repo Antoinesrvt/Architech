@@ -27,7 +27,7 @@ export const Testimonials = ({
 }: TestimonialsProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const activeTestimonial = testimonials[activeIndex];
+  const activeTestimonial = testimonials[activeIndex] ?? testimonials[0];
 
   const nextTestimonial = () => {
     setActiveIndex((prev) => (prev + 1) % testimonials.length);
@@ -85,7 +85,7 @@ export const Testimonials = ({
 
   return (
     <div className={`rounded-xl border ${styles.wrapper} p-6 md:p-8`}>
-      {(title || subtitle) && (
+      {(title ?? subtitle) && (
         <div className="text-center mb-8">
           {title && (
             <h3 className={`text-xl md:text-2xl font-bold ${styles.title}`}>
@@ -109,7 +109,7 @@ export const Testimonials = ({
         {/* Testimonial content */}
         <div className="mb-6">
           <p className={`text-lg ${styles.quote} mb-6`}>
-            "{activeTestimonial.quote}"
+            &quot;{activeTestimonial.quote}&quot;
           </p>
 
           <div className="flex items-center">
@@ -149,7 +149,9 @@ export const Testimonials = ({
                 <button
                   key={`testimonial-btn-${testimonial.name}`}
                   type="button"
-                  onClick={() => setActiveIndex(i)}
+                  onClick={() => {
+                    setActiveIndex(i);
+                  }}
                   className={`w-2 h-2 rounded-full transition-colors ${
                     i === activeIndex
                       ? styles.indicatorActive

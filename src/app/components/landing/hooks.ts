@@ -40,7 +40,9 @@ export const useScrollVisibility = (sectionRefs: SectionRefs) => {
     };
 
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, [sectionRefs]);
 
   return {
@@ -86,7 +88,9 @@ export const useStepAnimation = (isVisible: boolean) => {
       setActiveStep((prev) => (prev < 2 ? prev + 1 : 0));
     }, 4000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, [isVisible]);
 
   return { activeStep, setActiveStep };

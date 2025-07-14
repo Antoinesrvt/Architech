@@ -26,13 +26,21 @@ export const useSettingsStore = create<SettingsState>()(
       editorCommand: "code", // Default to VS Code
       autoOpenProjectAfterGeneration: true,
       useGit: true,
-      setTheme: (theme) => { set({ theme }); },
-      setDefaultProjectPath: (path) => { set({ defaultProjectPath: path }); },
-      setEditorCommand: (command) => { set({ editorCommand: command }); },
+      setTheme: (theme) => {
+        set({ theme });
+      },
+      setDefaultProjectPath: (path) => {
+        set({ defaultProjectPath: path });
+      },
+      setEditorCommand: (command) => {
+        set({ editorCommand: command });
+      },
       setAutoOpenProjectAfterGeneration: (value) => {
         set({ autoOpenProjectAfterGeneration: value });
       },
-      setUseGit: (value) => { set({ useGit: value }); },
+      setUseGit: (value) => {
+        set({ useGit: value });
+      },
     }),
     {
       name: "architech-settings",

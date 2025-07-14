@@ -64,6 +64,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
           <div className="flex-none">
             <button
+              type="button"
               className="btn btn-square btn-ghost"
               onClick={handleThemeToggle}
             >
@@ -74,6 +75,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   viewBox="0 0 24 24"
                   className="inline-block w-6 h-6 stroke-current"
                 >
+                  <title>Switch to dark theme</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -88,6 +90,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   viewBox="0 0 24 24"
                   className="inline-block w-6 h-6 stroke-current"
                 >
+                  <title>Switch to light theme</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -121,6 +124,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </div>
             <div className="flex-none hidden lg:block">
               <button
+                type="button"
                 className="btn btn-square btn-ghost"
                 onClick={handleThemeToggle}
               >
@@ -131,6 +135,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     viewBox="0 0 24 24"
                     className="inline-block w-6 h-6 stroke-current"
                   >
+                    <title>Switch to dark theme</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -145,6 +150,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     viewBox="0 0 24 24"
                     className="inline-block w-6 h-6 stroke-current"
                   >
+                    <title>Switch to light theme</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -168,6 +174,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
+                  <title>Dashboard</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -187,6 +194,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
+                  <title>New Project</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -206,6 +214,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
+                  <title>Templates</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -225,6 +234,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
+                  <title>Settings</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

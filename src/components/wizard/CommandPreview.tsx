@@ -65,8 +65,8 @@ export default function CommandPreview({
       other: 0,
     };
 
-    modules.forEach((module) => {
-      module.installation.file_operations.forEach((op) => {
+    for (const module of modules) {
+      for (const op of module.installation.file_operations) {
         if (op.operation === "create") {
           operations.create++;
         } else if (op.operation === "modify") {
@@ -74,8 +74,8 @@ export default function CommandPreview({
         } else {
           operations.other++;
         }
-      });
-    });
+      }
+    }
 
     return operations;
   };

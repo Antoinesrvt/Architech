@@ -60,7 +60,9 @@ export default function SettingsPage() {
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-label="Success checkmark"
               >
+                <title>Success checkmark</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -78,9 +80,9 @@ export default function SettingsPage() {
             <h2 className="card-title">Appearance</h2>
 
             <div className="form-control">
-              <label className="label">
+              <div className="label">
                 <span className="label-text">Theme</span>
-              </label>
+              </div>
               <div className="flex gap-4">
                 {[
                   { id: "architech-light", name: "Light", icon: "sun" },
@@ -99,6 +101,21 @@ export default function SettingsPage() {
                         console.error("Failed to set theme:", error);
                       }
                     }}
+                    onKeyDown={async (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        try {
+                          await setTheme(
+                            themeOption.id as "architech" | "architech-light",
+                          );
+                        } catch (error) {
+                          console.error("Failed to set theme:", error);
+                        }
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Select ${themeOption.name} theme`}
                   >
                     <div
                       className={
@@ -112,7 +129,9 @@ export default function SettingsPage() {
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
+                          aria-label="Light theme"
                         >
+                          <title>Light theme</title>
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -127,7 +146,9 @@ export default function SettingsPage() {
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
+                          aria-label="Dark theme"
                         >
+                          <title>Dark theme</title>
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -150,11 +171,12 @@ export default function SettingsPage() {
             <h2 className="card-title">Project Settings</h2>
 
             <div className="form-control w-full mb-4">
-              <label className="label">
+              <label className="label" htmlFor="project-path-input">
                 <span className="label-text">Default Project Location</span>
               </label>
               <div className="flex gap-2">
                 <input
+                  id="project-path-input"
                   type="text"
                   placeholder="/path/to/projects"
                   className="input input-bordered w-full"
@@ -162,6 +184,7 @@ export default function SettingsPage() {
                   onChange={(e) => setTempPath(e.target.value)}
                 />
                 <button
+                  type="button"
                   className="btn btn-outline"
                   onClick={handleBrowseProjectPath}
                 >
@@ -171,10 +194,11 @@ export default function SettingsPage() {
             </div>
 
             <div className="form-control w-full mb-4">
-              <label className="label">
+              <label className="label" htmlFor="editor-command-input">
                 <span className="label-text">Editor Command</span>
               </label>
               <input
+                id="editor-command-input"
                 type="text"
                 placeholder="code"
                 className="input input-bordered w-full"

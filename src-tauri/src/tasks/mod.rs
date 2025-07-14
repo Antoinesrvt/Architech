@@ -19,7 +19,6 @@ mod cleanup;
 
 pub use framework::FrameworkTask;
 pub use module::ModuleTask;
-pub use directory::DirectoryTask;
 pub use cleanup::CleanupTask;
 
 /// Context provided to tasks during execution

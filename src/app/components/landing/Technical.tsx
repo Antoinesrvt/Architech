@@ -298,11 +298,11 @@ const FrameworkShowcase = ({
           <button
             key={category.id}
             type="button"
-            onClick={() =>
+            onClick={() => {
               setActiveCategory(
                 category.id as "all" | "frontend" | "backend" | "fullstack",
-              )
-            }
+              );
+            }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeCategory === category.id
                 ? "bg-purple-700 text-white"

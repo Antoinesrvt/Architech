@@ -1,31 +1,29 @@
 import type { LucideIcon } from "lucide-react";
 import type { RefObject } from "react";
 
-export type SectionRefs = {
-  [key: string]: RefObject<HTMLElement | null>;
-};
+export type SectionRefs = Record<string, RefObject<HTMLElement | null>>;
 
-export type NavItem = {
+export interface NavItem {
   id: string;
   name: string;
-};
+}
 
-export type FeatureHighlight = {
+export interface FeatureHighlight {
   title: string;
   description: string;
   icon: LucideIcon;
-};
+}
 
-export type ProcessStep = {
+export interface ProcessStep {
   title: string;
   description: string;
   icon: LucideIcon;
   color: string;
   bgColor: string;
   borderColor: string;
-};
+}
 
-export type Benefit = {
+export interface Benefit {
   title: string;
   description: string;
   icon: LucideIcon;
@@ -41,23 +39,23 @@ export type Benefit = {
     before: string;
     after: string;
   };
-};
+}
 
-export type TechItem = {
+export interface TechItem {
   name: string;
   icon: LucideIcon;
   score: number;
-};
+}
 
-export type TechnicalComponent = {
+export interface TechnicalComponent {
   title: string;
   description: string;
   icon: LucideIcon;
   color: string;
-};
+}
 
-export type SectionProps = {
+export interface SectionProps {
   sectionRef: RefObject<HTMLElement | null>;
   isVisible?: boolean;
   scrollToSection: (sectionId: string) => void;
-};
+}

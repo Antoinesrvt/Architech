@@ -145,11 +145,11 @@ export function ModulesStep({
       addModule(moduleId);
 
       // Also add all dependencies
-      module.dependencies.forEach((depId) => {
+      for (const depId of module.dependencies) {
         if (!selectedModuleIds.includes(depId)) {
           addModule(depId);
         }
-      });
+      }
     }
   };
 

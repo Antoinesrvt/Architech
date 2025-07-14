@@ -19,6 +19,14 @@ export default function FrameworkCard({
         selected && "ring-2 ring-primary",
       )}
       onClick={() => onSelect(framework)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onSelect(framework);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`Select ${framework.name} framework`}
     >
       <div className="card-body">
         <h3 className="card-title flex items-center">

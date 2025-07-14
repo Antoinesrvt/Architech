@@ -17,7 +17,7 @@ interface ModalState {
     cancelText?: string;
     variant?: "default" | "danger";
   };
-};
+}
 
 let modalState: ModalState = { isOpen: false };
 let modalStateListeners: Array<(state: ModalState) => void> = [];
@@ -38,9 +38,9 @@ export const getModalState = () => modalState;
 // Update modal state
 const updateModalState = (newState: Partial<ModalState>) => {
   modalState = { ...modalState, ...newState };
-  modalStateListeners.forEach((listener) => {
+  for (const listener of modalStateListeners) {
     listener(modalState);
-  });
+  }
 };
 
 /**

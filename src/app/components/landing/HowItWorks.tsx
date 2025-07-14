@@ -31,7 +31,7 @@ export const HowItWorks = ({
   isVisible,
   scrollToSection,
 }: SectionProps) => {
-  const { activeStep, setActiveStep } = useStepAnimation(isVisible || false);
+  const { activeStep, setActiveStep } = useStepAnimation(isVisible ?? false);
 
   return (
     <SectionWrapper
@@ -110,7 +110,7 @@ const ProcessSteps = ({
       <div
         className="hidden md:block absolute top-16 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-green-500 z-0"
         aria-hidden="true"
-      ></div>
+      />
 
       {steps.map((step, index) => {
         const isActive = activeStep === index;
@@ -118,7 +118,7 @@ const ProcessSteps = ({
 
         return (
           <div
-            key={`step-${step.title.toLowerCase().replace(/\s+/g, '-')}`}
+            key={`step-${step.title.toLowerCase().replace(/\s+/g, "-")}`}
             className={`relative z-10 transition-all duration-500 transform ${
               isVisible
                 ? "opacity-100 translate-y-0"
@@ -127,13 +127,12 @@ const ProcessSteps = ({
             style={{ transitionDelay: `${index * 100}ms` }}
             aria-hidden={!isVisible}
           >
-            <div
+            <section
               className={`p-6 rounded-xl ${step.bgColor} border ${
                 step.borderColor
               } h-full transition-all duration-300 ${
                 isActive ? "shadow-lg shadow-blue-900/20" : ""
               }`}
-              role="region"
               aria-label={`Step ${index + 1}: ${step.title}`}
               tabIndex={isActive ? 0 : -1}
             >
@@ -164,7 +163,7 @@ const ProcessSteps = ({
                 {step.title}
               </h3>
               <p className="text-gray-300 text-center">{step.description}</p>
-            </div>
+            </section>
 
             {/* Connection arrow */}
             {index < 2 && (
@@ -244,7 +243,7 @@ const WorkflowDemo = ({
       {/* Blurred gradient decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -left-32 w-64 h-64 bg-blue-900/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-900/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-900/20 rounded-full blur-3xl" />
       </div>
 
       {/* Browser chrome */}
@@ -270,7 +269,9 @@ const WorkflowDemo = ({
                   <button
                     key={`workflow-step-${step}`}
                     type="button"
-                    onClick={() => setActiveStep(step)}
+                    onClick={() => {
+                      setActiveStep(step);
+                    }}
                     className={`w-full flex items-center p-3 rounded-lg transition-all ${
                       activeStep === step
                         ? "bg-blue-900/30 border border-blue-800"
@@ -331,7 +332,7 @@ const WorkflowDemo = ({
                       <p className="text-gray-300 text-sm">
                         {typedText}
                         {isTyping && (
-                          <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-blink"></span>
+                          <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-blink" />
                         )}
                       </p>
                     </div>
@@ -349,7 +350,7 @@ const WorkflowDemo = ({
                           "Performance",
                         ].map((tag, i) => (
                           <span
-                            key={`tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                            key={`tag-${tag.toLowerCase().replace(/\s+/g, "-")}`}
                             className="px-2 py-1 bg-gray-800 text-gray-400 rounded text-xs"
                           >
                             {tag}
@@ -422,7 +423,7 @@ const WorkflowDemo = ({
                         const TechIcon = tech.icon;
                         return (
                           <div
-                            key={`tech-${tech.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                            key={`tech-${tech.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
                             className="flex items-start p-3 bg-gray-900/50 rounded-lg border border-gray-800"
                           >
                             <div className="w-8 h-8 rounded-full bg-purple-900/50 flex items-center justify-center mr-3 flex-shrink-0">
@@ -554,10 +555,11 @@ const WorkflowDemo = ({
                         ? "bg-green-600 hover:bg-green-700"
                         : "bg-blue-600 hover:bg-blue-700"
                   }`}
-                  onClick={() =>
-                    !isTyping &&
-                    setActiveStep((prev) => (prev < 2 ? prev + 1 : 0))
-                  }
+                  onClick={() => {
+                    if (!isTyping) {
+                      setActiveStep((prev) => (prev < 2 ? prev + 1 : 0));
+                    }
+                  }}
                   disabled={isTyping}
                 >
                   {activeStep === 2 ? "Start Again" : "Continue"}
@@ -725,9 +727,10 @@ const OutputPreview = ({
                   <div className="text-green-400">
                     // Authentication API routes
                   </div>
-                  <div>import NextAuth from "next-auth/next";</div>
+                  <div>import NextAuth from &quot;next-auth/next&quot;;</div>
                   <div>
-                    import {"{"} authOptions {"}"} from "@/lib/auth";
+                    import {"{}"} authOptions {"{}"} from
+                    &quot;@/lib/auth&quot;;
                   </div>
                   <div className="text-purple-400">
                     export default NextAuth(authOptions);
@@ -737,7 +740,7 @@ const OutputPreview = ({
                     // Product API endpoints
                   </div>
                   <div>
-                    import {"{"} db {"}"} from "@/lib/db";
+                    import {"{}"} db {"{}"} from &quot;@/lib/db&quot;;
                   </div>
                   <div className="text-blue-400">
                     export async function GET() {"{"}
@@ -808,7 +811,7 @@ const KeyFeatures = ({ isVisible }: { isVisible?: boolean }) => {
 
           return (
             <div
-              key={`feature-${feature.title.toLowerCase().replace(/\s+/g, '-')}`}
+              key={`feature-${feature.title.toLowerCase().replace(/\s+/g, "-")}`}
               className={`p-6 rounded-xl border border-gray-800 ${feature.bgColor} transition-all duration-700 ${
                 isVisible
                   ? "opacity-100 transform translate-y-0"

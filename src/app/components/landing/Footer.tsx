@@ -8,7 +8,6 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
   return (
     <footer
       className="py-12 bg-gray-950 border-t border-gray-900"
-      role="contentinfo"
       aria-label="Site footer"
     >
       <div className="max-w-6xl mx-auto px-4">
@@ -41,7 +40,9 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
                 <li key={link.id}>
                   <button
                     type="button"
-                    onClick={() => { scrollToSection(link.id); }}
+                    onClick={() => {
+                      scrollToSection(link.id);
+                    }}
                     className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-950 rounded-md px-2 py-1"
                     aria-label={`Go to ${link.label} section`}
                   >

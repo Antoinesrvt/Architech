@@ -52,7 +52,7 @@ export default function ModulesPage() {
       }
     }
 
-    fetchData();
+    void fetchData();
   }, [frameworks.length, modules.length, setFrameworks, setModules]);
 
   // Enhance modules with usage data
@@ -63,22 +63,22 @@ export default function ModulesPage() {
     const usageMap = new Map<string, Set<string>>();
 
     // Populate the map
-    frameworks.forEach((framework) => {
-      framework.compatible_modules.forEach((moduleId: string) => {
+    for (const framework of frameworks) {
+      for (const moduleId of framework.compatible_modules) {
         if (!usageMap.has(moduleId)) {
           usageMap.set(moduleId, new Set());
         }
         usageMap.get(moduleId)?.add(framework.id);
-      });
-    });
+      }
+    }
 
     // Create enhanced modules
-    modules.forEach((module) => {
+    for (const moduleItem of modules) {
       result.push({
-        ...module,
-        uses: usageMap.get(module.id) || new Set(),
+        ...moduleItem,
+        uses: usageMap.get(moduleItem.id) || new Set(),
       });
-    });
+    }
 
     return result;
   }, [frameworks, modules]);
@@ -86,7 +86,7 @@ export default function ModulesPage() {
   // Extract unique tags from all modules
   const tags = useMemo(() => {
     return Array.from(
-      new Set(enhancedModules.flatMap((module) => module.tags || [])),
+      new Set(enhancedModules.flatMap((module) => module.tags ?? [])),
     ).sort();
   }, [enhancedModules]);
 
@@ -125,7 +125,9 @@ export default function ModulesPage() {
             fill="none"
             viewBox="0 0 24 24"
             className="stroke-info shrink-0 w-6 h-6"
+            aria-label="Information icon"
           >
+            <title>Information icon</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -176,6 +178,7 @@ export default function ModulesPage() {
             {tags.map((tag) => (
               <button
                 key={tag}
+                type="button"
                 className={`badge badge-lg ${selectedTag === tag ? "badge-primary" : "badge-outline"}`}
                 onClick={() => {
                   handleTagClick(tag);
@@ -199,7 +202,9 @@ export default function ModulesPage() {
               className="stroke-current shrink-0 h-6 w-6"
               fill="none"
               viewBox="0 0 24 24"
+              aria-label="Error icon"
             >
+              <title>Error icon</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -216,7 +221,9 @@ export default function ModulesPage() {
               fill="none"
               viewBox="0 0 24 24"
               className="stroke-info shrink-0 w-6 h-6"
+              aria-label="Information icon"
             >
+              <title>Information icon</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -233,7 +240,9 @@ export default function ModulesPage() {
               fill="none"
               viewBox="0 0 24 24"
               className="stroke-info shrink-0 w-6 h-6"
+              aria-label="Information icon"
             >
+              <title>Information icon</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -246,12 +255,14 @@ export default function ModulesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredModules.map((module) => (
-              <div
+              <button
                 key={module.id}
-                className="card bg-base-100 border border-base-300 hover:border-primary cursor-pointer transition-all hover:shadow-md"
+                type="button"
+                className="card bg-base-100 border border-base-300 hover:border-primary cursor-pointer transition-all hover:shadow-md text-left w-full"
                 onClick={() => {
                   handleModuleClick(module.id);
                 }}
+                aria-label={`View details for ${module.name} module`}
               >
                 <figure className="h-40 bg-gradient-to-br from-primary/5 to-secondary/5">
                   {module.screenshot ? (
@@ -269,7 +280,9 @@ export default function ModulesPage() {
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
+                          aria-label="Module placeholder"
                         >
+                          <title>Module placeholder</title>
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -306,7 +319,7 @@ export default function ModulesPage() {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}

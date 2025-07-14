@@ -1,17 +1,19 @@
 import { PlayCircle } from "lucide-react";
 import React from "react";
 
-type Props = {
+interface Props {
   setShowDemo: (show: boolean) => void;
-};
+}
 const VideoDemo = ({ setShowDemo }: Props) => {
   return (
     <div className="mt-10 w-full max-w-4xl relative group">
       <div
         className="w-full aspect-video rounded-lg overflow-hidden border border-gray-700 bg-gray-900/60 backdrop-blur-sm cursor-pointer hover:border-purple-500 transition-colors shadow-2xl transform hover:scale-[1.01] hover:shadow-purple-700/20 duration-300"
-        onClick={() => setShowDemo(true)}
+        onClick={() => {
+          setShowDemo(true);
+        }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setShowDemo(true);
           }
@@ -55,7 +57,7 @@ const VideoDemo = ({ setShowDemo }: Props) => {
                 <div className="w-1/4 h-full bg-gray-900 rounded-md p-3">
                   <div className="w-full h-8 bg-purple-900/30 rounded-md mb-3" />
                   <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
+                    {Array.from({ length: 5 }, (_, i) => (
                       <div
                         key={`skeleton-line-${i}`}
                         className="w-full h-6 bg-gray-800 rounded-md"
@@ -69,7 +71,7 @@ const VideoDemo = ({ setShowDemo }: Props) => {
                   <div className="h-10 w-1/2 bg-purple-900/40 rounded-md" />
                   <div className="flex-1 bg-gray-900 rounded-md p-3 flex flex-col">
                     <div className="grid grid-cols-3 gap-2 mb-3">
-                      {[...Array(3)].map((_, i) => (
+                      {Array.from({ length: 3 }, (_, i) => (
                         <div
                           key={`grid-item-${i}`}
                           className={`h-8 rounded-md ${

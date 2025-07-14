@@ -29,9 +29,9 @@ export default async function ModuleDetailPage({
   try {
     // This will be run at build time for static export
     const modules = await frameworkService.getModules();
-    const module = modules.find((m) => m.id === moduleId);
+    const moduleData = modules.find((m) => m.id === moduleId);
 
-    if (!module) {
+    if (!moduleData) {
       notFound();
     }
 
@@ -44,7 +44,7 @@ export default async function ModuleDetailPage({
             </div>
           }
         >
-          <ModuleDetailClient module={module} />
+          <ModuleDetailClient module={moduleData} />
         </Suspense>
       </MainLayout>
     );

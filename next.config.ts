@@ -7,13 +7,13 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   distDir: "dist",
-  //Maybe not usefull: 
+  //Maybe not usefull:
   // This enables static path generation for modules
-  trailingSlash: true, 
+  trailingSlash: true,
   // Disable type checking in production build to speed up the build process
   typescript: {
     // Don't run type checking during production build
-    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+    ignoreBuildErrors: process.env.NODE_ENV === "production",
   },
 };
 

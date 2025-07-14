@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { ConfirmModal } from '@/components/ui';
+import { ConfirmModal } from "@/components/ui";
 import {
-  subscribeToModalState,
   getModalState,
+  handleModalCancel,
   handleModalConfirm,
-  handleModalCancel
-} from '@/lib/utils/dialog';
+  subscribeToModalState,
+} from "@/lib/utils/dialog";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Global modal provider that handles UI modals triggered by dialog utilities

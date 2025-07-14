@@ -1,26 +1,39 @@
-import { Github, Twitter, Mail, ClipboardCheck, Zap, Rocket } from 'lucide-react';
-import { SectionProps } from './types';
-import { useState } from 'react';
-import { Testimonials } from './Testimonials';
-import { testimonials } from './testimonialData';
+import {
+  ClipboardCheck,
+  Github,
+  Mail,
+  Rocket,
+  Twitter,
+  Zap,
+} from "lucide-react";
+import { useState } from "react";
+import { Testimonials } from "./Testimonials";
+import { testimonials } from "./testimonialData";
+import type { SectionProps } from "./types";
 
 export const EarlyAccess = ({ sectionRef, isVisible }: SectionProps) => {
-  const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'success'>('idle');
-  
+  const [submissionState, setSubmissionState] = useState<
+    "idle" | "submitting" | "success"
+  >("idle");
+
   // Simulate form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmissionState('submitting');
-    
+    setSubmissionState("submitting");
+
     // Simulate API call delay
     setTimeout(() => {
-      setSubmissionState('success');
+      setSubmissionState("success");
     }, 1500);
   };
-  
+
   // Select testimonials for this section
-  const featuredTestimonials = [testimonials[1], testimonials[4], testimonials[5]];
-  
+  const featuredTestimonials = [
+    testimonials[1],
+    testimonials[4],
+    testimonials[5],
+  ];
+
   return (
     <section
       ref={sectionRef}
@@ -41,7 +54,8 @@ export const EarlyAccess = ({ sectionRef, isVisible }: SectionProps) => {
                 </span>
               </h2>
               <p className="text-xl text-gray-300">
-                Join the early access program and transform your development process today.
+                Join the early access program and transform your development
+                process today.
               </p>
             </div>
 
@@ -53,67 +67,73 @@ export const EarlyAccess = ({ sectionRef, isVisible }: SectionProps) => {
                   : "opacity-0 transform translate-y-16"
               }`}
             >
-              {submissionState === 'success' ? (
+              {submissionState === "success" ? (
                 <SuccessMessage />
               ) : (
-                <EarlyAccessForm 
-                  onSubmit={handleSubmit} 
-                  isSubmitting={submissionState === 'submitting'} 
+                <EarlyAccessForm
+                  onSubmit={handleSubmit}
+                  isSubmitting={submissionState === "submitting"}
                 />
               )}
             </div>
           </div>
-          
+
           {/* Right column: Testimonials and stats */}
-          <div className={`space-y-8 transition-all duration-1000 delay-300 ${
-            isVisible
-              ? "opacity-100 transform translate-y-0"
-              : "opacity-0 transform translate-y-16"
-          }`}>
+          <div
+            className={`space-y-8 transition-all duration-1000 delay-300 ${
+              isVisible
+                ? "opacity-100 transform translate-y-0"
+                : "opacity-0 transform translate-y-16"
+            }`}
+          >
             {/* Featured testimonial */}
-            <Testimonials 
-              testimonials={featuredTestimonials} 
+            <Testimonials
+              testimonials={featuredTestimonials}
               variant="purple"
             />
-            
+
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-4">
-              <StatCard 
-                icon={ClipboardCheck} 
-                value="94%" 
-                label="Satisfied Beta Users" 
+              <StatCard
+                icon={ClipboardCheck}
+                value="94%"
+                label="Satisfied Beta Users"
               />
-              <StatCard 
-                icon={Zap} 
-                value="30+" 
-                label="Hours Saved Per Project" 
+              <StatCard
+                icon={Zap}
+                value="30+"
+                label="Hours Saved Per Project"
               />
             </div>
-            
+
             {/* Limited spots indicator */}
             <div className="bg-gray-900/70 backdrop-blur-sm border border-purple-900/30 rounded-xl p-6">
               <h3 className="text-lg font-medium text-white mb-4 flex items-center">
                 <Rocket className="mr-2 text-purple-400" size={20} />
                 Early Access Program
               </h3>
-              
+
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-300">Spots Remaining</span>
                   <span className="text-purple-300 font-medium">48 of 250</span>
                 </div>
                 <div className="w-full bg-gray-800 rounded-full h-2.5">
-                  <div className="bg-gradient-to-r from-purple-600 to-blue-500 h-2.5 rounded-full" style={{ width: '81%' }}></div>
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-blue-500 h-2.5 rounded-full"
+                    style={{ width: "81%" }}
+                  />
                 </div>
               </div>
-              
+
               <div className="text-gray-400 text-sm">
-                Early access members receive exclusive benefits, including premium support and lifetime discounts on future plans.
+                Early access members receive exclusive benefits, including
+                premium support and lifetime discounts on future plans.
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Additional call to action */}
         <div className="mt-16 text-gray-300 text-center">
           <p>Want to learn more before signing up?</p>
@@ -211,7 +231,7 @@ const EarlyAccessForm = ({ onSubmit, isSubmitting }: EarlyAccessFormProps) => {
           rows={3}
           className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="Tell us about your development challenges..."
-        ></textarea>
+        />
       </div>
 
       <button
@@ -219,13 +239,29 @@ const EarlyAccessForm = ({ onSubmit, isSubmitting }: EarlyAccessFormProps) => {
         disabled={isSubmitting}
         className={`w-full px-6 py-4 bg-gradient-to-r from-purple-700 to-blue-700 hover:from-purple-600 hover:to-blue-600 
           text-white font-medium rounded-lg transition-all shadow-lg shadow-purple-900/40 relative overflow-hidden
-          ${isSubmitting ? 'cursor-wait' : ''}`}
+          ${isSubmitting ? "cursor-wait" : ""}`}
       >
         {isSubmitting ? (
           <span className="flex items-center justify-center">
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <svg
+              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
             </svg>
             Processing...
           </span>
@@ -236,12 +272,25 @@ const EarlyAccessForm = ({ onSubmit, isSubmitting }: EarlyAccessFormProps) => {
 
       <div className="text-gray-400 text-sm flex items-start">
         <div className="mr-2 mt-0.5 text-purple-400">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            />
           </svg>
         </div>
         <div>
-          Only <span className="text-purple-300 font-medium">48</span> early access spots remain. Members receive premium support and lifetime benefits.
+          Only <span className="text-purple-300 font-medium">48</span> early
+          access spots remain. Members receive premium support and lifetime
+          benefits.
         </div>
       </div>
     </form>
@@ -252,17 +301,32 @@ const SuccessMessage = () => {
   return (
     <div className="text-center py-8">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-900/30 text-green-400 mb-6">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-8 w-8"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
         </svg>
       </div>
-      <h3 className="text-2xl font-bold text-white mb-2">You're on the list!</h3>
+      <h3 className="text-2xl font-bold text-white mb-2">
+        You're on the list!
+      </h3>
       <p className="text-gray-300 mb-8">
-        We've received your request for early access. You'll be among the first to know when The Architect is ready.
+        We've received your request for early access. You'll be among the first
+        to know when The Architect is ready.
       </p>
       <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
         <p className="text-gray-300 text-sm">
-          Watch your inbox for a confirmation email with exclusive early access details.
+          Watch your inbox for a confirmation email with exclusive early access
+          details.
         </p>
       </div>
     </div>
@@ -287,4 +351,4 @@ const StatCard = ({ icon: Icon, value, label }: StatCardProps) => {
       </div>
     </div>
   );
-}; 
+};

@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useFrameworkStore } from '@/lib/store/framework-store';
-import { useProjectStore } from '@/lib/store/project-store';
-import { frameworkService } from '@/lib/api';
+import { frameworkService } from "@/lib/api";
+import { useFrameworkStore } from "@/lib/store/framework-store";
+import { useProjectStore } from "@/lib/store/project-store";
+import { useEffect, useState } from "react";
 
 export function useFrameworkSelection() {
   const { frameworks, setFrameworks } = useFrameworkStore();
-  const { selectedFrameworkId, setSelectedFramework, saveDraft } = useProjectStore();
-  const [selectedType, setSelectedType] = useState<string>('web');
+  const { selectedFrameworkId, setSelectedFramework, saveDraft } =
+    useProjectStore();
+  const [selectedType, setSelectedType] = useState<string>("web");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Get the selected framework
   const selectedFramework = selectedFrameworkId
-    ? frameworks.find(f => f.id === selectedFrameworkId)
+    ? frameworks.find((f) => f.id === selectedFrameworkId)
     : null;
 
   // Update selected type based on selected framework
@@ -23,7 +24,9 @@ export function useFrameworkSelection() {
   }, [selectedFramework]);
 
   // Filter frameworks by type
-  const frameworksByType = frameworks.filter(framework => framework.type === selectedType);
+  const frameworksByType = frameworks.filter(
+    (framework) => framework.type === selectedType,
+  );
 
   // Load frameworks
   const loadFrameworks = async () => {
@@ -36,7 +39,7 @@ export function useFrameworkSelection() {
       const loadedFrameworks = await frameworkService.getFrameworks();
       await setFrameworks(loadedFrameworks);
     } catch (err) {
-      setError('Failed to load frameworks');
+      setError("Failed to load frameworks");
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,7 +57,7 @@ export function useFrameworkSelection() {
       await setSelectedFramework(frameworkId);
       // Draft is automatically saved by the setSelectedFramework method
     } catch (error) {
-      console.error('Failed to select framework:', error);
+      console.error("Failed to select framework:", error);
     }
   };
 

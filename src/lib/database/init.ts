@@ -1,4 +1,4 @@
-import Database from '@tauri-apps/plugin-sql';
+import Database from "@tauri-apps/plugin-sql";
 
 export interface DatabaseTables {
   recent_projects: {
@@ -9,7 +9,7 @@ export interface DatabaseTables {
     created_at: string;
     last_opened_at: string;
   };
-  
+
   project_drafts: {
     id: string;
     name: string;
@@ -24,7 +24,7 @@ export interface DatabaseTables {
     generation_progress?: number;
     generation_error?: string;
   };
-  
+
   frameworks: {
     id: string;
     name: string;
@@ -37,7 +37,7 @@ export interface DatabaseTables {
     directory_structure: string; // JSON string
     logo?: string;
   };
-  
+
   modules: {
     id: string;
     name: string;
@@ -48,7 +48,7 @@ export interface DatabaseTables {
     file_operations: string; // JSON string
     options: string; // JSON string
   };
-  
+
   favorite_frameworks: {
     id: string;
     framework_id: string;
@@ -64,14 +64,14 @@ export async function initializeDatabase(): Promise<Database> {
   }
 
   try {
-    dbInstance = await Database.load('sqlite:architech.db');
-    
+    dbInstance = await Database.load("sqlite:architech.db");
+
     // Create tables if they don't exist
     await createTables(dbInstance);
-    
+
     return dbInstance;
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error("Failed to initialize database:", error);
     throw error;
   }
 }
@@ -154,7 +154,7 @@ async function createTables(db: Database): Promise<void> {
     )
   `);
 
-  console.log('Database tables initialized successfully');
+  console.log("Database tables initialized successfully");
 }
 
 export async function closeDatabase(): Promise<void> {

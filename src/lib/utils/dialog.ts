@@ -1,7 +1,10 @@
-'use client';
+"use client";
 
-import { message as tauriMessage, confirm as tauriConfirm } from '@tauri-apps/plugin-dialog';
-import { isTauri } from '@tauri-apps/api/core';
+import { isTauri } from "@tauri-apps/api/core";
+import {
+  confirm as tauriConfirm,
+  message as tauriMessage,
+} from "@tauri-apps/plugin-dialog";
 
 // Modal state management for UI modals
 type ModalState = {
@@ -12,7 +15,7 @@ type ModalState = {
     message: string;
     confirmText?: string;
     cancelText?: string;
-    variant?: 'default' | 'danger';
+    variant?: "default" | "danger";
   };
 };
 
@@ -20,10 +23,12 @@ let modalState: ModalState = { isOpen: false };
 let modalStateListeners: Array<(state: ModalState) => void> = [];
 
 // Subscribe to modal state changes
-export const subscribeToModalState = (listener: (state: ModalState) => void) => {
+export const subscribeToModalState = (
+  listener: (state: ModalState) => void,
+) => {
   modalStateListeners.push(listener);
   return () => {
-    modalStateListeners = modalStateListeners.filter(l => l !== listener);
+    modalStateListeners = modalStateListeners.filter((l) => l !== listener);
   };
 };
 
@@ -33,7 +38,7 @@ export const getModalState = () => modalState;
 // Update modal state
 const updateModalState = (newState: Partial<ModalState>) => {
   modalState = { ...modalState, ...newState };
-  modalStateListeners.forEach(listener => listener(modalState));
+  modalStateListeners.forEach((listener) => listener(modalState));
 };
 
 /**
@@ -45,24 +50,27 @@ export async function confirmDialog(
     title?: string;
     confirmText?: string;
     cancelText?: string;
-    variant?: 'default' | 'danger';
+    variant?: "default" | "danger";
     useNativeDialog?: boolean;
-  } = {}
+  } = {},
 ): Promise<boolean> {
   const {
-    title = 'Confirm',
-    confirmText = 'Confirm',
-    cancelText = 'Cancel',
-    variant = 'default',
-    useNativeDialog = false
+    title = "Confirm",
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+    variant = "default",
+    useNativeDialog = false,
   } = options;
 
   // Use native Tauri dialog if explicitly requested or if not in browser
-  if (useNativeDialog || (isTauri() && typeof window === 'undefined')) {
+  if (useNativeDialog || (isTauri() && typeof window === "undefined")) {
     try {
-      return await tauriConfirm(message, { title, kind: variant === 'danger' ? 'warning' : 'info' });
+      return await tauriConfirm(message, {
+        title,
+        kind: variant === "danger" ? "warning" : "info",
+      });
     } catch (error) {
-      console.error('Tauri dialog error:', error);
+      console.error("Tauri dialog error:", error);
       // Fallback to browser confirm
       return window.confirm(`${title}\n\n${message}`);
     }
@@ -78,8 +86,8 @@ export async function confirmDialog(
         message,
         confirmText,
         cancelText,
-        variant
-      }
+        variant,
+      },
     });
   });
 }
@@ -111,11 +119,11 @@ export async function messageDialog(
   message: string,
   options: {
     title?: string;
-    type?: 'info' | 'warning' | 'error';
+    type?: "info" | "warning" | "error";
     useNativeDialog?: boolean;
-  } = {}
+  } = {},
 ): Promise<void> {
-  const { title = 'Message', type = 'info', useNativeDialog = false } = options;
+  const { title = "Message", type = "info", useNativeDialog = false } = options;
 
   // Use native Tauri dialog if explicitly requested
   if (useNativeDialog) {
@@ -123,7 +131,7 @@ export async function messageDialog(
       await tauriMessage(message, { title, kind: type });
       return;
     } catch (error) {
-      console.error('Tauri dialog error:', error);
+      console.error("Tauri dialog error:", error);
       // Fallback to browser alert
       window.alert(`${title}\n\n${message}`);
       return;
@@ -132,10 +140,10 @@ export async function messageDialog(
 
   // For UI implementation, you would typically use a toast notification
   // This is a simple fallback - in a real app, integrate with your toast system
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     // Try to use toast if available (you can integrate with your toast system here)
     console.info(`${title}: ${message}`);
-    
+
     // For now, use browser alert as fallback
     window.alert(`${title}\n\n${message}`);
   }

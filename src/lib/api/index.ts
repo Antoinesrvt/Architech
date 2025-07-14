@@ -1,5 +1,5 @@
-import { LocalFrameworkService } from './local';
-import { FrameworkService } from './types';
+import { LocalFrameworkService } from "./local";
+import type { FrameworkService } from "./types";
 
 // Factory function to get the appropriate service implementation
 // based on environment or configuration
@@ -14,4 +14,4 @@ export const frameworkService = getFrameworkService();
 // For backward compatibility
 export const getApiService = getFrameworkService;
 
-export * from './types'; 
+export * from "./types";

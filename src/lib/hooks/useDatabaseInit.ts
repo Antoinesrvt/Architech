@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { initializeDatabase } from '@/lib/database/init';
-import { useProjectStore } from '@/lib/store/project-store-sqlite';
-import { useFrameworkStore } from '@/lib/store/framework-store-sqlite';
+import { initializeDatabase } from "@/lib/database/init";
+import { useFrameworkStore } from "@/lib/store/framework-store-sqlite";
+import { useProjectStore } from "@/lib/store/project-store-sqlite";
+import { useEffect, useState } from "react";
 
 interface DatabaseInitState {
   isInitialized: boolean;
@@ -13,7 +13,7 @@ export function useDatabaseInit() {
   const [state, setState] = useState<DatabaseInitState>({
     isInitialized: false,
     isLoading: true,
-    error: null
+    error: null,
   });
 
   const projectStore = useProjectStore();
@@ -24,7 +24,7 @@ export function useDatabaseInit() {
 
     const initializeApp = async () => {
       try {
-        setState(prev => ({ ...prev, isLoading: true, error: null }));
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
         // Initialize database
         await initializeDatabase();
@@ -35,23 +35,26 @@ export function useDatabaseInit() {
           projectStore.loadDrafts(),
           frameworkStore.loadFrameworks(),
           frameworkStore.loadModules(),
-          frameworkStore.loadFavorites()
+          frameworkStore.loadFavorites(),
         ]);
 
         if (isMounted) {
           setState({
             isInitialized: true,
             isLoading: false,
-            error: null
+            error: null,
           });
         }
       } catch (error) {
-        console.error('Failed to initialize database:', error);
+        console.error("Failed to initialize database:", error);
         if (isMounted) {
           setState({
             isInitialized: false,
             isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to initialize database'
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to initialize database",
           });
         }
       }

@@ -1,7 +1,7 @@
-import { getDatabase } from './init';
-import { RecentProject, ProjectDraft } from '../store/project-store';
-import { Framework, Module } from '../store/framework-store';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
+import type { Framework, Module } from "../store/framework-store";
+import type { ProjectDraft, RecentProject } from "../store/project-store";
+import { getDatabase } from "./init";
 
 export interface LocalStorageData {
   projects?: {
@@ -31,43 +31,43 @@ export function exportLocalStorageData(): LocalStorageData {
 
   try {
     // Export project data
-    const projectData = localStorage.getItem('architech-projects');
+    const projectData = localStorage.getItem("architech-projects");
     if (projectData) {
       const parsed = JSON.parse(projectData);
       data.projects = {
         recentProjects: parsed.state?.recentProjects || [],
         drafts: parsed.state?.drafts || [],
-        currentDraftId: parsed.state?.currentDraftId || null
+        currentDraftId: parsed.state?.currentDraftId || null,
       };
     }
 
     // Export framework data
-    const frameworkData = localStorage.getItem('architech-frameworks');
+    const frameworkData = localStorage.getItem("architech-frameworks");
     if (frameworkData) {
       const parsed = JSON.parse(frameworkData);
       data.frameworks = {
         frameworks: parsed.state?.frameworks || [],
         modules: parsed.state?.modules || [],
-        favoriteFrameworks: parsed.state?.favoriteFrameworks || []
+        favoriteFrameworks: parsed.state?.favoriteFrameworks || [],
       };
     }
 
     // Export theme data (from useTheme hook)
-    const theme = localStorage.getItem('theme');
+    const theme = localStorage.getItem("theme");
     if (theme) {
       data.settings = {
         theme,
-        defaultProjectPath: '',
-        editorCommand: '',
+        defaultProjectPath: "",
+        editorCommand: "",
         autoOpenProjectAfterGeneration: false,
-        useGit: true
+        useGit: true,
       };
     }
 
-    console.log('Exported localStorage data:', data);
+    console.log("Exported localStorage data:", data);
     return data;
   } catch (error) {
-    console.error('Failed to export localStorage data:', error);
+    console.error("Failed to export localStorage data:", error);
     return {};
   }
 }
@@ -75,7 +75,9 @@ export function exportLocalStorageData(): LocalStorageData {
 /**
  * Import data into SQLite database
  */
-export async function importDataToSQLite(data: LocalStorageData): Promise<void> {
+export async function importDataToSQLite(
+  data: LocalStorageData,
+): Promise<void> {
   const db = await getDatabase();
 
   try {
@@ -92,11 +94,13 @@ export async function importDataToSQLite(data: LocalStorageData): Promise<void> 
             project.path,
             project.framework,
             project.createdAt,
-            project.lastOpenedAt
-          ]
+            project.lastOpenedAt,
+          ],
         );
       }
-      console.log(`Imported ${data.projects.recentProjects.length} recent projects`);
+      console.log(
+        `Imported ${data.projects.recentProjects.length} recent projects`,
+      );
     }
 
     // Import project drafts
@@ -119,8 +123,8 @@ export async function importDataToSQLite(data: LocalStorageData): Promise<void> 
             draft.generationId || null,
             draft.generationStatus || null,
             draft.generationProgress || null,
-            draft.generationError || null
-          ]
+            draft.generationError || null,
+          ],
         );
       }
       console.log(`Imported ${data.projects.drafts.length} project drafts`);
@@ -143,8 +147,8 @@ export async function importDataToSQLite(data: LocalStorageData): Promise<void> 
             JSON.stringify(framework.cli),
             JSON.stringify(framework.compatible_modules),
             JSON.stringify(framework.directory_structure),
-            framework.logo || null
-          ]
+            framework.logo || null,
+          ],
         );
       }
       console.log(`Imported ${data.frameworks.frameworks.length} frameworks`);
@@ -165,8 +169,8 @@ export async function importDataToSQLite(data: LocalStorageData): Promise<void> 
             module.category,
             JSON.stringify(module.dependencies),
             JSON.stringify(module.file_operations || []),
-            JSON.stringify(module.options || [])
-          ]
+            JSON.stringify(module.options || []),
+          ],
         );
       }
       console.log(`Imported ${data.frameworks.modules.length} modules`);
@@ -178,15 +182,17 @@ export async function importDataToSQLite(data: LocalStorageData): Promise<void> 
         await db.execute(
           `INSERT OR IGNORE INTO favorite_frameworks (id, framework_id, created_at) 
            VALUES (?, ?, ?)`,
-          [uuidv4(), frameworkId, new Date().toISOString()]
+          [uuidv4(), frameworkId, new Date().toISOString()],
         );
       }
-      console.log(`Imported ${data.frameworks.favoriteFrameworks.length} favorite frameworks`);
+      console.log(
+        `Imported ${data.frameworks.favoriteFrameworks.length} favorite frameworks`,
+      );
     }
 
-    console.log('Data migration to SQLite completed successfully');
+    console.log("Data migration to SQLite completed successfully");
   } catch (error) {
-    console.error('Failed to import data to SQLite:', error);
+    console.error("Failed to import data to SQLite:", error);
     throw error;
   }
 }
@@ -196,17 +202,17 @@ export async function importDataToSQLite(data: LocalStorageData): Promise<void> 
  */
 export async function migrateToSQLite(): Promise<void> {
   try {
-    console.log('Starting migration from localStorage to SQLite...');
-    
+    console.log("Starting migration from localStorage to SQLite...");
+
     // Export existing data
     const data = exportLocalStorageData();
-    
+
     // Import to SQLite
     await importDataToSQLite(data);
-    
-    console.log('Migration completed successfully!');
+
+    console.log("Migration completed successfully!");
   } catch (error) {
-    console.error('Migration failed:', error);
+    console.error("Migration failed:", error);
     throw error;
   }
 }
@@ -216,11 +222,11 @@ export async function migrateToSQLite(): Promise<void> {
  */
 export function clearLocalStorageData(): void {
   try {
-    localStorage.removeItem('architech-projects');
-    localStorage.removeItem('architech-frameworks');
-    localStorage.removeItem('theme'); // This will be handled by settings store
-    console.log('localStorage data cleared');
+    localStorage.removeItem("architech-projects");
+    localStorage.removeItem("architech-frameworks");
+    localStorage.removeItem("theme"); // This will be handled by settings store
+    console.log("localStorage data cleared");
   } catch (error) {
-    console.error('Failed to clear localStorage:', error);
+    console.error("Failed to clear localStorage:", error);
   }
 }

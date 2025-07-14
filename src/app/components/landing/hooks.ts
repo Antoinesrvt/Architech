@@ -1,5 +1,5 @@
-import { useState, useEffect, RefObject } from 'react';
-import { SectionRefs } from './types';
+import { RefObject, useEffect, useState } from "react";
+import type { SectionRefs } from "./types";
 
 export const useScrollVisibility = (sectionRefs: SectionRefs) => {
   const [scrolled, setScrolled] = useState(false);
@@ -51,22 +51,25 @@ export const useScrollVisibility = (sectionRefs: SectionRefs) => {
     isHowItWorksVisible,
     isBenefitsVisible,
     isTechnicalVisible,
-    isAccessVisible
+    isAccessVisible,
   };
 };
 
-export const useScrollTo = (sectionRefs: SectionRefs, closeMobileMenu?: () => void) => {
+export const useScrollTo = (
+  sectionRefs: SectionRefs,
+  closeMobileMenu?: () => void,
+) => {
   const scrollToSection = (sectionId: string) => {
     if (closeMobileMenu) {
       closeMobileMenu();
     }
-    
+
     const element = sectionRefs[sectionId].current;
     if (element) {
       const yOffset = -80;
       const y =
         element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      window.scrollTo({ top: y, behavior: "smooth" });
     }
   };
 
@@ -87,4 +90,4 @@ export const useStepAnimation = (isVisible: boolean) => {
   }, [isVisible]);
 
   return { activeStep, setActiveStep };
-}; 
+};

@@ -1,4 +1,4 @@
-import { Braces, Github, Twitter, Mail } from 'lucide-react';
+import { Braces, Github, Mail, Twitter } from "lucide-react";
 
 interface FooterProps {
   scrollToSection: (sectionId: string) => void;
@@ -6,7 +6,11 @@ interface FooterProps {
 
 export const Footer = ({ scrollToSection }: FooterProps) => {
   return (
-    <footer className="py-12 bg-gray-950 border-t border-gray-900" role="contentinfo" aria-label="Site footer">
+    <footer
+      className="py-12 bg-gray-950 border-t border-gray-900"
+      role="contentinfo"
+      aria-label="Site footer"
+    >
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           {/* Logo and tagline */}
@@ -32,8 +36,8 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
                 { id: "howItWorks", label: "How It Works" },
                 { id: "benefits", label: "Benefits" },
                 { id: "technical", label: "Technical" },
-                { id: "access", label: "Early Access" }
-              ].map(link => (
+                { id: "access", label: "Early Access" },
+              ].map((link) => (
                 <li key={link.id}>
                   <button
                     onClick={() => scrollToSection(link.id)}
@@ -50,7 +54,8 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
 
         <div className="mt-8 pt-8 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center">
           <div className="text-gray-500 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} The Architect. All rights reserved.
+            &copy; {new Date().getFullYear()} The Architect. All rights
+            reserved.
           </div>
           <div className="flex space-x-6">
             <a
@@ -82,7 +87,7 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
 
         {/* Vision hint */}
         <div className="mt-8 text-center">
-          <button 
+          <button
             className="text-gray-600 hover:text-blue-400 text-sm transition-colors py-2 px-4 rounded-full hover:bg-gray-900/50"
             aria-label="View future vision"
           >
@@ -92,4 +97,4 @@ export const Footer = ({ scrollToSection }: FooterProps) => {
       </div>
     </footer>
   );
-}; 
+};

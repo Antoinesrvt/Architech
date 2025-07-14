@@ -1,65 +1,85 @@
-import { useState, useEffect } from 'react';
-import { useFrameworkStore } from '@/lib/store/framework-store';
-import { useProjectStore } from '@/lib/store/project-store';
-import { Module } from '@/lib/store/framework-store';
-import ModuleCard from '../ModuleCard';
-import { cn } from '@/lib/utils/cn';
-import { WizardStepProps } from '../types';
-import WizardCard from '../WizardCard';
+import { useFrameworkStore } from "@/lib/store/framework-store";
+import type { Module } from "@/lib/store/framework-store";
+import { useProjectStore } from "@/lib/store/project-store";
+import { cn } from "@/lib/utils/cn";
+import { useEffect, useState } from "react";
+import ModuleCard from "../ModuleCard";
+import WizardCard from "../WizardCard";
+import type { WizardStepProps } from "../types";
 
-type ModuleCategory = 'all' | 'styling' | 'ui' | 'state' | 'i18n' | 'forms' | 'testing' | 'advanced';
+type ModuleCategory =
+  | "all"
+  | "styling"
+  | "ui"
+  | "state"
+  | "i18n"
+  | "forms"
+  | "testing"
+  | "advanced";
 
-export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBackToDashboard }: WizardStepProps) {
+export function ModulesStep({
+  onNext,
+  onPrevious,
+  canGoNext,
+  canGoPrevious,
+  onBackToDashboard,
+}: WizardStepProps) {
   const { modules, frameworks } = useFrameworkStore();
-  const { 
-    selectedFrameworkId, 
-    selectedModuleIds, 
-    addModule, 
+  const {
+    selectedFrameworkId,
+    selectedModuleIds,
+    addModule,
     removeModule,
     saveDraft,
-    lastSaved 
+    lastSaved,
   } = useProjectStore();
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ModuleCategory>('all');
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] =
+    useState<ModuleCategory>("all");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   // Get the selected framework
-  const selectedFramework = selectedFrameworkId 
-    ? frameworks.find(f => f.id === selectedFrameworkId)
+  const selectedFramework = selectedFrameworkId
+    ? frameworks.find((f) => f.id === selectedFrameworkId)
     : null;
 
   // Filter modules based on search, category, and compatibility with selected framework
   const filteredModules = modules
-    .filter(module => {
+    .filter((module) => {
       // Filter by search query
-      if (searchQuery && !module.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          !module.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (
+        searchQuery &&
+        !module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !module.description.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
-      
+
       // Filter by category
-      if (selectedCategory !== 'all' && module.category !== selectedCategory) {
+      if (selectedCategory !== "all" && module.category !== selectedCategory) {
         return false;
       }
-      
+
       // Filter by framework compatibility
-      if (selectedFramework && 
-          (!selectedFramework.compatible_modules || 
-           !selectedFramework.compatible_modules.includes(module.id))) {
+      if (
+        selectedFramework &&
+        (!selectedFramework.compatible_modules ||
+          !selectedFramework.compatible_modules.includes(module.id))
+      ) {
         return false;
       }
-      
+
       return true;
     })
     .sort((a, b) => {
       // Sort by selected status first
       const aSelected = selectedModuleIds.includes(a.id);
       const bSelected = selectedModuleIds.includes(b.id);
-      
+
       if (aSelected && !bSelected) return -1;
       if (!aSelected && bSelected) return 1;
-      
+
       // Then sort alphabetically
       return a.name.localeCompare(b.name);
     });
@@ -68,58 +88,64 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
   const canToggleModule = (module: Module, selected: boolean) => {
     // If we're trying to deselect a module, make sure no selected module depends on it
     if (selected) {
-      const selectedDependentModules = modules
-        .filter(m => selectedModuleIds.includes(m.id) && m.dependencies.includes(module.id));
-      
+      const selectedDependentModules = modules.filter(
+        (m) =>
+          selectedModuleIds.includes(m.id) &&
+          m.dependencies.includes(module.id),
+      );
+
       if (selectedDependentModules.length > 0) {
         return {
           can: false,
-          reason: `Cannot remove ${module.name} because it is required by: ${selectedDependentModules.map(m => m.name).join(', ')}`
-        };
-      }
-    } 
-    // If we're trying to select a module, check for incompatibilities
-    else {
-      // Check if this module is incompatible with any already selected module
-      const incompatibleModules = modules
-        .filter(m => selectedModuleIds.includes(m.id) && 
-          (m.incompatible_with.includes(module.id) || module.incompatible_with.includes(m.id)));
-      
-      if (incompatibleModules.length > 0) {
-        return {
-          can: false,
-          reason: `${module.name} is incompatible with: ${incompatibleModules.map(m => m.name).join(', ')}`
+          reason: `Cannot remove ${module.name} because it is required by: ${selectedDependentModules.map((m) => m.name).join(", ")}`,
         };
       }
     }
-    
-    return { can: true, reason: '' };
+    // If we're trying to select a module, check for incompatibilities
+    else {
+      // Check if this module is incompatible with any already selected module
+      const incompatibleModules = modules.filter(
+        (m) =>
+          selectedModuleIds.includes(m.id) &&
+          (m.incompatible_with.includes(module.id) ||
+            module.incompatible_with.includes(m.id)),
+      );
+
+      if (incompatibleModules.length > 0) {
+        return {
+          can: false,
+          reason: `${module.name} is incompatible with: ${incompatibleModules.map((m) => m.name).join(", ")}`,
+        };
+      }
+    }
+
+    return { can: true, reason: "" };
   };
 
   // Handle module toggle
   const handleModuleToggle = (moduleId: string, isSelected: boolean) => {
-    const module = modules.find(m => m.id === moduleId);
+    const module = modules.find((m) => m.id === moduleId);
     if (!module) return;
-    
+
     const currentlySelected = selectedModuleIds.includes(moduleId);
     const toggle = canToggleModule(module, currentlySelected);
-    
+
     if (!toggle.can) {
       // Show error message
       setErrorMessage(toggle.reason);
       setTimeout(() => setErrorMessage(null), 5000);
       return;
     }
-    
+
     if (currentlySelected) {
       // Remove module from selection
       removeModule(moduleId);
     } else {
       // Add module to selection
       addModule(moduleId);
-      
+
       // Also add all dependencies
-      module.dependencies.forEach(depId => {
+      module.dependencies.forEach((depId) => {
         if (!selectedModuleIds.includes(depId)) {
           addModule(depId);
         }
@@ -130,13 +156,13 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
   // Group modules by category for better organization
   const modulesByCategory: Record<ModuleCategory, Module[]> = {
     all: filteredModules,
-    styling: filteredModules.filter(m => m.category === 'styling'),
-    ui: filteredModules.filter(m => m.category === 'ui'),
-    state: filteredModules.filter(m => m.category === 'state'),
-    i18n: filteredModules.filter(m => m.category === 'i18n'),
-    forms: filteredModules.filter(m => m.category === 'forms'),
-    testing: filteredModules.filter(m => m.category === 'testing'),
-    advanced: filteredModules.filter(m => m.category === 'advanced'),
+    styling: filteredModules.filter((m) => m.category === "styling"),
+    ui: filteredModules.filter((m) => m.category === "ui"),
+    state: filteredModules.filter((m) => m.category === "state"),
+    i18n: filteredModules.filter((m) => m.category === "i18n"),
+    forms: filteredModules.filter((m) => m.category === "forms"),
+    testing: filteredModules.filter((m) => m.category === "testing"),
+    advanced: filteredModules.filter((m) => m.category === "advanced"),
   };
 
   // Get counts by category
@@ -145,7 +171,7 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
       acc[category as ModuleCategory] = modules.length;
       return acc;
     },
-    {} as Record<ModuleCategory, number>
+    {} as Record<ModuleCategory, number>,
   );
 
   // Handle next step
@@ -154,14 +180,14 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
       await saveDraft();
       onNext();
     } catch (error) {
-      console.error('Failed to save draft:', error);
+      console.error("Failed to save draft:", error);
     }
   };
 
   return (
     <WizardCard
       title="Select Modules"
-      description={`Choose the modules you want to install in your project.${selectedFramework ? ` Showing modules compatible with ${selectedFramework.name}.` : ''}`}
+      description={`Choose the modules you want to install in your project.${selectedFramework ? ` Showing modules compatible with ${selectedFramework.name}.` : ""}`}
       canGoPrevious={canGoPrevious}
       canGoNext={canGoNext}
       onPrevious={onPrevious}
@@ -233,7 +259,10 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
             All ({countsByCategory.all || 0})
           </button>
           <button
-            className={cn("tab", selectedCategory === "styling" && "tab-active")}
+            className={cn(
+              "tab",
+              selectedCategory === "styling" && "tab-active",
+            )}
             onClick={() => setSelectedCategory("styling")}
           >
             Styling ({countsByCategory.styling || 0})
@@ -263,13 +292,19 @@ export function ModulesStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBa
             Forms ({countsByCategory.forms || 0})
           </button>
           <button
-            className={cn("tab", selectedCategory === "testing" && "tab-active")}
+            className={cn(
+              "tab",
+              selectedCategory === "testing" && "tab-active",
+            )}
             onClick={() => setSelectedCategory("testing")}
           >
             Testing ({countsByCategory.testing || 0})
           </button>
           <button
-            className={cn("tab", selectedCategory === "advanced" && "tab-active")}
+            className={cn(
+              "tab",
+              selectedCategory === "advanced" && "tab-active",
+            )}
             onClick={() => setSelectedCategory("advanced")}
           >
             Advanced ({countsByCategory.advanced || 0})

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { forwardRef } from "react";
 import { cn } from "@/lib/utils/cn";
+import type React from "react";
+import { forwardRef } from "react";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -48,38 +49,39 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       disabled = false,
       ...rest
     },
-    ref
+    ref,
   ) => {
     // Base classes
     const baseClasses = "card bg-base-100";
-    
+
     // Border classes
-    const borderClasses = bordered 
-      ? selected 
-        ? "border-2 border-primary" 
-        : "border border-base-300" 
+    const borderClasses = bordered
+      ? selected
+        ? "border-2 border-primary"
+        : "border border-base-300"
       : "";
-    
+
     // Shadow classes
     const shadowClasses = withShadow ? "shadow-sm" : "";
-    
+
     // Interactive classes
-    const interactiveClasses = interactive && !disabled
-      ? cn(
-          "transition-all duration-300",
-          hoverShadow && "hover:shadow-md",
-          hoverLift && "hover:translate-y-[-2px]",
-          "active:scale-[0.99]",
-          "cursor-pointer"
-        )
-      : "";
-    
+    const interactiveClasses =
+      interactive && !disabled
+        ? cn(
+            "transition-all duration-300",
+            hoverShadow && "hover:shadow-md",
+            hoverLift && "hover:translate-y-[-2px]",
+            "active:scale-[0.99]",
+            "cursor-pointer",
+          )
+        : "";
+
     // Selected state classes
     const selectedClasses = selected ? "bg-primary/10" : "";
-    
+
     // Disabled state classes
     const disabledClasses = disabled ? "opacity-60 cursor-not-allowed" : "";
-    
+
     // Combine all classes
     const cardClasses = cn(
       baseClasses,
@@ -88,33 +90,25 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       interactiveClasses,
       selectedClasses,
       disabledClasses,
-      className
+      className,
     );
-    
+
     return (
-      <div
-        className={cardClasses}
-        ref={ref}
-        {...rest}
-      >
+      <div className={cardClasses} ref={ref} {...rest}>
         {children}
       </div>
     );
-  }
+  },
 );
 
 Card.displayName = "Card";
 
 // Card subcomponents
 export const CardBody = forwardRef<
-  HTMLDivElement, 
+  HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => (
-  <div 
-    ref={ref}
-    className={cn("card-body", className)}
-    {...props}
-  >
+  <div ref={ref} className={cn("card-body", className)} {...props}>
     {children}
   </div>
 ));
@@ -122,14 +116,10 @@ export const CardBody = forwardRef<
 CardBody.displayName = "CardBody";
 
 export const CardTitle = forwardRef<
-  HTMLDivElement, 
+  HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => (
-  <div 
-    ref={ref}
-    className={cn("card-title", className)}
-    {...props}
-  >
+  <div ref={ref} className={cn("card-title", className)} {...props}>
     {children}
   </div>
 ));
@@ -137,14 +127,10 @@ export const CardTitle = forwardRef<
 CardTitle.displayName = "CardTitle";
 
 export const CardActions = forwardRef<
-  HTMLDivElement, 
+  HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => (
-  <div 
-    ref={ref}
-    className={cn("card-actions", className)}
-    {...props}
-  >
+  <div ref={ref} className={cn("card-actions", className)} {...props}>
     {children}
   </div>
 ));
@@ -154,5 +140,5 @@ CardActions.displayName = "CardActions";
 export default Object.assign(Card, {
   Body: CardBody,
   Title: CardTitle,
-  Actions: CardActions
-}); 
+  Actions: CardActions,
+});

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils/cn';
+import { cn } from "@/lib/utils/cn";
+import React, { useState, useEffect } from "react";
 
 interface WizardSideNavigationProps {
   onNext: () => void;
@@ -12,10 +12,12 @@ export function WizardSideNavigation({
   onNext,
   onPrevious,
   canGoNext,
-  canGoPrevious
+  canGoPrevious,
 }: WizardSideNavigationProps) {
   const [showButtons, setShowButtons] = useState(false);
-  const [recentNavigation, setRecentNavigation] = useState<'next' | 'prev' | null>(null);
+  const [recentNavigation, setRecentNavigation] = useState<
+    "next" | "prev" | null
+  >(null);
   const [isMobile, setIsMobile] = useState(false);
 
   // Set initial mobile state and update on resize
@@ -23,37 +25,37 @@ export function WizardSideNavigation({
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     // Set initial value
     checkMobile();
-    
+
     // Add resize listener
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Show buttons when user moves mouse
   useEffect(() => {
     const handleMouseMove = () => {
       setShowButtons(true);
-      
+
       // Hide after 3 seconds of inactivity
       const timeout = setTimeout(() => {
         setShowButtons(false);
       }, 3000);
-      
+
       return () => clearTimeout(timeout);
     };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
-  
+
   // Handle navigation click with animation effect
-  const handleNavClick = (direction: 'next' | 'prev', callback: () => void) => {
+  const handleNavClick = (direction: "next" | "prev", callback: () => void) => {
     setRecentNavigation(direction);
     callback();
-    
+
     // Reset the animation state after animation completes
     setTimeout(() => {
       setRecentNavigation(null);
@@ -69,7 +71,7 @@ export function WizardSideNavigation({
     <>
       {/* Previous button */}
       <button
-        onClick={() => handleNavClick('prev', onPrevious)}
+        onClick={() => handleNavClick("prev", onPrevious)}
         disabled={!canGoPrevious}
         aria-label="Previous step"
         className={cn(
@@ -81,34 +83,38 @@ export function WizardSideNavigation({
           "hover:bg-primary/20 hover:border-primary/50 hover:scale-105",
           "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-base-100/70 disabled:hover:border-base-300 disabled:hover:scale-100",
           "group",
-          showButtons || recentNavigation === 'prev' ? "opacity-90 translate-x-0" : "opacity-0 -translate-x-2",
-          recentNavigation === 'prev' && "bg-primary/30 border-primary"
+          showButtons || recentNavigation === "prev"
+            ? "opacity-90 translate-x-0"
+            : "opacity-0 -translate-x-2",
+          recentNavigation === "prev" && "bg-primary/30 border-primary",
         )}
       >
-        <div className={cn(
-          "absolute inset-0 rounded-full bg-primary/10",
-          "transition-transform duration-300",
-          recentNavigation === 'prev' ? "animate-ping-once" : "scale-0"
-        )} />
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="20" 
-          height="20" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
+        <div
+          className={cn(
+            "absolute inset-0 rounded-full bg-primary/10",
+            "transition-transform duration-300",
+            recentNavigation === "prev" ? "animate-ping-once" : "scale-0",
+          )}
+        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
           strokeLinejoin="round"
           className="transition-transform group-hover:-translate-x-1 relative z-10"
         >
-          <path d="m15 18-6-6 6-6"/>
+          <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
 
       {/* Next button */}
       <button
-        onClick={() => handleNavClick('next', onNext)}
+        onClick={() => handleNavClick("next", onNext)}
         disabled={!canGoNext}
         aria-label="Next step"
         className={cn(
@@ -120,30 +126,34 @@ export function WizardSideNavigation({
           "hover:bg-primary/20 hover:border-primary/50 hover:scale-105",
           "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-base-100/70 disabled:hover:border-base-300 disabled:hover:scale-100",
           "group",
-          showButtons || recentNavigation === 'next' ? "opacity-90 translate-x-0" : "opacity-0 translate-x-2",
-          recentNavigation === 'next' && "bg-primary/30 border-primary"
+          showButtons || recentNavigation === "next"
+            ? "opacity-90 translate-x-0"
+            : "opacity-0 translate-x-2",
+          recentNavigation === "next" && "bg-primary/30 border-primary",
         )}
       >
-        <div className={cn(
-          "absolute inset-0 rounded-full bg-primary/10",
-          "transition-transform duration-300",
-          recentNavigation === 'next' ? "animate-ping-once" : "scale-0"
-        )} />
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="20" 
-          height="20" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
+        <div
+          className={cn(
+            "absolute inset-0 rounded-full bg-primary/10",
+            "transition-transform duration-300",
+            recentNavigation === "next" ? "animate-ping-once" : "scale-0",
+          )}
+        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
           strokeLinejoin="round"
           className="transition-transform group-hover:translate-x-1 relative z-10"
         >
-          <path d="m9 18 6-6-6-6"/>
+          <path d="m9 18 6-6-6-6" />
         </svg>
       </button>
     </>
   );
-} 
+}

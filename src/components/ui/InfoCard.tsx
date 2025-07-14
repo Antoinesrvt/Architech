@@ -1,10 +1,18 @@
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/utils/cn";
+import type React from "react";
 import Card from "./Card";
 
-export type InfoCardVariant = "default" | "primary" | "secondary" | "accent" | "info" | "success" | "warning" | "error";
+export type InfoCardVariant =
+  | "default"
+  | "primary"
+  | "secondary"
+  | "accent"
+  | "info"
+  | "success"
+  | "warning"
+  | "error";
 
 export interface InfoCardProps {
   /**
@@ -105,29 +113,37 @@ export const InfoCard: React.FC<InfoCardProps> = ({
 
   const cardContent = (
     <>
-      <div className={cn(
-        "flex",
-        horizontal ? "flex-row items-center" : "flex-col",
-        horizontal && "gap-4"
-      )}>
+      <div
+        className={cn(
+          "flex",
+          horizontal ? "flex-row items-center" : "flex-col",
+          horizontal && "gap-4",
+        )}
+      >
         {icon && (
-          <div className={cn(
-            "flex-shrink-0",
-            horizontal ? "" : "mb-4",
-            variant !== "default" ? `text-${variant}` : ""
-          )}>
+          <div
+            className={cn(
+              "flex-shrink-0",
+              horizontal ? "" : "mb-4",
+              variant !== "default" ? `text-${variant}` : "",
+            )}
+          >
             {icon}
           </div>
         )}
         <div className={cn("flex-1", horizontal && "min-w-0")}>
-          <div className={cn(
-            horizontal ? "flex items-center justify-between" : "",
-          )}>
-            <h3 className={cn(
-              "font-medium",
-              compact ? "text-base" : "text-lg",
-              variant !== "default" ? `text-${variant}` : ""
-            )}>
+          <div
+            className={cn(
+              horizontal ? "flex items-center justify-between" : "",
+            )}
+          >
+            <h3
+              className={cn(
+                "font-medium",
+                compact ? "text-base" : "text-lg",
+                variant !== "default" ? `text-${variant}` : "",
+              )}
+            >
               {title}
             </h3>
             {horizontal && actions && (
@@ -135,11 +151,13 @@ export const InfoCard: React.FC<InfoCardProps> = ({
             )}
           </div>
           {description && (
-            <div className={cn(
-              "mt-1",
-              compact ? "text-sm" : "text-base",
-              "opacity-80"
-            )}>
+            <div
+              className={cn(
+                "mt-1",
+                compact ? "text-sm" : "text-base",
+                "opacity-80",
+              )}
+            >
               {description}
             </div>
           )}
@@ -150,7 +168,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
           )}
         </div>
       </div>
-      
+
       {!horizontal && actions && (
         <div className={cn("mt-4", "card-actions", "justify-end")}>
           {actions}
@@ -161,7 +179,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
 
   const cardClasses = cn(
     variant !== "default" && getVariantClasses(),
-    className
+    className,
   );
 
   if (href) {
@@ -172,7 +190,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
         withShadow={withShadow}
         hoverLift={hover}
         className={cardClasses}
-        onClick={() => window.location.href = href}
+        onClick={() => (window.location.href = href)}
         {...props}
       >
         <Card.Body className={cn(compact ? "p-4" : "")}>
@@ -191,11 +209,9 @@ export const InfoCard: React.FC<InfoCardProps> = ({
       className={cardClasses}
       {...props}
     >
-      <Card.Body className={cn(compact ? "p-4" : "")}>
-        {cardContent}
-      </Card.Body>
+      <Card.Body className={cn(compact ? "p-4" : "")}>{cardContent}</Card.Body>
     </Card>
   );
 };
 
-export default InfoCard; 
+export default InfoCard;

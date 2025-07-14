@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE CHAIN - Own Your Internet</title>
+    
+    <!-- Three.js for 3D network -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Design System Variables */
+        :root {
+            /* Colors */
+            --primary-blue: #0066FF;
+            --deep-blue: #0047B3;
+            --electric-cyan: #00D4FF;
+            --midnight: #0A0E1A;
+            --steel: #1A1F2E;
+            --mist: #F0F4FF;
+            --white: #FFFFFF;
+            --black: #000000;
+            --gray-100: #F5F5F5;
+            --gray-200: #E5E5E5;
+            --gray-300: #CCCCCC;
+            --gray-400: #999999;
+            --gray-500: #666666;
+            --gray-600: #333333;
+            
+            /* Spacing */
+            --space-xs: 8px;
+            --space-sm: 16px;
+            --space-md: 24px;
+            --space-lg: 32px;
+            --space-xl: 48px;
+            --space-2xl: 64px;
+            --space-3xl: 96px;
+            --space-4xl: 128px;
+            
+            /* Border Radius */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            
+            /* Transitions */
+            --transition-fast: 0.2s ease;
+            --transition-base: 0.3s ease;
+            --transition-slow: 0.5s ease;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Typography System */
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .display-xl {
+            font-size: clamp(3.5rem, 10vw, 9rem);
+            font-weight: 900;
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+            margin-bottom: var(--space-lg);
+        }
+
+        .display-l {
+            font-size: clamp(2.5rem, 7vw, 6rem);
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            margin-bottom: var(--space-lg);
+        }
+
+        .display-m {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: var(--space-md);
+        }
+
+        .headline {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            margin-bottom: var(--space-md);
+        }
+
+        .body-l {
+            font-size: clamp(1.125rem, 2vw, 1.5rem);
+            font-weight: 400;
+            line-height: 1.6;
+            margin-bottom: var(--space-md);
+        }
+
+        .body {
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.7;
+            margin-bottom: var(--space-sm);
+        }
+
+        /* Remove default margins for last children */
+        *:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Gradient text effect */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary-blue), var(--electric-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Layout System */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 var(--space-lg);
+        }
+
+        .section {
+            padding: var(--space-4xl) 0;
+            position: relative;
+        }
+
+        .section-sm {
+            padding: var(--space-3xl) 0;
+        }
+
+        .section-lg {
+            padding: var(--space-4xl) 0;
+        }
+
+        @media (max-width: 768px) {
+            .section {
+                padding: var(--space-3xl) 0;
+            }
+            
+            .section-lg {
+                padding: var(--space-3xl) 0;
+            }
+            
+            .container {
+                padding: 0 var(--space-md);
+            }
+        }
+
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: var(--space-lg);
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            z-index: 1000;
+            transition: all var(--transition-base);
+        }
+
+        .nav-container {
+            padding: var(--space-md) 0;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all var(--transition-base);
+        }
+
+        .nav-logo:hover {
+            text-shadow: 0 0 20px rgba(0, 102, 255, 0.6);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: var(--space-xl);
+        }
+
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.875rem;
+            position: relative;
+            transition: color var(--transition-base);
+            padding: var(--space-xs) 0;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-blue);
+            transition: width var(--transition-base);
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-blue);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Mobile Navigation */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--white);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: var(--space-xs);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: rgba(0, 0, 0, 0.98);
+                flex-direction: column;
+                padding: var(--space-lg);
+                gap: var(--space-md);
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            background: linear-gradient(180deg, var(--midnight) 0%, var(--black) 100%);
+            overflow: hidden;
+            padding-top: var(--space-3xl);
+        }
+
+        #network-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.8;
+        }
+
+        .hero-content {
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-3xl);
+            align-items: center;
+        }
+
+        @media (max-width: 1024px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-2xl);
+            }
+        }
+
+        .hero-text {
+            position: relative;
+            padding-left: var(--space-lg);
+        }
+
+        .hero-text::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--primary-blue), var(--electric-cyan));
+            border-radius: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .hero-text {
+                padding-left: 0;
+            }
+
+            .hero-text::before {
+                display: none;
+            }
+        }
+
+        .hero-title {
+            animation: titleGlitch 10s infinite;
+        }
+
+        @keyframes titleGlitch {
+            0%, 90%, 100% {
+                text-shadow: none;
+            }
+            92% {
+                text-shadow: -2px 0 var(--electric-cyan), 2px 0 var(--primary-blue);
+            }
+            94% {
+                text-shadow: 2px 0 var(--electric-cyan), -2px 0 var(--primary-blue);
+            }
+        }
+
+        .hero-subtitle {
+            color: var(--gray-300);
+            max-width: 600px;
+            margin-bottom: var(--space-xl);
+        }
+
+        /* Glass morphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: var(--space-xl);
+            transition: all var(--transition-base);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 102, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 102, 255, 0.2);
+        }
+
+        .hero-meta-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--space-md);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-sm) 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-300);
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary-blue);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: var(--space-md) var(--space-xl);
+            background: transparent;
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 0.875rem;
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), var(--electric-cyan));
+            transition: left var(--transition-base);
+            z-index: -1;
+        }
+
+        .btn:hover {
+            color: var(--white);
+            border-color: transparent;
+            box-shadow: 0 10px 30px rgba(0, 102, 255, 0.3);
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue), var(--deep-blue));
+            color: var(--white);
+            border: none;
+        }
+
+        .btn-primary::before {
+            background: linear-gradient(135deg, var(--electric-cyan), var(--primary-blue));
+        }
+
+        .cta-group {
+            display: flex;
+            gap: var(--space-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Problem Section */
+        .problem {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .problem-header {
+            text-align: center;
+            margin-bottom: 120px;
+        }
+
+        .problem-title {
+            text-transform: uppercase;
+            margin-bottom: 40px;
+        }
+
+        .problem-subtitle {
+            color: #666666;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 0;
+        }
+
+        .problem-item {
+            padding: 80px 40px;
+            border: 1px solid #000000;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .problem-item:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .problem-item:hover .problem-icon {
+            background: #0066FF;
+            color: #000000;
+        }
+
+        .problem-icon {
+            width: 80px;
+            height: 80px;
+            background: #000000;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            font-size: 32px;
+            font-weight: 900;
+            transition: all 0.3s ease;
+        }
+
+        .problem-item h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .problem-item p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+
+        /* Use Cases Section */
+        .use-cases {
+            background: var(--midnight);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .use-cases::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 102, 255, 0.1) 0%, transparent 70%);
+            animation: float 20s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0);
+            }
+            50% {
+                transform: translate(-30%, 30%);
+            }
+        }
+
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-lg);
+            position: relative;
+            z-index: 2;
+        }
+
+        .use-case-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            transition: all var(--transition-base);
+            cursor: pointer;
+        }
+
+        .use-case-card:hover {
+            background: rgba(0, 102, 255, 0.1);
+            border-color: var(--primary-blue);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 102, 255, 0.2);
+        }
+
+        .use-case-icon {
+            font-size: 3rem;
+            margin-bottom: var(--space-md);
+            display: block;
+        }
+
+        .use-case-card h3 {
+            margin-bottom: var(--space-md);
+        }
+
+        .use-case-card .feature-tech {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: var(--space-md);
+        }
+
+        /* Solution Section */
+        .solution {
+            background: var(--black);
+        }
+
+        .solution-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-3xl);
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .solution-content {
+                grid-template-columns: 1fr;
+                gap: var(--space-2xl);
+            }
+        }
+
+        .solution-text {
+            position: sticky;
+            top: calc(80px + var(--space-lg));
+        }
+
+        @media (max-width: 1024px) {
+            .solution-text {
+                position: static;
+            }
+        }
+
+        .solution-features {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+        }
+
+        .feature-item {
+            padding: var(--space-2xl);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--gray-600);
+            border-radius: var(--radius-lg);
+            transition: all var(--transition-base);
+        }
+
+        .feature-item:hover {
+            border-color: var(--primary-blue);
+            background: rgba(0, 102, 255, 0.05);
+            box-shadow: 0 20px 40px rgba(0, 102, 255, 0.1);
+        }
+
+        .feature-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--space-md);
+        }
+
+        .feature-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+        }
+
+        .feature-description {
+            color: var(--gray-300);
+            margin-bottom: var(--space-md);
+        }
+
+        /* Feature Demo */
+        .feature-demo {
+            background: var(--black);
+            border: 1px solid var(--gray-600);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            margin-top: var(--space-md);
+        }
+
+        .demo-tabs {
+            display: flex;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+            flex-wrap: wrap;
+        }
+
+        .demo-tab {
+            padding: var(--space-xs) var(--space-md);
+            background: transparent;
+            border: 1px solid var(--gray-600);
+            color: var(--gray-300);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .demo-tab:hover {
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .demo-tab.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: var(--white);
+        }
+
+        .demo-content {
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: var(--space-md);
+            border-radius: var(--radius-sm);
+            overflow-x: auto;
+        }
+
+        .demo-content.active {
+            display: block;
+            animation: fadeInUp 0.4s ease;
+        }
+
+        .demo-content code {
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Architecture Section */
+  .architecture {
+            background: var(--white);
+            color: var(--black);
+        }
+
+        .arch-diagram {
+            background: var(--gray-100);
+            border-radius: 16px;
+            padding: 60px;
+            margin: 60px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arch-layer {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .arch-layer:hover {
+            border-color: var(--primary-blue);
+            transform: translateX(8px);
+            box-shadow: -8px 8px 0 var(--primary-blue);
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            margin-top: var(--space-3xl);
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comparison-item {
+            text-align: center;
+            padding: var(--space-lg);
+            background: var(--gray-100);
+            border-radius: var(--radius-lg);
+        }
+
+        .comparison-item h4 {
+            color: var(--gray-500);
+            margin-bottom: var(--space-sm);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .comparison-item p:first-of-type {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: var(--space-xs);
+        }
+
+        .comparison-item p:last-of-type {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        /* Vision Section */
+        .vision {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--deep-blue) 100%);
+            color: var(--white);
+        }
+
+        .vision-content {
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .vision-text {
+            margin-bottom: var(--space-3xl);
+        }
+
+        .vision-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-lg);
+        }
+
+        @media (max-width: 768px) {
+            .vision-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .vision-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: var(--space-xl);
+            border-radius: var(--radius-lg);
+            text-align: left;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all var(--transition-base);
+        }
+
+        .vision-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .vision-item h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+        }
+
+        .vision-item p {
+            font-size: 1rem;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        /* Community Section */
+        .community {
+            background: var(--midnight);
+        }
+
+        .roadmap {
+            position: relative;
+            padding: var(--space-3xl) 0;
+            margin-top: var(--space-3xl);
+        }
+
+        .roadmap-line {
+            position: absolute;
+            top: 48px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            .roadmap-line {
+                display: none;
+            }
+        }
+
+        .roadmap-items {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-lg);
+            position: relative;
+            z-index: 2;
+        }
+
+        @media (max-width: 1024px) {
+            .roadmap-items {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .roadmap-items {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .roadmap-item {
+            text-align: center;
+        }
+
+        .roadmap-dot {
+            width: 24px;
+            height: 24px;
+            background: var(--gray-600);
+            border-radius: 50%;
+            margin: 0 auto var(--space-md);
+            position: relative;
+            transition: all var(--transition-base);
+        }
+
+        .roadmap-item.active .roadmap-dot {
+            width: 32px;
+            height: 32px;
+            background: var(--primary-blue);
+            box-shadow: 0 0 0 8px rgba(0, 102, 255, 0.2);
+        }
+
+        .roadmap-item:hover .roadmap-dot {
+            transform: scale(1.2);
+            background: var(--primary-blue);
+            box-shadow: 0 0 20px rgba(0, 102, 255, 0.6);
+        }
+
+        .roadmap-item h4 {
+            font-weight: 700;
+            margin-bottom: var(--space-xs);
+            color: var(--primary-blue);
+        }
+
+        .roadmap-item p {
+            color: var(--gray-300);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .community-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            margin-top: var(--space-3xl);
+        }
+
+        @media (max-width: 768px) {
+            .community-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .community-card {
+            text-align: center;
+        }
+
+        .community-card h3 {
+            font-size: 3rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .community-card h4 {
+            font-size: 1.5rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .community-card p {
+            margin-bottom: var(--space-md);
+            color: var(--gray-300);
+        }
+
+        /* CTA Section */
+        .cta {
+            background: var(--black);
+        }
+
+        .cta-content {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-3xl);
+            border: 2px solid var(--primary-blue);
+            border-radius: var(--radius-xl);
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: var(--space-xl);
+        }
+
+        .cta-content p:last-child {
+            margin-top: var(--space-xl);
+            color: var(--gray-400);
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .slide-in-left {
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .slide-in-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .slide-in-right {
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .slide-in-right.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .scale-in {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .scale-in.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Loading animation */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--black);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity var(--transition-slow);
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-content {
+            text-align: center;
+        }
+
+        .loader-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: var(--space-md);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loader-bar {
+            width: 200px;
+            height: 4px;
+            background: var(--gray-600);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loader-progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), var(--electric-cyan));
+            border-radius: 2px;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(200%);
+            }
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mx-auto {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .max-w-lg {
+            max-width: 800px;
+        }
+
+        .max-w-xl {
+            max-width: 1000px;
+        }
+
+        /* Ripple effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(0);
+            animation: ripple-animation 0.6s ease-out;
+            pointer-events: none;
+        }
+        
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loader" id="loader">
+        <div class="loader-content">
+            <div class="loader-logo">THE CHAIN</div>
+            <div class="loader-bar">
+                <div class="loader-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav">
+        <div class="container nav-container">
+            <div class="nav-content">
+                <a href="#" class="nav-logo">THE CHAIN</a>
+                <div class="nav-links" id="navLinks">
+                    <a href="#problem">Problem</a>
+                    <a href="#solution">Solution</a>
+                    <a href="#use-cases">Use Cases</a>
+                    <a href="#architecture">Architecture</a>
+                    <a href="#community">Community</a>
+                </div>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <canvas id="network-canvas"></canvas>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-grid">
+                    <div class="hero-text">
+                        <h1 class="display-xl hero-title fade-in">
+                            Own Your<br><span class="gradient-text">Internet</span>
+                        </h1>
+                        <p class="body-l hero-subtitle fade-in">
+                            The first mainstream blockchain that puts you in control.<br>
+                            Your identity. Your money. Your rules. No middlemen.
+                        </p>
+                        <div class="cta-group fade-in">
+                            <a href="#" class="btn btn-primary">EXPLORE NETWORK</a>
+                            <a href="#" class="btn">BECOME A NODE</a>
+                        </div>
+                    </div>
+                    <div class="glass-card hero-meta fade-in">
+                        <div class="hero-meta-title">Live Network Status</div>
+                        <div class="hero-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Active Nodes</span>
+                                <span class="stat-value mono">12,847</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Transactions/sec</span>
+                                <span class="stat-value mono">2,451</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Total Value Locked</span>
+                                <span class="stat-value mono">$14.2M</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Network Health</span>
+                                <span class="stat-value mono" style="color: #00FF88;">99.9%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="problem section bg-white" id="problem">
+      <div class="container">
+          <div class="problem-header">
+              <h2 class="display-m problem-title fade-in">Your Digital Life<br>Belongs to Them</h2>
+              <p class="body-l problem-subtitle fade-in">
+                  Corporations control your identity, steal your data, and tax every transaction.<br>
+                  The internet was supposed to free us. Instead, it enslaved us.
+              </p>
+          </div>
+          <div class="problem-grid">
+              <div class="problem-item fade-in">
+                  <div class="problem-icon">01</div>
+                  <h3>Identity Theft</h3>
+                  <p>Your accounts belong to Facebook, Google, Twitter. They can delete you, ban you, sell your data. You own nothing.</p>
+              </div>
+              <div class="problem-item fade-in">
+                  <div class="problem-icon">02</div>
+                  <h3>Payment Prison</h3>
+                  <p>Banks and processors take 3-5% of every transaction. International transfers? Prepare for 10%+ fees and 3-day delays.</p>
+              </div>
+              <div class="problem-item fade-in">
+                  <div class="problem-icon">03</div>
+                  <h3>Broken Promises</h3>
+                  <p>Digital contracts are just PDFs. No enforcement, no transparency, no guarantees. When disputes arise, lawyers get rich.</p>
+              </div>
+              <div class="problem-item fade-in">
+                  <div class="problem-icon">04</div>
+                  <h3>Fake Ownership</h3>
+                  <p>Your digital assets exist at the mercy of platforms. Account banned? Everything disappears. Server down? Your assets vanish.</p>
+              </div>
+          </div>
+      </div>
+  </section>
+
+    <section class="use-cases section" id="use-cases">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="display-m fade-in">Real Freedom.<br><span class="gradient-text">Real Stories.</span></h2>
+                <p class="body-l fade-in">
+                    See how people are already using The Chain to take back control of their digital lives.
+                </p>
+            </div>
+            <div class="use-case-grid">
+                <div class="use-case-card scale-in">
+                    <span class="use-case-icon">👩‍💼</span>
+                    <h3 class="headline">Sarah's Story</h3>
+                    <p class="body">
+                        "I lost my Instagram account with 50K followers overnight. No appeal, no reason. 
+                        Now my identity lives on The Chain. No company can delete me."
+                    </p>
+                    <div class="feature-tech">Decentralized Identity • Multi-Sig Security</div>
+                </div>
+                <div class="use-case-card scale-in">
+                    <span class="use-case-icon">🌍</span>
+                    <h3 class="headline">Ahmed's Freedom</h3>
+                    <p class="body">
+                        "Sending money home used to cost me $50 and take 5 days. 
+                        With The Chain, it's instant and costs pennies. My family gets every dollar."
+                    </p>
+                    <div class="feature-tech">Instant Settlement • Global Access</div>
+                </div>
+                <div class="use-case-card scale-in">
+                    <span class="use-case-icon">🎨</span>
+                    <h3 class="headline">Maya's Art</h3>
+                    <p class="body">
+                        "OpenSea banned my collection for 'violations' they wouldn't explain. 
+                        On The Chain, my art is mine. No platforms, no gatekeepers."
+                    </p>
+                    <div class="feature-tech">True NFT Ownership • Decentralized Storage</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="solution section" id="solution">
+        <div class="container">
+            <div class="solution-content">
+                <div class="solution-text">
+                    <h2 class="display-m slide-in-left">
+                        We Built<br><span class="gradient-text">Different</span>
+                    </h2>
+                    <p class="body-l slide-in-left">
+                        Four core primitives. Zero complexity. Total sovereignty.<br>
+                        Everything you need, nothing you don't.
+                    </p>
+                    <div class="cta-group slide-in-left">
+                        <a href="#" class="btn">READ WHITEPAPER</a>
+                    </div>
+                </div>
+                <div class="solution-features">
+                    <div class="feature-item slide-in-right">
+                        <div class="feature-number gradient-text">01 / Identity</div>
+                        <h3 class="feature-title">You Are The Key</h3>
+                        <p class="feature-description">
+                            One identity, infinite possibilities. Multi-signature security. Account abstraction. 
+                            Soul-bound tokens. No passwords, no providers, just you.
+                        </p>
+                        <div class="feature-demo">
+                            <div class="demo-tabs">
+                                <button class="demo-tab active" data-tab="identity-1">Basic Setup</button>
+                                <button class="demo-tab" data-tab="identity-2">Multi-Sig</button>
+                                <button class="demo-tab" data-tab="identity-3">Recovery</button>
+                            </div>
+                            <div class="demo-content active" id="identity-1">
+                                <code class="mono" style="color: var(--electric-cyan);">
+                                    chain.identity.create({<br>
+                                    &nbsp;&nbsp;name: "alice.chain",<br>
+                                    &nbsp;&nbsp;publicKey: "0x742d35Cc6634C0532925a3b844Bc9e7595f7F1eD"<br>
+                                    });
+                                </code>
+                            </div>
+                            <div class="demo-content" id="identity-2">
+                                <code class="mono" style="color: var(--electric-cyan);">
+                                    chain.identity.addSigner({<br>
+                                    &nbsp;&nbsp;address: "0x5aAeb6053f3E94C9b9A09f33669435E7Ef1BeAed",<br>
+                                    &nbsp;&nbsp;threshold: 2<br>
+                                    });
+                                </code>
+                            </div>
+                            <div class="demo-content" id="identity-3">
+                                <code class="mono" style="color: var(--electric-cyan);">
+                                    chain.identity.setRecovery({<br>
+                                    &nbsp;&nbsp;guardians: ["bob.chain", "carol.chain"],<br>
+                                    &nbsp;&nbsp;timelock: "7 days"<br>
+                                    });
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-item slide-in-right">
+                        <div class="feature-number gradient-text">02 / Payments</div>
+                        <h3 class="feature-title">Money At Light Speed</h3>
+                        <p class="feature-description">
+                            Send value anywhere, instantly. Sub-cent fees. No banks, no borders, no bullshit. 
+                            Your money moves as fast as information.
+                        </p>
+                        <div class="feature-tech">Instant Finality • Negligible Fees • Universal Access</div>
+                    </div>
+                    <div class="feature-item slide-in-right">
+                        <div class="feature-number gradient-text">03 / Contracts</div>
+                        <h3 class="feature-title">Promises That Keep Themselves</h3>
+                        <p class="feature-description">
+                            Simple agreements that execute automatically. "I owe you X for Y by Z." 
+                            No lawyers, no litigation, just logic.
+                        </p>
+                        <div class="feature-tech">Human-Readable • Self-Executing • Dispute-Free</div>
+                    </div>
+                    <div class="feature-item slide-in-right">
+                        <div class="feature-number gradient-text">04 / Assets</div>
+                        <h3 class="feature-title">Property, Not Permissions</h3>
+                        <p class="feature-description">
+                            Your digital assets are yours. Forever. Link to any resource, monetize anything, 
+                            transfer without asking. True digital property rights.
+                        </p>
+                        <div class="feature-tech">Permanent Ownership • Resource Linking • Native Monetization</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="architecture section" id="architecture">
+      <div class="container">
+          <div class="section-header">
+              <h2 class="display-m fade-in">Built Simple.<br>Scales Infinite.</h2>
+              <p class="body-l fade-in" style="margin-top: 40px; max-width: 800px;">
+                  The Chain strips blockchain to its essence. No bloat, no complexity, just the four primitives 
+                  that matter. Here's how we built the internet's next foundation.
+              </p>
+          </div>
+          
+          <div class="arch-diagram fade-in">
+              <div class="arch-layer">
+                  <h3 style="color: var(--primary-blue); margin-bottom: 16px;">Application Layer</h3>
+                  <p>DApps, marketplaces, social platforms - built on our four primitives</p>
+              </div>
+              <div class="arch-layer">
+                  <h3 style="color: var(--primary-blue); margin-bottom: 16px;">Core Primitives</h3>
+                  <p>Identity • Payments • Contracts • Assets - Everything else is built on these</p>
+              </div>
+              <div class="arch-layer">
+                  <h3 style="color: var(--primary-blue); margin-bottom: 16px;">Consensus Layer</h3>
+                  <p>Proof of Stake with instant finality - Energy efficient, lightning fast</p>
+              </div>
+              <div class="arch-layer">
+                  <h3 style="color: var(--primary-blue); margin-bottom: 16px;">Network Layer</h3>
+                  <p>P2P mesh network - No single point of failure, truly decentralized</p>
+              </div>
+          </div>
+
+          <div class="comparison-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 80px;">
+              <div class="comparison-item fade-in">
+                  <h4 style="color: var(--gray-500); margin-bottom: 16px;">BITCOIN</h4>
+                  <p style="font-size: 48px; font-weight: 900; color: var(--black);">10min</p>
+                  <p style="color: var(--gray-500);">Block time</p>
+              </div>
+              <div class="comparison-item fade-in">
+                  <h4 style="color: var(--gray-500); margin-bottom: 16px;">ETHEREUM</h4>
+                  <p style="font-size: 48px; font-weight: 900; color: var(--black);">15sec</p>
+                  <p style="color: var(--gray-500);">Block time</p>
+              </div>
+              <div class="comparison-item fade-in">
+                  <h4 style="color: var(--primary-blue); margin-bottom: 16px;">THE CHAIN</h4>
+                  <p style="font-size: 48px; font-weight: 900; color: var(--primary-blue);">Instant</p>
+                  <p style="color: var(--gray-500);">Finality</p>
+              </div>
+          </div>
+      </div>
+  </section>
+
+    <section class="vision section" id="vision">
+        <div class="container">
+            <div class="vision-content">
+                <h2 class="display-m fade-in">Internet 3.0<br>Starts Now</h2>
+                <p class="body-l vision-text fade-in">
+                    Imagine an internet where you own everything. Your identity, your money, your content.<br>
+                    Where code is law and trust is math. Where freedom isn't granted, it's guaranteed.<br>
+                    Stop imagining. Start building.
+                </p>
+                <div class="vision-grid">
+                    <div class="vision-item fade-in">
+                        <h3>Unstoppable</h3>
+                        <p>No kill switch. No central servers. Distributed across thousands of nodes globally. 
+                        The network lives as long as the internet does.</p>
+                    </div>
+                    <div class="vision-item fade-in">
+                        <h3>Lightning Fast</h3>
+                        <p>Instant finality. Sub-second transactions. Built for the speed of modern life, 
+                        not the pace of traditional finance.</p>
+                    </div>
+                    <div class="vision-item fade-in">
+                        <h3>Bulletproof</h3>
+                        <p>Military-grade encryption. Quantum-resistant cryptography. Your data is yours, 
+                        protected by mathematics, not promises.</p>
+                    </div>
+                    <div class="vision-item fade-in">
+                        <h3>Universal</h3>
+                        <p>No borders. No discrimination. No gatekeepers. If you have internet access, 
+                        you have financial access. Period.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="community section" id="community">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="display-m fade-in">Join The<br><span class="gradient-text">Revolution</span></h2>
+                <p class="body-l fade-in">
+                    The Chain isn't just technology. It's a movement. Thousands of developers, creators, 
+                    and pioneers building the internet we deserve.
+                </p>
+            </div>
+
+            <div class="roadmap">
+                <div class="roadmap-line"></div>
+                <div class="roadmap-items">
+                    <div class="roadmap-item active fade-in">
+                        <div class="roadmap-dot"></div>
+                        <h4>Q1 2024</h4>
+                        <p>Mainnet Launch</p>
+                    </div>
+                    <div class="roadmap-item fade-in">
+                        <div class="roadmap-dot"></div>
+                        <h4>Q2 2024</h4>
+                        <p>10K Nodes</p>
+                    </div>
+                    <div class="roadmap-item fade-in">
+                        <div class="roadmap-dot"></div>
+                        <h4>Q3 2024</h4>
+                        <p>Mobile Wallet</p>
+                    </div>
+                    <div class="roadmap-item fade-in">
+                        <div class="roadmap-dot"></div>
+                        <h4>Q4 2024</h4>
+                        <p>1M Users</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="community-grid">
+                <div class="glass-card community-card scale-in">
+                    <h3>👥</h3>
+                    <h4>Community</h4>
+                    <p>Join 50K+ members shaping the future</p>
+                    <a href="#" class="btn">Join Discord</a>
+                </div>
+                <div class="glass-card community-card scale-in">
+                    <h3>⚙️</h3>
+                    <h4>Developers</h4>
+                    <p>Build on The Chain with our simple SDK</p>
+                    <a href="#" class="btn">View Docs</a>
+                </div>
+                <div class="glass-card community-card scale-in">
+                    <h3>🌟</h3>
+                    <h4>Ecosystem</h4>
+                    <p>Partner with us to build Internet 3.0</p>
+                    <a href="#" class="btn">Get in Touch</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta section">
+        <div class="container">
+            <div class="cta-content glass-card fade-in">
+                <h2 class="display-m">
+                    The Future Is<br><span class="gradient-text">Decentralized</span>
+                </h2>
+                <p class="body-l">
+                    Join thousands building the internet that puts users first.<br>
+                    Own your identity. Control your money. Shape the future.
+                </p>
+                <div class="cta-buttons">
+                    <a href="#" class="btn btn-primary">START EXPLORING</a>
+                    <a href="#" class="btn">RUN A NODE</a>
+                </div>
+                <p class="mono">
+                    // The revolution will be decentralized
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Three.js 3D Network Visualization
+        let scene, camera, renderer;
+        let particles, particleSystem;
+        let mouseX = 0, mouseY = 0;
+        let windowHalfX = window.innerWidth / 2;
+        let windowHalfY = window.innerHeight / 2;
+
+        function init3D() {
+            const canvas = document.getElementById('network-canvas');
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.z = 1000;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Particles
+            const particleCount = 150;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+
+            const color = new THREE.Color();
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() * 2 - 1) * 1000;
+                positions[i * 3 + 1] = (Math.random() * 2 - 1) * 1000;
+                positions[i * 3 + 2] = (Math.random() * 2 - 1) * 1000;
+
+                // Blue gradient colors
+                const hue = 0.6 + Math.random() * 0.1; // Blue range
+                const saturation = 0.8 + Math.random() * 0.2;
+                const lightness = 0.5 + Math.random() * 0.3;
+                color.setHSL(hue, saturation, lightness);
+
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+
+                sizes[i] = Math.random() * 20 + 5;
+            }
+
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            particles.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            // Shader material for glowing particles
+            const shaderMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 1.0 },
+                    resolution: { value: new THREE.Vector2() }
+                },
+                vertexShader: `
+                    attribute float size;
+                    varying vec3 vColor;
+                    void main() {
+                        vColor = color;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_PointSize = size * (300.0 / -mvPosition.z);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vColor;
+                    void main() {
+                        float dist = length(gl_PointCoord - vec2(0.5));
+                        float opacity = 1.0 - smoothstep(0.4, 0.5, dist);
+                        gl_FragColor = vec4(vColor, opacity);
+                    }
+                `,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                transparent: true,
+                vertexColors: true
+            });
+
+            particleSystem = new THREE.Points(particles, shaderMaterial);
+            scene.add(particleSystem);
+
+            // Add connections between nearby particles
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x0066ff,
+                opacity: 0.2,
+                transparent: true
+            });
+
+            const lineGeometry = new THREE.BufferGeometry();
+            const linePositions = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                for (let j = i + 1; j < particleCount; j++) {
+                    const dist = Math.sqrt(
+                        Math.pow(positions[i * 3] - positions[j * 3], 2) +
+                        Math.pow(positions[i * 3 + 1] - positions[j * 3 + 1], 2) +
+                        Math.pow(positions[i * 3 + 2] - positions[j * 3 + 2], 2)
+                    );
+
+                    if (dist < 300) {
+                        linePositions.push(
+                            positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2],
+                            positions[j * 3], positions[j * 3 + 1], positions[j * 3 + 2]
+                        );
+                    }
+                }
+            }
+
+            lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+            scene.add(lines);
+
+            // Mouse interaction
+            document.addEventListener('mousemove', onDocumentMouseMove);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onDocumentMouseMove(event) {
+            mouseX = (event.clientX - windowHalfX) / 100;
+            mouseY = (event.clientY - windowHalfY) / 100;
+        }
+
+        function onWindowResize() {
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+
+            // Rotate particles
+            particleSystem.rotation.y += 0.0005;
+            particleSystem.rotation.x += 0.0002;
+
+            // Mouse interaction
+            camera.position.x += (mouseX - camera.position.x) * 0.05;
+            camera.position.y += (-mouseY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize 3D after page load
+        window.addEventListener('load', () => {
+            init3D();
+            animate3D();
+
+            // Hide loader
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, 1500);
+        });
+
+        // Enhanced scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all animated elements
+        document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Interactive demo tabs
+        document.querySelectorAll('.demo-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                const parent = this.closest('.feature-demo');
+                
+                // Update active tab
+                parent.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update content
+                parent.querySelectorAll('.demo-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Enhanced button interactions
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Create ripple effect
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => ripple.remove(), 600);
+                
+                // Handle button actions
+                const text = this.textContent.toLowerCase();
+                if (text.includes('explore')) {
+                    console.log('Opening network explorer...');
+                } else if (text.includes('node')) {
+                    console.log('Opening node setup...');
+                }
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileMenuBtn.textContent = navLinks.classList.contains('active') ? '✕' : '☰';
+        });
+
+        // Close mobile menu when clicking a link
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                mobileMenuBtn.textContent = '☰';
+            });
+        });
+
+        // Navbar hide/show on scroll
+        let lastScrollTop = 0;
+        const nav = document.querySelector('.nav');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                nav.style.transform = 'translateY(-100%)';
+            } else {
+                nav.style.transform = 'translateY(0)';
+            }
+            
+            lastScrollTop = scrollTop;
+        });
+
+        // Live stats animation
+        function animateValue(element, start, end, duration) {
+            const startTime = performance.now();
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const current = Math.floor(progress * (end - start) + start);
+                element.textContent = current.toLocaleString();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            
+            requestAnimationFrame(update);
+        }
+
+        // Animate stats when visible
+        const statsObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const statElements = entry.target.querySelectorAll('.stat-value');
+                    statElements.forEach(stat => {
+                        const value = stat.textContent.replace(/[^0-9]/g, '');
+                        if (value) {
+                            animateValue(stat, 0, parseInt(value), 2000);
+                        }
+                    });
+                    statsObserver.unobserve(entry.target);
+                }
+            });
+        });
+
+        const heroMeta = document.querySelector('.hero-meta');
+        if (heroMeta) {
+            statsObserver.observe(heroMeta);
+        }
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const offset = 80; // Account for fixed nav
+                    const targetPosition = target.offsetTop - offset;
+                    window.scrollTo({
+                        top: targetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

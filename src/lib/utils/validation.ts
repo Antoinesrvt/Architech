@@ -4,16 +4,16 @@
  * @returns An error message if invalid, empty string if valid
  */
 export function validateProjectName(name: string): string {
-  if (!name || name.trim() === '') {
-    return 'Project name is required';
+  if (!name || name.trim() === "") {
+    return "Project name is required";
   }
-  
+
   // Check for valid package name (simplified)
   if (!/^[a-z0-9-_]+$/i.test(name)) {
-    return 'Project name can only contain letters, numbers, hyphens, and underscores';
+    return "Project name can only contain letters, numbers, hyphens, and underscores";
   }
-  
-  return '';
+
+  return "";
 }
 
 /**
@@ -22,11 +22,11 @@ export function validateProjectName(name: string): string {
  * @returns An error message if invalid, empty string if valid
  */
 export function validateProjectPath(path: string): string {
-  if (!path || path.trim() === '') {
-    return 'Project path is required';
+  if (!path || path.trim() === "") {
+    return "Project path is required";
   }
-  
-  return '';
+
+  return "";
 }
 
 /**
@@ -41,4 +41,4 @@ export function isValidUrl(url: string): boolean {
   } catch {
     return false;
   }
-} 
+}

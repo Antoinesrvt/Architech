@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
 import { useFrameworkStore } from '@/lib/store/framework-store';
+import type { Module, ModuleOption } from '@/lib/store/framework-store';
 import { useProjectStore } from '@/lib/store/project-store';
-import { Module, ModuleOption } from '@/lib/store/framework-store';
 import { cn } from '@/lib/utils/cn';
-import { WizardStepProps } from '../types';
+import { useEffect, useState } from 'react';
 import WizardCard from '../WizardCard';
+import type { WizardStepProps } from '../types';
 
 export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious, onBackToDashboard }: WizardStepProps) {
   const { modules, frameworks } = useFrameworkStore();
@@ -87,8 +87,6 @@ export function ConfigurationStep({ onNext, onPrevious, canGoNext, canGoPrevious
             </select>
           </div>
         );
-        
-      case 'string':
       default:
         return (
           <div className="form-control w-full">

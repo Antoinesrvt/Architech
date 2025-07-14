@@ -1,5 +1,5 @@
-import { RefObject } from "react";
-import { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { RefObject } from "react";
 
 export type SectionRefs = {
   [key: string]: RefObject<HTMLElement | null>;
@@ -60,4 +60,4 @@ export type SectionProps = {
   sectionRef: RefObject<HTMLElement | null>;
   isVisible?: boolean;
   scrollToSection: (sectionId: string) => void;
-}; 
+};

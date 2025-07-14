@@ -1,9 +1,22 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useFrameworkStore } from '@/lib/store/framework-store';
-import { useProjectStore } from '@/lib/store/project-store';
-import { frameworkService } from '@/lib/api';
-import { Terminal, FolderOpen, RefreshCw, ArrowLeft, HomeIcon, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import { TaskStatus, TaskStatusHelpers, TASK_STATUS } from '@/lib/api/local';
+import { frameworkService } from "@/lib/api";
+import {
+  TASK_STATUS,
+  type TaskStatus,
+  TaskStatusHelpers,
+} from "@/lib/api/local";
+import { useFrameworkStore } from "@/lib/store/framework-store";
+import { useProjectStore } from "@/lib/store/project-store";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
+  FolderOpen,
+  HomeIcon,
+  RefreshCw,
+  Terminal,
+  XCircle,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface GenerationPageProps {
   onBackToDashboard?: () => void;
@@ -11,7 +24,7 @@ interface GenerationPageProps {
 
 export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   const { frameworks, modules } = useFrameworkStore();
-  const { 
+  const {
     projectName,
     projectPath,
     selectedFrameworkId,
@@ -20,7 +33,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
     isLoading,
     error: projectError,
     setError: setProjectError,
-    
+
     // New state management properties
     currentGenerationId,
     generationState,
@@ -28,7 +41,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
     getGenerationStatus,
     getGenerationLogs,
     cancelGeneration,
-    setupGenerationListeners
+    setupGenerationListeners,
   } = useProjectStore();
 
   const [showConsole, setShowConsole] = useState(false);
@@ -36,17 +49,19 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // Get the selected framework
-  const selectedFramework = selectedFrameworkId 
-    ? frameworks.find(f => f.id === selectedFrameworkId)
+  const selectedFramework = selectedFrameworkId
+    ? frameworks.find((f) => f.id === selectedFrameworkId)
     : null;
 
   // Get the selected modules
-  const selectedModules = modules.filter(module => selectedModuleIds.includes(module.id));
+  const selectedModules = modules.filter((module) =>
+    selectedModuleIds.includes(module.id),
+  );
 
   // Scroll to bottom of logs when new entries come in
   useEffect(() => {
     if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [generationLogs]);
 
@@ -70,11 +85,17 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
     }, 1000);
 
     setPollInterval(interval);
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [currentGenerationId, isLoading, getGenerationStatus, getGenerationLogs, pollInterval]);
+  }, [
+    currentGenerationId,
+    isLoading,
+    getGenerationStatus,
+    getGenerationLogs,
+    pollInterval,
+  ]);
 
   // Setup event listeners and polling
   useEffect(() => {
@@ -83,7 +104,7 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
 
     // Setup listeners for generation events
     const unsubscribe = setupGenerationListeners();
-    
+
     // Start polling for updates
     startPolling();
 
@@ -100,8 +121,10 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   useEffect(() => {
     if (generationState) {
       // If generation is complete or failed, stop polling
-      if (generationState.status === TASK_STATUS.COMPLETED || 
-          TaskStatusHelpers.isFailed(generationState.status)) {
+      if (
+        generationState.status === TASK_STATUS.COMPLETED ||
+        TaskStatusHelpers.isFailed(generationState.status)
+      ) {
         if (pollInterval) {
           clearInterval(pollInterval);
           setPollInterval(null);
@@ -116,23 +139,23 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   // Handle project generation
   const handleGenerateProject = async () => {
     if (setProjectError) setProjectError(null);
-    
+
     try {
       // Generate project using the store method
       await generateProject();
     } catch (err) {
-      console.error('Project generation failed:', err);
+      console.error("Project generation failed:", err);
     }
   };
 
   // Handle canceling project generation
   const handleCancelGeneration = async () => {
     if (!currentGenerationId) return;
-    
+
     try {
       await cancelGeneration();
     } catch (err) {
-      console.error('Failed to cancel generation:', err);
+      console.error("Failed to cancel generation:", err);
     }
   };
 
@@ -144,24 +167,24 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   // Handle opening the project in an editor
   const handleOpenInEditor = async () => {
     if (!projectPath || !projectName) return;
-    
+
     try {
       await frameworkService.openInEditor(`${projectPath}/${projectName}`);
     } catch (error) {
-      console.error('Failed to open in editor:', error);
-      if (setProjectError) setProjectError('Failed to open project in editor');
+      console.error("Failed to open in editor:", error);
+      if (setProjectError) setProjectError("Failed to open project in editor");
     }
   };
 
   // Handle opening the project in file explorer
   const handleOpenInFolder = async () => {
     if (!projectPath || !projectName) return;
-    
+
     try {
       await frameworkService.openInFolder(`${projectPath}/${projectName}`);
     } catch (error) {
-      console.error('Failed to open in file explorer:', error);
-      if (setProjectError) setProjectError('Failed to open project location');
+      console.error("Failed to open in file explorer:", error);
+      if (setProjectError) setProjectError("Failed to open project location");
     }
   };
 
@@ -172,12 +195,14 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
 
   const getActiveTaskName = () => {
     if (!generationState || !generationState.current_task) {
-      return 'Initializing...';
+      return "Initializing...";
     }
-    
-    const currentTask = generationState.tasks && generationState.current_task ? 
-      generationState.tasks[generationState.current_task] : null;
-    return currentTask ? currentTask.name : 'Processing...';
+
+    const currentTask =
+      generationState.tasks && generationState.current_task
+        ? generationState.tasks[generationState.current_task]
+        : null;
+    return currentTask ? currentTask.name : "Processing...";
   };
 
   const isGenerationSuccessful = () => {
@@ -185,32 +210,40 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
   };
 
   const isGenerationFailed = () => {
-    return generationState && TaskStatusHelpers.isFailed(generationState.status);
+    return (
+      generationState && TaskStatusHelpers.isFailed(generationState.status)
+    );
   };
 
   const getErrorDetails = () => {
     if (projectError) return projectError;
-    
+
     if (generationState && TaskStatusHelpers.isFailed(generationState.status)) {
       const reason = TaskStatusHelpers.getReason(generationState.status);
-      return reason ? `Failed: ${reason}` : 'Project generation failed';
+      return reason ? `Failed: ${reason}` : "Project generation failed";
     }
-    
-    return 'Project generation failed';
+
+    return "Project generation failed";
   };
 
   const renderTaskList = () => {
-    if (!generationState || !generationState.tasks || Object.keys(generationState.tasks).length === 0) {
+    if (
+      !generationState ||
+      !generationState.tasks ||
+      Object.keys(generationState.tasks).length === 0
+    ) {
       return (
         <div className="mt-4 space-y-2">
           <h4 className="font-medium">Generation Tasks</h4>
           <div className="p-4 text-center bg-base-300 rounded-lg">
-            <p className="text-sm opacity-75">Waiting for tasks to initialize...</p>
+            <p className="text-sm opacity-75">
+              Waiting for tasks to initialize...
+            </p>
           </div>
         </div>
       );
     }
-    
+
     // Sort tasks by status: running first, then pending, then completed, then failed
     const sortedTasks = Object.values(generationState.tasks).sort((a, b) => {
       const getStatusPriority = (status: TaskStatus | string) => {
@@ -220,28 +253,32 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
         if (TaskStatusHelpers.isSkipped(status)) return 3;
         return 4; // Failed or other
       };
-      
+
       return getStatusPriority(a.status) - getStatusPriority(b.status);
     });
-    
+
     return (
       <div className="mt-4 space-y-2">
         <h4 className="font-medium">Generation Tasks</h4>
         <div className="space-y-2 max-h-40 overflow-y-auto p-2 bg-base-300 rounded-lg">
-          {sortedTasks.map(task => (
-            <div 
-              key={task.id} 
+          {sortedTasks.map((task) => (
+            <div
+              key={task.id}
               className={`flex items-center justify-between p-2 rounded ${
-                task.status === TASK_STATUS.RUNNING ? 'bg-primary/10 border border-primary/30' :
-                task.status === TASK_STATUS.COMPLETED ? 'bg-success/10 border border-success/30' :
-                TaskStatusHelpers.isFailed(task.status) ? 'bg-error/10 border border-error/30' :
-                TaskStatusHelpers.isSkipped(task.status) ? 'bg-base-100' :
-                'bg-base-200'
+                task.status === TASK_STATUS.RUNNING
+                  ? "bg-primary/10 border border-primary/30"
+                  : task.status === TASK_STATUS.COMPLETED
+                    ? "bg-success/10 border border-success/30"
+                    : TaskStatusHelpers.isFailed(task.status)
+                      ? "bg-error/10 border border-error/30"
+                      : TaskStatusHelpers.isSkipped(task.status)
+                        ? "bg-base-100"
+                        : "bg-base-200"
               }`}
             >
               <div className="flex items-center gap-2">
                 {task.status === TASK_STATUS.RUNNING && (
-                  <div className="w-4 h-4 rounded-full bg-primary animate-pulse"></div>
+                  <div className="w-4 h-4 rounded-full bg-primary animate-pulse" />
                 )}
                 {task.status === TASK_STATUS.COMPLETED && (
                   <CheckCircle size={16} className="text-success" />
@@ -253,16 +290,17 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
                   <XCircle size={16} className="text-base-content/50" />
                 )}
                 {task.status === TASK_STATUS.PENDING && (
-                  <div className="w-4 h-4 rounded-full border border-base-content/30"></div>
+                  <div className="w-4 h-4 rounded-full border border-base-content/30" />
                 )}
                 <span className="text-sm">{task.name}</span>
               </div>
               <div className="text-xs opacity-75">
-                {task.status === TASK_STATUS.RUNNING && `${Math.round(task.progress * 100)}%`}
-                {task.status === TASK_STATUS.COMPLETED && 'Done'}
-                {TaskStatusHelpers.isFailed(task.status) && 'Failed'}
-                {TaskStatusHelpers.isSkipped(task.status) && 'Skipped'}
-                {task.status === TASK_STATUS.PENDING && 'Pending'}
+                {task.status === TASK_STATUS.RUNNING &&
+                  `${Math.round(task.progress * 100)}%`}
+                {task.status === TASK_STATUS.COMPLETED && "Done"}
+                {TaskStatusHelpers.isFailed(task.status) && "Failed"}
+                {TaskStatusHelpers.isSkipped(task.status) && "Skipped"}
+                {task.status === TASK_STATUS.PENDING && "Pending"}
               </div>
             </div>
           ))}
@@ -282,15 +320,15 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">Project Generator</h1>
           <div className="flex gap-2">
-            <button 
-              onClick={handleBackToDashboard} 
+            <button
+              onClick={handleBackToDashboard}
               className="btn btn-sm btn-ghost gap-2"
             >
               <ArrowLeft size={16} />
               <span className="hidden sm:inline">Back to Dashboard</span>
               <span className="sm:hidden">Back</span>
             </button>
-            <button 
+            <button
               onClick={handleBackToDashboard}
               className="btn btn-sm btn-ghost"
             >
@@ -303,44 +341,54 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       <main className="flex-1 container mx-auto p-4 md:p-6 max-w-5xl">
         <div className="space-y-6">
           {/* Project Info Card */}
-          <div 
+          <div
             className="card bg-base-200 shadow-sm opacity-0 animate-fadeIn"
-            style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}
+            style={{ animationDelay: "100ms", animationFillMode: "forwards" }}
           >
             <div className="card-body">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                 <div>
-                  <h2 className="text-xl font-bold">{projectName || 'Unnamed Project'}</h2>
+                  <h2 className="text-xl font-bold">
+                    {projectName || "Unnamed Project"}
+                  </h2>
                   <p className="text-sm opacity-75">{projectPath}</p>
                 </div>
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
-                  <div className="badge badge-primary">{selectedFramework?.name || 'No Framework'}</div>
-                  <div className="badge badge-secondary">{selectedModules.length} modules</div>
+                  <div className="badge badge-primary">
+                    {selectedFramework?.name || "No Framework"}
+                  </div>
+                  <div className="badge badge-secondary">
+                    {selectedModules.length} modules
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Generation Progress Card */}
-          <div 
+          <div
             className="card bg-base-200 shadow-sm overflow-hidden opacity-0 animate-fadeIn"
-            style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}
+            style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
           >
             <div className="card-body">
               <h3 className="card-title flex justify-between">
                 <span>{getActiveTaskName()}</span>
                 {generationState && (
-                  <span className="text-sm font-normal badge badge-primary">{getProgressPercentage()}%</span>
+                  <span className="text-sm font-normal badge badge-primary">
+                    {getProgressPercentage()}%
+                  </span>
                 )}
               </h3>
 
               {/* Progress Bar */}
               <div className="w-full bg-base-300 rounded-full h-4 my-4 overflow-hidden">
-                <div 
+                <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    isGenerationSuccessful() ? 'bg-success' : 
-                    isGenerationFailed() ? 'bg-error' : 
-                    'bg-primary'
+                    isGenerationSuccessful()
+                      ? "bg-success"
+                      : isGenerationFailed()
+                        ? "bg-error"
+                        : "bg-primary"
                   }`}
                   style={{ width: `${getProgressPercentage()}%` }}
                 />
@@ -349,8 +397,10 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               {/* Initial Loading State */}
               {isLoading && !generationState && (
                 <div className="flex flex-col items-center justify-center p-4">
-                  <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                  <h3 className="font-bold text-lg">Starting Project Generation</h3>
+                  <div className="loading loading-spinner loading-lg text-primary mb-4" />
+                  <h3 className="font-bold text-lg">
+                    Starting Project Generation
+                  </h3>
                   <p className="text-center text-sm opacity-75">
                     Initializing task runner, please wait...
                   </p>
@@ -358,48 +408,56 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
               )}
 
               {/* Current Action */}
-              {generationState && isLoading && !isGenerationSuccessful() && !isGenerationFailed() && (
-                <div className="flex justify-between items-center">
-                  <p className="text-center text-sm py-2">{getActiveTaskName()}</p>
-                  <button
-                    onClick={handleCancelGeneration}
-                    className="btn btn-sm btn-outline btn-error gap-2"
-                  >
-                    <XCircle size={16} />
-                    Cancel
-                  </button>
-                </div>
-              )}
+              {generationState &&
+                isLoading &&
+                !isGenerationSuccessful() &&
+                !isGenerationFailed() && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-center text-sm py-2">
+                      {getActiveTaskName()}
+                    </p>
+                    <button
+                      onClick={handleCancelGeneration}
+                      className="btn btn-sm btn-outline btn-error gap-2"
+                    >
+                      <XCircle size={16} />
+                      Cancel
+                    </button>
+                  </div>
+                )}
 
               {/* Task List */}
               {renderTaskList()}
 
               {/* Success Message */}
               {isGenerationSuccessful() && (
-                <div 
-                  className="bg-success/10 border border-success/30 rounded-lg p-4 text-center my-4 animate-fadeIn"
-                >
-                  <CheckCircle className="mx-auto mb-2 text-success" size={48} />
-                  <h3 className="font-bold text-lg text-success">Project Generated Successfully!</h3>
+                <div className="bg-success/10 border border-success/30 rounded-lg p-4 text-center my-4 animate-fadeIn">
+                  <CheckCircle
+                    className="mx-auto mb-2 text-success"
+                    size={48}
+                  />
+                  <h3 className="font-bold text-lg text-success">
+                    Project Generated Successfully!
+                  </h3>
                   <p className="text-sm opacity-75 mb-4">
                     Your project has been created at {projectPath}/{projectName}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <button 
+                    <button
                       onClick={handleOpenInEditor}
                       className="btn btn-sm btn-outline"
                     >
                       <Terminal size={16} />
                       Open in Editor
                     </button>
-                    <button 
+                    <button
                       onClick={handleOpenInFolder}
                       className="btn btn-sm btn-outline"
                     >
                       <FolderOpen size={16} />
                       Open Folder
                     </button>
-                    <button 
+                    <button
                       onClick={handleBackToDashboard}
                       className="btn btn-sm btn-outline"
                     >
@@ -412,16 +470,17 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
 
               {/* Error Message */}
               {isGenerationFailed() && (
-                <div 
-                  className="bg-error/10 border border-error/30 rounded-lg p-4 text-center my-4 animate-fadeIn"
-                >
-                  <AlertTriangle className="mx-auto mb-2 text-error" size={48} />
-                  <h3 className="font-bold text-lg text-error">Generation Failed</h3>
-                  <p className="text-sm opacity-75 mb-4">
-                    {getErrorDetails()}
-                  </p>
+                <div className="bg-error/10 border border-error/30 rounded-lg p-4 text-center my-4 animate-fadeIn">
+                  <AlertTriangle
+                    className="mx-auto mb-2 text-error"
+                    size={48}
+                  />
+                  <h3 className="font-bold text-lg text-error">
+                    Generation Failed
+                  </h3>
+                  <p className="text-sm opacity-75 mb-4">{getErrorDetails()}</p>
                   <div className="flex justify-center gap-2">
-                    <button 
+                    <button
                       onClick={handleRetry}
                       className="btn btn-sm btn-error gap-2"
                     >
@@ -434,27 +493,29 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
 
               {/* Toggle Console Button */}
               <div className="flex justify-center mt-4">
-                <button 
+                <button
                   onClick={() => setShowConsole(!showConsole)}
                   className="btn btn-sm btn-ghost gap-2"
                 >
                   <Terminal size={16} />
-                  {showConsole ? 'Hide' : 'Show'} Console Output
+                  {showConsole ? "Hide" : "Show"} Console Output
                 </button>
               </div>
             </div>
 
             {/* Command Console */}
             {showConsole && (
-              <div 
+              <div
                 className="bg-black px-4 py-2 text-green-400 font-mono text-xs overflow-auto animate-slideDown"
-                style={{ maxHeight: '400px' }}
+                style={{ maxHeight: "400px" }}
               >
                 <div className="border-b border-gray-700 pb-1 mb-2 flex justify-between">
                   <span>Command Output</span>
                 </div>
                 {generationLogs.length === 0 ? (
-                  <div className="text-gray-500 italic">Waiting for command output...</div>
+                  <div className="text-gray-500 italic">
+                    Waiting for command output...
+                  </div>
                 ) : (
                   generationLogs.map((log, index) => (
                     <div key={index} className="mb-1 whitespace-pre-wrap">
@@ -468,18 +529,23 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
           </div>
 
           {/* Selected Modules Section */}
-          <div 
+          <div
             className="card bg-base-200 shadow-sm opacity-0 animate-fadeIn"
-            style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}
+            style={{ animationDelay: "300ms", animationFillMode: "forwards" }}
           >
             <div className="card-body">
               <h3 className="card-title">Selected Modules</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {selectedModules.map(module => (
-                  <div key={module.id} className="bg-base-100 p-3 rounded-lg text-sm">
+                {selectedModules.map((module) => (
+                  <div
+                    key={module.id}
+                    className="bg-base-100 p-3 rounded-lg text-sm"
+                  >
                     <div className="flex justify-between items-center">
                       <p className="font-medium">{module.name}</p>
-                      <span className="badge badge-xs badge-outline">{module.category}</span>
+                      <span className="badge badge-xs badge-outline">
+                        {module.category}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -511,4 +577,4 @@ export function GenerationPage({ onBackToDashboard }: GenerationPageProps) {
       `}</style>
     </div>
   );
-} 
+}

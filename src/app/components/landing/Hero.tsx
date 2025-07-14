@@ -1,11 +1,11 @@
-import { ChevronDown, Clock, Code, Shield, PlayCircle } from 'lucide-react';
-import { SectionProps } from './types';
-import { useState } from 'react';
-import VideoDemo from './videodemo';
+import { ChevronDown, Clock, Code, PlayCircle, Shield } from "lucide-react";
+import { useState } from "react";
+import type { SectionProps } from "./types";
+import VideoDemo from "./videodemo";
 
 export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
   const [showDemo, setShowDemo] = useState(false);
-  
+
   return (
     <section
       ref={sectionRef}
@@ -16,7 +16,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         {/* Abstract grid lines */}
         <div className="absolute inset-0 opacity-20">
           <div className="h-full w-full">
-            <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.15)_0,rgba(99,102,241,0)_50%)]"></div>
+            <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.15)_0,rgba(99,102,241,0)_50%)]" />
           </div>
         </div>
       </div>
@@ -25,7 +25,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
         {/* Pre-heading badge */}
         <div className="inline-flex items-center px-4 py-1 rounded-full text-xs font-medium bg-indigo-800/50 text-indigo-200 mb-8 backdrop-blur-sm">
-          <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-purple-400"></span>
+          <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-purple-400" />
           Developer Preview Coming Soon
         </div>
 
@@ -39,8 +39,9 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         {/* Subheading */}
         <p className="mt-6 text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl">
           The Architect generates production-ready foundations in 15 minutes,
-          eliminating <span className="text-white font-medium">30+ hours</span> of configuration work. 
-          Build what matters—unique features, not boilerplate.
+          eliminating <span className="text-white font-medium">30+ hours</span>{" "}
+          of configuration work. Build what matters—unique features, not
+          boilerplate.
         </p>
 
         {/* Video demo mockup */}
@@ -49,17 +50,17 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         {/* CTA section */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
           <button
-            onClick={() => scrollToSection('access')}
+            onClick={() => scrollToSection("access")}
             className="px-6 py-3 bg-gradient-to-r from-purple-700 to-indigo-700 rounded-lg text-white font-medium shadow-lg shadow-purple-900/20 transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-xl hover:shadow-purple-900/30 hover:from-purple-600 hover:to-indigo-600 active:translate-y-0 active:shadow-md"
           >
             Get Early Access
           </button>
           <button
-            onClick={() => scrollToSection('howItWorks')}
+            onClick={() => scrollToSection("howItWorks")}
             className="px-6 py-3 bg-gray-800/80 rounded-lg text-white font-medium transition-all duration-300 group relative overflow-hidden"
           >
             <span className="relative z-10">See How It Works</span>
-            <span className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+            <span className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </button>
         </div>
 
@@ -75,11 +76,11 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
                       ? "from-blue-500 to-purple-600"
                       : "from-purple-600 to-pink-500"
                   }`}
-                ></div>
+                />
               ))}
             </div>
             <span>
-              <span className="font-semibold text-white">342+</span> developers 
+              <span className="font-semibold text-white">342+</span> developers
               already waiting
             </span>
           </div>
@@ -97,15 +98,21 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
       {/* Mouse scroll indicator */}
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
         <div className="w-8 h-12 rounded-full border-2 border-gray-500 flex justify-center py-2">
-          <div className="w-1 h-3 bg-gray-400 rounded-full animate-bounce"></div>
+          <div className="w-1 h-3 bg-gray-400 rounded-full animate-bounce" />
         </div>
       </div>
-      
+
       {/* Demo modal */}
       {showDemo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowDemo(false)}>
-          <div className="w-full max-w-4xl aspect-video bg-black relative" onClick={e => e.stopPropagation()}>
-            <button 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowDemo(false)}
+        >
+          <div
+            className="w-full max-w-4xl aspect-video bg-black relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
               className="absolute -top-10 right-0 text-white hover:text-purple-400 transition-colors"
               onClick={() => setShowDemo(false)}
             >
@@ -118,14 +125,18 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
                     <Code size={30} className="text-purple-400" />
                   </div>
                 </div>
-                <h3 className="text-xl font-medium mb-2">The Architect in Action</h3>
+                <h3 className="text-xl font-medium mb-2">
+                  The Architect in Action
+                </h3>
                 <p className="text-gray-400 mb-6">
-                  In this demo, you'll see how The Architect turns a simple project description into a complete, production-ready application foundation in under a minute.
+                  In this demo, you'll see how The Architect turns a simple
+                  project description into a complete, production-ready
+                  application foundation in under a minute.
                 </p>
                 <div className="w-full h-12 bg-gray-800 rounded-lg overflow-hidden mb-4 relative">
                   <div className="absolute inset-0 flex items-center px-4">
                     <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
-                      <div className="w-2/3 h-full bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                      <div className="w-2/3 h-full bg-gradient-to-r from-blue-500 to-purple-500" />
                     </div>
                   </div>
                 </div>
@@ -168,8 +179,14 @@ const FeatureHighlights = () => {
         {features.map((feature, index) => {
           const FeatureIcon = feature.icon;
           return (
-            <div key={index} className="bg-gray-900/40 backdrop-blur-sm p-4 rounded-lg border border-gray-800 flex items-center transform hover:translate-y-[-2px] hover:bg-gray-900/60 hover:border-gray-700 transition-all duration-300">
-              <FeatureIcon size={24} className="text-blue-400 mr-3 flex-shrink-0" />
+            <div
+              key={index}
+              className="bg-gray-900/40 backdrop-blur-sm p-4 rounded-lg border border-gray-800 flex items-center transform hover:translate-y-[-2px] hover:bg-gray-900/60 hover:border-gray-700 transition-all duration-300"
+            >
+              <FeatureIcon
+                size={24}
+                className="text-blue-400 mr-3 flex-shrink-0"
+              />
               <div>
                 <div className="text-white font-medium">{feature.title}</div>
                 <div className="text-gray-400 text-sm">
@@ -182,4 +199,4 @@ const FeatureHighlights = () => {
       </div>
     </div>
   );
-}; 
+};

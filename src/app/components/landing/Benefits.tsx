@@ -1,9 +1,24 @@
-import { Clock, Shield, Zap, Layers, Code, CheckCircle, FileCode, Terminal, GitBranch, ArrowRight } from 'lucide-react';
-import { Benefit, SectionProps } from './types';
-import { SectionWrapper } from './SectionWrapper';
-import { useState } from 'react';
+import {
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  Code,
+  FileCode,
+  GitBranch,
+  Layers,
+  Shield,
+  Terminal,
+  Zap,
+} from "lucide-react";
+import { useState } from "react";
+import { SectionWrapper } from "./SectionWrapper";
+import type { Benefit, SectionProps } from "./types";
 
-export const Benefits = ({ sectionRef, isVisible, scrollToSection }: SectionProps) => {
+export const Benefits = ({
+  sectionRef,
+  isVisible,
+  scrollToSection,
+}: SectionProps) => {
   const [activeTab, setActiveTab] = useState<number>(0);
 
   const benefits: Benefit[] = [
@@ -18,7 +33,8 @@ export const Benefits = ({ sectionRef, isVisible, scrollToSection }: SectionProp
       stat: "97%",
       statLabel: "Time Savings",
       painPoint: "Configuration Time",
-      beforeExample: "Manually researching and configuring tech stacks for days",
+      beforeExample:
+        "Manually researching and configuring tech stacks for days",
       afterExample: "Complete project foundation in 15 minutes",
       codeExample: {
         before: `// Typical workflow without The Architect
@@ -35,8 +51,8 @@ export const Benefits = ({ sectionRef, isVisible, scrollToSection }: SectionProp
 1. Describe your project requirements
 2. Review tech recommendations
 3. Generate complete foundation
-4. Start building unique features immediately`
-      }
+4. Start building unique features immediately`,
+      },
     },
     {
       title: "Quality & Consistency",
@@ -49,8 +65,10 @@ export const Benefits = ({ sectionRef, isVisible, scrollToSection }: SectionProp
       stat: "100%",
       statLabel: "Best Practices",
       painPoint: "Quality Concerns",
-      beforeExample: "Inconsistent patterns, security vulnerabilities, technical debt",
-      afterExample: "Production-ready architecture with built-in best practices",
+      beforeExample:
+        "Inconsistent patterns, security vulnerabilities, technical debt",
+      afterExample:
+        "Production-ready architecture with built-in best practices",
       codeExample: {
         before: `// Inconsistent error handling
 function fetchData() {
@@ -91,8 +109,8 @@ app.get('/api/user/:id',
       next(error);
     }
   }
-);`
-      }
+);`,
+      },
     },
     {
       title: "Focus On Innovation",
@@ -120,8 +138,8 @@ Day 1 (Morning): Generate project foundation
 Day 1 (Afternoon): Start implementing unique features
 Week 1: Core feature set nearly complete
 Week 2: Ready for feedback and iteration
-...`
-      }
+...`,
+      },
     },
     {
       title: "Modern & Adaptable",
@@ -134,7 +152,8 @@ Week 2: Ready for feedback and iteration
       stat: "Zero",
       statLabel: "Technical Debt",
       painPoint: "Technology Evolution",
-      beforeExample: "Projects quickly become outdated, requiring major rewrites",
+      beforeExample:
+        "Projects quickly become outdated, requiring major rewrites",
       afterExample: "Always up-to-date with latest patterns and practices",
       codeExample: {
         before: `// Outdated patterns and hard to update
@@ -166,8 +185,8 @@ function UserComponent() {
   return (
     // JSX with modern patterns
   );
-}`
-      }
+}`,
+      },
     },
   ];
 
@@ -179,8 +198,10 @@ function UserComponent() {
       className="py-24 bg-gradient-to-b from-gray-950 to-gray-900"
       heading={{
         title: "Transformative Benefits",
-        titleClasses: "text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600",
-        subtitle: "Real-world impact on your development workflow and productivity."
+        titleClasses:
+          "text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600",
+        subtitle:
+          "Real-world impact on your development workflow and productivity.",
       }}
     >
       {/* Main benefit cards */}
@@ -199,7 +220,9 @@ function UserComponent() {
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-12"
               } ${
-                isActive ? "ring-2 ring-offset-2 ring-offset-gray-900 " + benefit.borderColor : ""
+                isActive
+                  ? `ring-2 ring-offset-2 ring-offset-gray-900 ${benefit.borderColor}`
+                  : ""
               }`}
               style={{ transitionDelay: `${index * 150}ms` }}
               aria-hidden={!isVisible}
@@ -207,11 +230,15 @@ function UserComponent() {
             >
               {/* Pain point tag */}
               <div className="flex justify-between items-center mb-4">
-                <div className={`px-3 py-1 rounded-full text-xs font-medium ${benefit.bgColor} ${benefit.color}`}>
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${benefit.bgColor} ${benefit.color}`}
+                >
                   {benefit.painPoint}
                 </div>
                 {isActive && (
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${benefit.bgColor}`}>
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center ${benefit.bgColor}`}
+                  >
                     <CheckCircle size={12} className={benefit.color} />
                   </div>
                 )}
@@ -238,10 +265,12 @@ function UserComponent() {
                 {benefit.title}
               </h3>
               <p className="text-gray-300 mb-4">{benefit.description}</p>
-              
+
               {/* Quick Before/After */}
               <div className="flex items-center text-sm text-gray-400 mt-4">
-                <span className="line-through text-red-400">{benefit.beforeExample}</span>
+                <span className="line-through text-red-400">
+                  {benefit.beforeExample}
+                </span>
                 <ArrowRight size={14} className="mx-2 text-gray-600" />
                 <span className="text-green-400">{benefit.afterExample}</span>
               </div>
@@ -251,7 +280,7 @@ function UserComponent() {
       </div>
 
       {/* Detailed example section */}
-      <div 
+      <div
         className={`mt-16 bg-gray-900/70 backdrop-blur-sm rounded-xl border border-gray-800 overflow-hidden transition-all duration-1000 ${
           isVisible
             ? "opacity-100 transform translate-y-0"
@@ -275,49 +304,63 @@ function UserComponent() {
             ))}
           </div>
         </div>
-        
+
         <div className="p-6">
           <div className="flex items-center mb-6">
-            <div className={`w-10 h-10 rounded-full ${benefits[activeTab].bgColor} flex items-center justify-center mr-3`}>
+            <div
+              className={`w-10 h-10 rounded-full ${benefits[activeTab].bgColor} flex items-center justify-center mr-3`}
+            >
               <Code size={20} className={benefits[activeTab].color} />
             </div>
             <h3 className="text-xl font-bold text-white">
               Real-World Example: {benefits[activeTab].title}
             </h3>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-6">
             {/* Before Example */}
             <div className="bg-gray-950 rounded-lg overflow-hidden border border-gray-800">
               <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center">
                   <Terminal size={16} className="text-red-400 mr-2" />
-                  <span className="text-gray-300 text-sm">Without The Architect</span>
+                  <span className="text-gray-300 text-sm">
+                    Without The Architect
+                  </span>
                 </div>
-                <div className="px-2 py-1 rounded text-xs bg-red-900/30 text-red-400">Before</div>
+                <div className="px-2 py-1 rounded text-xs bg-red-900/30 text-red-400">
+                  Before
+                </div>
               </div>
               <div className="p-4 font-mono text-sm text-gray-400 overflow-x-auto">
-                <pre className="whitespace-pre-wrap">{benefits[activeTab].codeExample.before}</pre>
+                <pre className="whitespace-pre-wrap">
+                  {benefits[activeTab].codeExample.before}
+                </pre>
               </div>
             </div>
-            
+
             {/* After Example */}
             <div className="bg-gray-950 rounded-lg overflow-hidden border border-gray-800">
               <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center">
                   <GitBranch size={16} className="text-green-400 mr-2" />
-                  <span className="text-gray-300 text-sm">With The Architect</span>
+                  <span className="text-gray-300 text-sm">
+                    With The Architect
+                  </span>
                 </div>
-                <div className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400">After</div>
+                <div className="px-2 py-1 rounded text-xs bg-green-900/30 text-green-400">
+                  After
+                </div>
               </div>
               <div className="p-4 font-mono text-sm text-gray-400 overflow-x-auto">
-                <pre className="whitespace-pre-wrap">{benefits[activeTab].codeExample.after}</pre>
+                <pre className="whitespace-pre-wrap">
+                  {benefits[activeTab].codeExample.after}
+                </pre>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Testimonial quote */}
       <div
         className={`mt-16 p-8 rounded-xl bg-gradient-to-br from-purple-900/20 to-gray-900 border border-purple-900/40 transition-all duration-1000 ${
@@ -327,11 +370,17 @@ function UserComponent() {
         }`}
       >
         <div className="mx-auto max-w-4xl text-center">
-          <svg className="w-10 h-10 mx-auto mb-4 text-purple-500 opacity-50" fill="currentColor" viewBox="0 0 32 32">
+          <svg
+            className="w-10 h-10 mx-auto mb-4 text-purple-500 opacity-50"
+            fill="currentColor"
+            viewBox="0 0 32 32"
+          >
             <path d="M9.352 4C4.456 7.456 1 13.12 1 19.36c0 5.088 3.072 8.064 6.624 8.064 3.36 0 5.856-2.688 5.856-5.856 0-3.168-2.208-5.472-5.088-5.472-.576 0-1.344.096-1.536.192.48-3.264 3.552-7.104 6.624-9.024L9.352 4zm16.512 0c-4.8 3.456-8.256 9.12-8.256 15.36 0 5.088 3.072 8.064 6.624 8.064 3.264 0 5.856-2.688 5.856-5.856 0-3.168-2.304-5.472-5.184-5.472-.576 0-1.248.096-1.44.192.48-3.264 3.456-7.104 6.528-9.024L25.864 4z" />
           </svg>
           <p className="text-2xl text-gray-300 leading-relaxed italic">
-            "The Architect eliminated weeks of setup time for our team. Now we can focus on building what makes our product unique instead of spending time on repetitive configuration."
+            "The Architect eliminated weeks of setup time for our team. Now we
+            can focus on building what makes our product unique instead of
+            spending time on repetitive configuration."
           </p>
           <div className="mt-6">
             <div className="text-white font-medium">Sarah Johnson</div>
@@ -351,7 +400,7 @@ function UserComponent() {
         <h3 className="text-2xl font-bold text-white mb-6">
           Experience these benefits for yourself
         </h3>
-        
+
         <div className="inline-flex bg-gray-900/70 backdrop-blur-sm p-1 rounded-lg border border-gray-800 mb-6">
           <div className="px-4 py-2 rounded-lg bg-purple-900/30 text-purple-300 text-sm font-medium">
             Limited Early Access Spots
@@ -370,4 +419,4 @@ function UserComponent() {
       </div>
     </SectionWrapper>
   );
-}; 
+};

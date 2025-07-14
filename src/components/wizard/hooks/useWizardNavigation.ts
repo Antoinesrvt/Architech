@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { WizardStepProps } from '../types';
+import { useState } from "react";
+import type { WizardStepProps } from "../types";
 
 export type WizardStep = {
   id: string;
@@ -13,9 +13,14 @@ export interface UseWizardNavigationProps {
   onComplete?: () => void;
 }
 
-export function useWizardNavigation({ steps, onComplete }: UseWizardNavigationProps) {
+export function useWizardNavigation({
+  steps,
+  onComplete,
+}: UseWizardNavigationProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [visitedSteps, setVisitedSteps] = useState<Record<number, boolean>>({ 0: true });
+  const [visitedSteps, setVisitedSteps] = useState<Record<number, boolean>>({
+    0: true,
+  });
   const [isCompleted, setIsCompleted] = useState(false);
 
   // Get the current step
@@ -31,21 +36,22 @@ export function useWizardNavigation({ steps, onComplete }: UseWizardNavigationPr
 
       const nextIndex = currentStepIndex + 1;
       setCurrentStepIndex(nextIndex);
-      
+
       // Mark the next step as visited
-      setVisitedSteps(prev => ({
+      setVisitedSteps((prev) => ({
         ...prev,
         [nextIndex]: true,
       }));
-      
+
       return true;
-    } else if (currentStepIndex === steps.length - 1) {
+    }
+    if (currentStepIndex === steps.length - 1) {
       // If we're on the last step and going forward, mark as completed
       setIsCompleted(true);
       onComplete?.();
       return true;
     }
-    
+
     return false;
   };
 
@@ -64,28 +70,31 @@ export function useWizardNavigation({ steps, onComplete }: UseWizardNavigationPr
     if (index >= steps.length) {
       return false;
     }
-    
+
     // Can only navigate to a step that has been visited before
     // or is immediately after the current highest visited step
-    const highestVisitedIndex = Math.max(...Object.keys(visitedSteps).map(Number));
-    
+    const highestVisitedIndex = Math.max(
+      ...Object.keys(visitedSteps).map(Number),
+    );
+
     if (visitedSteps[index] || index === highestVisitedIndex + 1) {
       setCurrentStepIndex(index);
-      
+
       // Mark this step as visited
-      setVisitedSteps(prev => ({
+      setVisitedSteps((prev) => ({
         ...prev,
         [index]: true,
       }));
-      
+
       return true;
     }
-    
+
     return false;
   };
 
   // Check if we can go to the next step
-  const canGoNext = currentStepIndex < steps.length - 1 && 
+  const canGoNext =
+    currentStepIndex < steps.length - 1 &&
     (!currentStep.canProceed || currentStep.canProceed());
 
   // Check if we can go to the previous step
@@ -107,4 +116,4 @@ export function useWizardNavigation({ steps, onComplete }: UseWizardNavigationPr
     canGoPrevious,
     progress,
   };
-} 
+}

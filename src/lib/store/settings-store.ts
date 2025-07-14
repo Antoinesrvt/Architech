@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-type ThemeType = 'architech' | 'architech-light';
+type ThemeType = "architech" | "architech-light";
 
 interface SettingsState {
   theme: ThemeType;
@@ -19,18 +19,22 @@ interface SettingsState {
 // @ts-ignore Ignoring type errors due to zustand version compatibility issues
 export const useSettingsStore = create<SettingsState>()(
   // @ts-ignore
-  persist((set) => ({
-    theme: 'architech', // Use your custom dark theme as default
-    defaultProjectPath: '',
-    editorCommand: 'code', // Default to VS Code
-    autoOpenProjectAfterGeneration: true,
-    useGit: true,
-    setTheme: (theme) => set({ theme }),
-    setDefaultProjectPath: (path) => set({ defaultProjectPath: path }),
-    setEditorCommand: (command) => set({ editorCommand: command }),
-    setAutoOpenProjectAfterGeneration: (value) => set({ autoOpenProjectAfterGeneration: value }),
-    setUseGit: (value) => set({ useGit: value }),
-  }), {
-    name: 'architech-settings',
-  })
-); 
+  persist(
+    (set) => ({
+      theme: "architech", // Use your custom dark theme as default
+      defaultProjectPath: "",
+      editorCommand: "code", // Default to VS Code
+      autoOpenProjectAfterGeneration: true,
+      useGit: true,
+      setTheme: (theme) => set({ theme }),
+      setDefaultProjectPath: (path) => set({ defaultProjectPath: path }),
+      setEditorCommand: (command) => set({ editorCommand: command }),
+      setAutoOpenProjectAfterGeneration: (value) =>
+        set({ autoOpenProjectAfterGeneration: value }),
+      setUseGit: (value) => set({ useGit: value }),
+    }),
+    {
+      name: "architech-settings",
+    },
+  ),
+);

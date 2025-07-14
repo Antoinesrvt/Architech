@@ -1,10 +1,10 @@
 "use client";
 
-import { Framework, Module } from "@/lib/store/framework-store";
-import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils/cn";
-import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
+import type { Framework, Module } from "@/lib/store/framework-store";
+import { cn } from "@/lib/utils/cn";
+import { useEffect, useState } from "react";
 
 interface CommandPreviewProps {
   framework: Framework;
@@ -15,7 +15,7 @@ interface CommandPreviewProps {
 export default function CommandPreview({
   framework,
   modules,
-  projectName
+  projectName,
 }: CommandPreviewProps) {
   const [expanded, setExpanded] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -33,8 +33,9 @@ export default function CommandPreview({
   // Format framework CLI command for display
   const formatFrameworkCommand = () => {
     // Add null checks to prevent runtime errors
-    if (!framework.cli) return `npx create-${framework.type}-app ${projectName}`;
-    
+    if (!framework.cli)
+      return `npx create-${framework.type}-app ${projectName}`;
+
     const baseCommand = framework.cli.base_command;
     let args = "";
 
@@ -51,8 +52,8 @@ export default function CommandPreview({
   // Get all module installation commands
   const getModuleCommands = () => {
     // Flatten all commands from all modules
-    return modules.flatMap(module => 
-      module.installation.commands.map(cmd => cmd)
+    return modules.flatMap((module) =>
+      module.installation.commands.map((cmd) => cmd),
     );
   };
 
@@ -61,11 +62,11 @@ export default function CommandPreview({
     const operations = {
       create: 0,
       modify: 0,
-      other: 0
+      other: 0,
     };
 
-    modules.forEach(module => {
-      module.installation.file_operations.forEach(op => {
+    modules.forEach((module) => {
+      module.installation.file_operations.forEach((op) => {
         if (op.operation === "create") {
           operations.create++;
         } else if (op.operation === "modify") {
@@ -84,7 +85,7 @@ export default function CommandPreview({
     const commands = [];
     commands.push(formatFrameworkCommand());
     commands.push(...getModuleCommands());
-    return commands.join('\n');
+    return commands.join("\n");
   };
 
   // Animation effect for command execution simulation
@@ -100,28 +101,42 @@ export default function CommandPreview({
       formatFrameworkCommand(),
       "Creating project...",
       "Framework installed!",
-      
+
       // Module installation
       ...(modules.length > 0 ? ["Installing modules..."] : []),
       ...getModuleCommands(),
       ...(modules.length > 0 ? ["All modules installed!"] : []),
-      
+
       // File operations
-      ...(getFileOperations().create + getFileOperations().modify + getFileOperations().other > 0 
-          ? ["Applying file operations..."] : []),
-      ...(getFileOperations().create > 0 ? [`Creating ${getFileOperations().create} file(s)...`] : []),
-      ...(getFileOperations().modify > 0 ? [`Modifying ${getFileOperations().modify} file(s)...`] : []),
-      ...(getFileOperations().other > 0 ? [`Other operations: ${getFileOperations().other}`] : []),
-      ...(getFileOperations().create + getFileOperations().modify + getFileOperations().other > 0 
-          ? ["File operations complete!"] : []),
-      
+      ...(getFileOperations().create +
+        getFileOperations().modify +
+        getFileOperations().other >
+      0
+        ? ["Applying file operations..."]
+        : []),
+      ...(getFileOperations().create > 0
+        ? [`Creating ${getFileOperations().create} file(s)...`]
+        : []),
+      ...(getFileOperations().modify > 0
+        ? [`Modifying ${getFileOperations().modify} file(s)...`]
+        : []),
+      ...(getFileOperations().other > 0
+        ? [`Other operations: ${getFileOperations().other}`]
+        : []),
+      ...(getFileOperations().create +
+        getFileOperations().modify +
+        getFileOperations().other >
+      0
+        ? ["File operations complete!"]
+        : []),
+
       // Completion
-      "Project ready! 🚀"
+      "Project ready! 🚀",
     ];
 
     // Simulate executing each line in sequence
     const interval = setInterval(() => {
-      setActiveLineIndex(prev => {
+      setActiveLineIndex((prev) => {
         if (prev >= allLines.length - 1) {
           clearInterval(interval);
           return prev;
@@ -140,14 +155,14 @@ export default function CommandPreview({
       await navigator.clipboard.writeText(commandText);
       setCopiedText(commandText);
       setShowCopiedIndicator(true);
-      
+
       // Show success toast
       toast({
         type: "success",
         title: "Copied!",
         message: "Commands copied to clipboard",
       });
-      
+
       // Reset copied state after a short delay
       setTimeout(() => {
         setShowCopiedIndicator(false);
@@ -166,25 +181,40 @@ export default function CommandPreview({
   };
 
   const fileOperations = getFileOperations();
-  const totalFileOps = fileOperations.create + fileOperations.modify + fileOperations.other;
+  const totalFileOps =
+    fileOperations.create + fileOperations.modify + fileOperations.other;
 
   // Calculate if the command is currently "running"
-  const isCommandRunning = expanded && activeLineIndex > 0 && activeLineIndex < getModuleCommands().length + 3;
+  const isCommandRunning =
+    expanded &&
+    activeLineIndex > 0 &&
+    activeLineIndex < getModuleCommands().length + 3;
 
   return (
     <div className="bg-base-200 rounded-lg p-4 font-mono text-sm animate-fadeIn">
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-bold text-lg font-sans">Command Preview</h3>
         <div className="flex gap-2">
-          <Button 
+          <Button
             variant="ghost"
             size="sm"
             onClick={handleCopy}
             disabled={isCommandRunning}
             className="relative"
             leftIcon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                />
               </svg>
             }
           >
@@ -196,7 +226,7 @@ export default function CommandPreview({
               </span>
             )}
           </Button>
-          <Button 
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => setExpanded(!expanded)}
@@ -216,7 +246,9 @@ export default function CommandPreview({
             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
           </div>
-          <div className="flex-1 text-center text-xs text-white/70 font-sans">terminal</div>
+          <div className="flex-1 text-center text-xs text-white/70 font-sans">
+            terminal
+          </div>
         </div>
 
         {/* Gradient divider */}
@@ -227,8 +259,10 @@ export default function CommandPreview({
           <div className="flex">
             <span className="text-slate-400 w-5 flex-shrink-0">$</span>
             <span className="flex-1">
-              <span className="text-cyan-400">npx</span> 
-              <span className="text-green-400">{formatFrameworkCommand().replace(/^npx /, '')}</span>
+              <span className="text-cyan-400">npx</span>
+              <span className="text-green-400">
+                {formatFrameworkCommand().replace(/^npx /, "")}
+              </span>
             </span>
           </div>
 
@@ -254,100 +288,128 @@ export default function CommandPreview({
           )}
 
           {/* Module installation commands */}
-          {expanded && modules.map((module, index) => (
-            <div key={`module-${module.id}`}>
-              {module.installation.commands.map((command, cmdIndex) => (
-                activeLineIndex >= 4 + index + cmdIndex && (
-                  <div 
-                    key={`cmd-${index}-${cmdIndex}`}
-                    className="flex"
-                  >
-                    <span className="text-slate-400 w-5 flex-shrink-0">$</span>
-                    <span>
-                      {command.startsWith('npm') ? (
-                        <>
-                          <span className="text-cyan-400">npm</span> 
-                          <span className="text-green-400">{command.replace(/^npm /, '')}</span>
-                        </>
-                      ) : command.startsWith('npx') ? (
-                        <>
-                          <span className="text-cyan-400">npx</span> 
-                          <span className="text-green-400">{command.replace(/^npx /, '')}</span>
-                        </>
-                      ) : (
-                        <span className="text-white">{command}</span>
-                      )}
-                    </span>
-                  </div>
-                )
-              ))}
-            </div>
-          ))}
-          
+          {expanded &&
+            modules.map((module, index) => (
+              <div key={`module-${module.id}`}>
+                {module.installation.commands.map(
+                  (command, cmdIndex) =>
+                    activeLineIndex >= 4 + index + cmdIndex && (
+                      <div key={`cmd-${index}-${cmdIndex}`} className="flex">
+                        <span className="text-slate-400 w-5 flex-shrink-0">
+                          $
+                        </span>
+                        <span>
+                          {command.startsWith("npm") ? (
+                            <>
+                              <span className="text-cyan-400">npm</span>
+                              <span className="text-green-400">
+                                {command.replace(/^npm /, "")}
+                              </span>
+                            </>
+                          ) : command.startsWith("npx") ? (
+                            <>
+                              <span className="text-cyan-400">npx</span>
+                              <span className="text-green-400">
+                                {command.replace(/^npx /, "")}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-white">{command}</span>
+                          )}
+                        </span>
+                      </div>
+                    ),
+                )}
+              </div>
+            ))}
+
           {/* Simplified view for collapsed state */}
           {!expanded && modules.length > 0 && (
             <div className="flex">
               <span className="text-slate-400 w-5 flex-shrink-0">$</span>
               <span>
-                <span className="text-cyan-400">{modules.length > 0 ? 'npm' : 'npx'}</span> 
-                <span className="text-green-400">install {modules.map(m => m.id).join(' ')}</span>
-                {modules.length > 2 && <span className="text-yellow-400"> // ...and more</span>}
+                <span className="text-cyan-400">
+                  {modules.length > 0 ? "npm" : "npx"}
+                </span>
+                <span className="text-green-400">
+                  install {modules.map((m) => m.id).join(" ")}
+                </span>
+                {modules.length > 2 && (
+                  <span className="text-yellow-400"> // ...and more</span>
+                )}
               </span>
             </div>
           )}
-          
+
           {/* Modules installed message */}
-          {modules.length > 0 && activeLineIndex > 3 + getModuleCommands().length && (
-            <div className="flex">
-              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
-              <span className="text-green-400">All modules installed!</span>
-            </div>
-          )}
-          
+          {modules.length > 0 &&
+            activeLineIndex > 3 + getModuleCommands().length && (
+              <div className="flex">
+                <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+                <span className="text-green-400">All modules installed!</span>
+              </div>
+            )}
+
           {/* File operations */}
-          {totalFileOps > 0 && activeLineIndex >= 5 + getModuleCommands().length && (
-            <div className="flex">
-              <span className="text-slate-400 w-5 flex-shrink-0">#</span>
-              <span className="text-yellow-400">Applying file operations...</span>
-            </div>
-          )}
-          
-          {fileOperations.create > 0 && activeLineIndex >= 6 + getModuleCommands().length && (
-            <div className="flex">
-              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
-              <span className="text-white">Creating {fileOperations.create} file(s)...</span>
-            </div>
-          )}
-          
-          {fileOperations.modify > 0 && activeLineIndex >= 7 + getModuleCommands().length && (
-            <div className="flex">
-              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
-              <span className="text-white">Modifying {fileOperations.modify} file(s)...</span>
-            </div>
-          )}
-          
-          {fileOperations.other > 0 && activeLineIndex >= 8 + getModuleCommands().length && (
-            <div className="flex">
-              <span className="text-slate-400 w-5 flex-shrink-0">$</span>
-              <span className="text-white">Other operations: {fileOperations.other}</span>
-            </div>
-          )}
-          
-          {totalFileOps > 0 && activeLineIndex >= 9 + getModuleCommands().length && (
-            <div className="flex">
-              <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
-              <span className="text-green-400">File operations complete!</span>
-            </div>
-          )}
-          
+          {totalFileOps > 0 &&
+            activeLineIndex >= 5 + getModuleCommands().length && (
+              <div className="flex">
+                <span className="text-slate-400 w-5 flex-shrink-0">#</span>
+                <span className="text-yellow-400">
+                  Applying file operations...
+                </span>
+              </div>
+            )}
+
+          {fileOperations.create > 0 &&
+            activeLineIndex >= 6 + getModuleCommands().length && (
+              <div className="flex">
+                <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+                <span className="text-white">
+                  Creating {fileOperations.create} file(s)...
+                </span>
+              </div>
+            )}
+
+          {fileOperations.modify > 0 &&
+            activeLineIndex >= 7 + getModuleCommands().length && (
+              <div className="flex">
+                <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+                <span className="text-white">
+                  Modifying {fileOperations.modify} file(s)...
+                </span>
+              </div>
+            )}
+
+          {fileOperations.other > 0 &&
+            activeLineIndex >= 8 + getModuleCommands().length && (
+              <div className="flex">
+                <span className="text-slate-400 w-5 flex-shrink-0">$</span>
+                <span className="text-white">
+                  Other operations: {fileOperations.other}
+                </span>
+              </div>
+            )}
+
+          {totalFileOps > 0 &&
+            activeLineIndex >= 9 + getModuleCommands().length && (
+              <div className="flex">
+                <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
+                <span className="text-green-400">
+                  File operations complete!
+                </span>
+              </div>
+            )}
+
           {/* Project ready */}
-          {activeLineIndex >= (totalFileOps > 0 ? 10 : 5) + getModuleCommands().length && (
+          {activeLineIndex >=
+            (totalFileOps > 0 ? 10 : 5) + getModuleCommands().length && (
             <div className="flex">
               <span className="text-slate-400 w-5 flex-shrink-0">&gt;</span>
               <span className="text-green-400">Project ready! 🚀</span>
             </div>
           )}
-          
+
           {/* Cursor */}
           <div className="flex">
             <span className="text-slate-400 w-5 flex-shrink-0">$</span>
@@ -361,10 +423,13 @@ export default function CommandPreview({
 
       <div className="mt-2 text-xs font-sans opacity-70 flex justify-between items-center">
         <span>These commands will run in sequence to set up your project.</span>
-        <span className="text-primary-focus hover:underline cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <span
+          className="text-primary-focus hover:underline cursor-pointer"
+          onClick={() => setExpanded(!expanded)}
+        >
           {expanded ? "Show less" : "Show more"}
         </span>
       </div>
     </div>
   );
-} 
+}

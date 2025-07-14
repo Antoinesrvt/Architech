@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Quote } from "lucide-react";
+import { useState } from "react";
 
 export interface Testimonial {
   id: number;
@@ -14,29 +14,31 @@ interface TestimonialsProps {
   title?: string;
   subtitle?: string;
   testimonials: Testimonial[];
-  variant?: 'dark' | 'light' | 'purple';
+  variant?: "dark" | "light" | "purple";
   compact?: boolean;
 }
 
-export const Testimonials = ({ 
-  title, 
-  subtitle, 
-  testimonials, 
-  variant = 'dark',
-  compact = false 
+export const Testimonials = ({
+  title,
+  subtitle,
+  testimonials,
+  variant = "dark",
+  compact = false,
 }: TestimonialsProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const activeTestimonial = testimonials[activeIndex];
-  
+
   const nextTestimonial = () => {
     setActiveIndex((prev) => (prev + 1) % testimonials.length);
   };
-  
+
   const prevTestimonial = () => {
-    setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+    setActiveIndex(
+      (prev) => (prev - 1 + testimonials.length) % testimonials.length,
+    );
   };
-  
+
   const variantStyles = {
     dark: {
       wrapper: "bg-gray-900/60 border-gray-800",
@@ -76,39 +78,47 @@ export const Testimonials = ({
       indicatorActive: "bg-purple-500",
       indicatorInactive: "bg-purple-900/40",
       navButton: "text-purple-400 hover:text-purple-300",
-    }
+    },
   };
-  
+
   const styles = variantStyles[variant];
-  
+
   return (
     <div className={`rounded-xl border ${styles.wrapper} p-6 md:p-8`}>
       {(title || subtitle) && (
         <div className="text-center mb-8">
-          {title && <h3 className={`text-xl md:text-2xl font-bold ${styles.title}`}>{title}</h3>}
+          {title && (
+            <h3 className={`text-xl md:text-2xl font-bold ${styles.title}`}>
+              {title}
+            </h3>
+          )}
           {subtitle && <p className={`mt-2 ${styles.subtitle}`}>{subtitle}</p>}
         </div>
       )}
-      
-      <div className={`${styles.quoteBg} rounded-xl p-6 md:p-8 border ${styles.quoteBorder} relative`}>
+
+      <div
+        className={`${styles.quoteBg} rounded-xl p-6 md:p-8 border ${styles.quoteBorder} relative`}
+      >
         {/* Quote icon */}
-        <Quote 
-          size={24} 
-          className="absolute text-purple-400 opacity-30 -top-3 -left-3 transform rotate-180" 
+        <Quote
+          size={24}
+          className="absolute text-purple-400 opacity-30 -top-3 -left-3 transform rotate-180"
         />
-        
+
         {/* Testimonial content */}
         <div className="mb-6">
-          <p className={`text-lg ${styles.quote} mb-6`}>"{activeTestimonial.quote}"</p>
-          
+          <p className={`text-lg ${styles.quote} mb-6`}>
+            "{activeTestimonial.quote}"
+          </p>
+
           <div className="flex items-center">
             <div className="mr-4">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 p-0.5">
                 <div className="w-full h-full rounded-full overflow-hidden bg-gray-800">
                   {activeTestimonial.image ? (
-                    <img 
-                      src={activeTestimonial.image} 
-                      alt={activeTestimonial.name} 
+                    <img
+                      src={activeTestimonial.image}
+                      alt={activeTestimonial.name}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -120,30 +130,34 @@ export const Testimonials = ({
               </div>
             </div>
             <div>
-              <div className={`font-medium ${styles.name}`}>{activeTestimonial.name}</div>
+              <div className={`font-medium ${styles.name}`}>
+                {activeTestimonial.name}
+              </div>
               <div className={`text-sm ${styles.role}`}>
                 {activeTestimonial.role}, {activeTestimonial.company}
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Navigation controls */}
         {!compact && testimonials.length > 1 && (
           <div className="flex justify-between items-center pt-4 border-t border-gray-800">
             <div className="flex space-x-1">
               {testimonials.map((_, i) => (
-                <button 
+                <button
                   key={i}
                   onClick={() => setActiveIndex(i)}
                   className={`w-2 h-2 rounded-full transition-colors ${
-                    i === activeIndex ? styles.indicatorActive : styles.indicatorInactive
+                    i === activeIndex
+                      ? styles.indicatorActive
+                      : styles.indicatorInactive
                   }`}
                   aria-label={`Go to testimonial ${i + 1}`}
                 />
               ))}
             </div>
-            
+
             <div className="flex space-x-2">
               <button
                 onClick={prevTestimonial}
@@ -163,4 +177,4 @@ export const Testimonials = ({
       </div>
     </div>
   );
-}; 
+};

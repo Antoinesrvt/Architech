@@ -1,19 +1,26 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils/cn";
+import type React from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 // Toast types
 export type ToastType = "info" | "success" | "warning" | "error";
 
 // Toast position
-export type ToastPosition = 
-  | "top-left" 
-  | "top-center" 
-  | "top-right" 
-  | "bottom-left" 
-  | "bottom-center" 
+export type ToastPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-center"
   | "bottom-right";
 
 // Toast item interface
@@ -54,7 +61,8 @@ export function ToastProvider({
   maxToasts = 5,
 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [currentPosition, setCurrentPosition] = useState<ToastPosition>(position);
+  const [currentPosition, setCurrentPosition] =
+    useState<ToastPosition>(position);
   const [isMounted, setIsMounted] = useState(false);
 
   // Handle mounting to avoid hydration issues
@@ -79,7 +87,7 @@ export function ToastProvider({
       });
 
       // Auto-remove toast after duration
-      if (newToast.duration !== Infinity) {
+      if (newToast.duration !== Number.POSITIVE_INFINITY) {
         setTimeout(() => {
           removeToast(id);
         }, newToast.duration);
@@ -87,7 +95,7 @@ export function ToastProvider({
 
       return id;
     },
-    [maxToasts]
+    [maxToasts],
   );
 
   // Remove a toast
@@ -140,7 +148,7 @@ export function ToastProvider({
             aria-live="polite"
             className={cn(
               "fixed z-50 flex flex-col gap-2 w-full max-w-sm",
-              getPositionClasses(currentPosition)
+              getPositionClasses(currentPosition),
             )}
           >
             {toasts.map((toast) => (
@@ -153,7 +161,7 @@ export function ToastProvider({
                   toast.type === "warning" && "alert-warning",
                   toast.type === "error" && "alert-error",
                   "shadow-lg opacity-0",
-                  getAnimationClasses(currentPosition)
+                  getAnimationClasses(currentPosition),
                 )}
                 role="alert"
               >
@@ -194,7 +202,7 @@ export function ToastProvider({
               </div>
             ))}
           </div>,
-          document.body
+          document.body,
         )}
     </ToastContext.Provider>
   );
@@ -236,7 +244,7 @@ export function Toast({
         type === "warning" && "alert-warning",
         type === "error" && "alert-error",
         "shadow-lg",
-        className
+        className,
       )}
       role="alert"
       {...props}
@@ -254,4 +262,4 @@ export function Toast({
       )}
     </div>
   );
-} 
+}

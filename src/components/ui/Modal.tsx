@@ -1,15 +1,16 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils/cn';
+import { cn } from "@/lib/utils/cn";
+import type React from "react";
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
   showCloseButton?: boolean;
@@ -24,7 +25,7 @@ export interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'default' | 'danger';
+  variant?: "default" | "danger";
   isLoading?: boolean;
 }
 
@@ -33,11 +34,11 @@ const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  size = 'md',
+  size = "md",
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showCloseButton = true,
-  className
+  className,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -46,25 +47,25 @@ const Modal: React.FC<ModalProps> = ({
     if (!closeOnEscape) return;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === "Escape" && isOpen) {
         onClose();
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose, closeOnEscape]);
 
   // Handle body scroll lock
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isOpen]);
 
@@ -78,10 +79,10 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl'
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -91,7 +92,7 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={handleOverlayClick}
     >
@@ -99,21 +100,24 @@ const Modal: React.FC<ModalProps> = ({
         ref={modalRef}
         tabIndex={-1}
         className={cn(
-          'relative w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl',
-          'transform transition-all duration-200 ease-out',
-          'animate-in fade-in-0 zoom-in-95',
+          "relative w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl",
+          "transform transition-all duration-200 ease-out",
+          "animate-in fade-in-0 zoom-in-95",
           sizeClasses[size],
-          className
+          className,
         )}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-labelledby={title ? "modal-title" : undefined}
       >
         {/* Header */}
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             {title && (
-              <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h2
+                id="modal-title"
+                className="text-lg font-semibold text-gray-900 dark:text-white"
+              >
                 {title}
               </h2>
             )}
@@ -123,8 +127,18 @@ const Modal: React.FC<ModalProps> = ({
                 className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 aria-label="Close modal"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             )}
@@ -132,9 +146,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content */}
-        <div className="p-6">
-          {children}
-        </div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );
@@ -146,12 +158,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Confirm Action',
+  title = "Confirm Action",
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
-  variant = 'default',
-  isLoading = false
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "default",
+  isLoading = false,
 }) => {
   const handleConfirm = () => {
     onConfirm();
@@ -160,9 +172,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     }
   };
 
-  const confirmButtonClasses = variant === 'danger'
-    ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-    : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
+  const confirmButtonClasses =
+    variant === "danger"
+      ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+      : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500";
 
   return (
     <Modal
@@ -175,10 +188,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
-        <p className="text-gray-700 dark:text-gray-300">
-          {message}
-        </p>
-        
+        <p className="text-gray-700 dark:text-gray-300">{message}</p>
+
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
@@ -191,8 +202,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             onClick={handleConfirm}
             disabled={isLoading}
             className={cn(
-              'px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
-              confirmButtonClasses
+              "px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
+              confirmButtonClasses,
             )}
           >
             {isLoading ? (

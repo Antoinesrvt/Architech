@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { SectionProps } from './types';
+import type { ReactNode } from "react";
+import type { SectionProps } from "./types";
 
 export interface SectionWrapperProps extends SectionProps {
   className?: string;
@@ -15,25 +15,19 @@ export interface SectionWrapperProps extends SectionProps {
 export const SectionWrapper = ({
   sectionRef,
   isVisible,
-  className = '',
+  className = "",
   children,
   id,
-  heading
+  heading,
 }: SectionWrapperProps) => {
   return (
-    <section
-      ref={sectionRef}
-      id={id}
-      className={className}
-    >
+    <section ref={sectionRef} id={id} className={className}>
       <div className="max-w-6xl mx-auto px-4">
         {heading && (
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               {heading.titleClasses ? (
-                <span className={heading.titleClasses}>
-                  {heading.title}
-                </span>
+                <span className={heading.titleClasses}>{heading.title}</span>
               ) : (
                 heading.title
               )}
@@ -49,4 +43,4 @@ export const SectionWrapper = ({
       </div>
     </section>
   );
-}; 
+};

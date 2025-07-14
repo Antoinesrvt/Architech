@@ -1,10 +1,18 @@
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/utils/cn";
+import type React from "react";
 
 export type SpinnerSize = "xs" | "sm" | "md" | "lg" | "xl";
-export type SpinnerColor = "primary" | "secondary" | "accent" | "info" | "success" | "warning" | "error" | "neutral";
+export type SpinnerColor =
+  | "primary"
+  | "secondary"
+  | "accent"
+  | "info"
+  | "success"
+  | "warning"
+  | "error"
+  | "neutral";
 
 export interface SpinnerProps {
   /**
@@ -49,13 +57,13 @@ export const Spinner: React.FC<SpinnerProps> = ({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <span 
+      <span
         className={cn(
-          "loading loading-spinner", 
+          "loading loading-spinner",
           sizeClasses[size],
-          `text-${color}`
+          `text-${color}`,
         )}
-        role="status" 
+        role="status"
         aria-label={showLabel ? undefined : label}
       />
       {showLabel && <span className="text-sm font-medium">{label}</span>}
@@ -63,4 +71,4 @@ export const Spinner: React.FC<SpinnerProps> = ({
   );
 };
 
-export default Spinner; 
+export default Spinner;

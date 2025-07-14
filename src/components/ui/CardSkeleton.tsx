@@ -1,12 +1,20 @@
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/utils/cn";
+import type React from "react";
 import Skeleton from "./Skeleton";
 
-export type CardSkeletonType = "basic" | "feature" | "project" | "module" | "framework" | "image" | "pricing";
+export type CardSkeletonType =
+  | "basic"
+  | "feature"
+  | "project"
+  | "module"
+  | "framework"
+  | "image"
+  | "pricing";
 
-export interface CardSkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardSkeletonProps
+  extends React.HTMLAttributes<HTMLDivElement> {
   /**
    * Type of card skeleton to render
    */
@@ -88,35 +96,38 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({
     bordered ? "border border-base-300" : "",
     hover ? "hover:shadow-md transition-shadow" : "",
     "bg-base-100",
-    className
+    className,
   );
 
   return (
     <div className={cardClasses} {...props}>
       {showImage && (
         <figure>
-          <Skeleton height={type === "feature" ? 100 : 200} className="w-full rounded-t-xl rounded-b-none" />
+          <Skeleton
+            height={type === "feature" ? 100 : 200}
+            className="w-full rounded-t-xl rounded-b-none"
+          />
         </figure>
       )}
       <div className="card-body">
         {showTitle && (
-          <Skeleton 
-            height={type === "pricing" ? 30 : 24} 
-            width={type === "pricing" ? "100%" : "60%"} 
-            className="mb-2" 
+          <Skeleton
+            height={type === "pricing" ? 30 : 24}
+            width={type === "pricing" ? "100%" : "60%"}
+            className="mb-2"
           />
         )}
-        
+
         {type === "framework" || type === "module" ? (
           <>
             <Skeleton text lines={contentLines} />
             <div className="flex flex-wrap gap-1 mt-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton 
-                  key={`tag-${i}`} 
-                  height={20} 
-                  width={60 + (i * 10)} 
-                  className="rounded-full" 
+                <Skeleton
+                  key={`tag-${i}`}
+                  height={20}
+                  width={60 + i * 10}
+                  className="rounded-full"
                 />
               ))}
             </div>
@@ -126,24 +137,37 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({
           <>
             <Skeleton height={40} width="70%" className="mb-4" />
             {Array.from({ length: contentLines }).map((_, i) => (
-              <div key={`feature-${i}`} className="flex items-center gap-2 mb-2">
+              <div
+                key={`feature-${i}`}
+                className="flex items-center gap-2 mb-2"
+              >
                 <Skeleton width={20} height={20} circle />
                 <Skeleton height={16} className="flex-1" />
               </div>
             ))}
           </>
         ) : (
-          <Skeleton text lines={contentLines} lastLineWidth={type === "project" ? 100 : 70} />
+          <Skeleton
+            text
+            lines={contentLines}
+            lastLineWidth={type === "project" ? 100 : 70}
+          />
         )}
-        
+
         {showActions && (
-          <div className={cn("card-actions", actionCount > 1 ? "justify-between" : "justify-end", "mt-4")}>
+          <div
+            className={cn(
+              "card-actions",
+              actionCount > 1 ? "justify-between" : "justify-end",
+              "mt-4",
+            )}
+          >
             {Array.from({ length: actionCount }).map((_, i) => (
-              <Skeleton 
-                key={`action-${i}`} 
-                height={36} 
-                width={i === 0 && actionCount > 1 ? 80 : 100} 
-                className="rounded-lg" 
+              <Skeleton
+                key={`action-${i}`}
+                height={36}
+                width={i === 0 && actionCount > 1 ? 80 : 100}
+                className="rounded-lg"
               />
             ))}
           </div>
@@ -153,4 +177,4 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({
   );
 };
 
-export default CardSkeleton; 
+export default CardSkeleton;

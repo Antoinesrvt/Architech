@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface Framework {
   id: string;
@@ -102,19 +102,27 @@ interface FrameworkState {
 // @ts-ignore Ignoring type errors due to zustand version compatibility issues
 export const useFrameworkStore = create<FrameworkState>()(
   // @ts-ignore
-  persist((set) => ({
-    frameworks: [],
-    modules: [],
-    selectedFrameworkId: null,
-    setFrameworks: (frameworks) => set({ frameworks }),
-    setModules: (modules) => set({ modules }),
-    setSelectedFramework: (frameworkId) => set({ selectedFrameworkId: frameworkId }),
-    favoriteFrameworks: [],
-    addFavorite: (frameworkId) => set((state) => ({
-      favoriteFrameworks: [...state.favoriteFrameworks, frameworkId]
-    })),
-    removeFavorite: (frameworkId) => set((state) => ({
-      favoriteFrameworks: state.favoriteFrameworks.filter(id => id !== frameworkId)
-    })),
-  }), { name: 'architech-frameworks' })
-); 
+  persist(
+    (set) => ({
+      frameworks: [],
+      modules: [],
+      selectedFrameworkId: null,
+      setFrameworks: (frameworks) => set({ frameworks }),
+      setModules: (modules) => set({ modules }),
+      setSelectedFramework: (frameworkId) =>
+        set({ selectedFrameworkId: frameworkId }),
+      favoriteFrameworks: [],
+      addFavorite: (frameworkId) =>
+        set((state) => ({
+          favoriteFrameworks: [...state.favoriteFrameworks, frameworkId],
+        })),
+      removeFavorite: (frameworkId) =>
+        set((state) => ({
+          favoriteFrameworks: state.favoriteFrameworks.filter(
+            (id) => id !== frameworkId,
+          ),
+        })),
+    }),
+    { name: "architech-frameworks" },
+  ),
+);

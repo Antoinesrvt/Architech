@@ -7,44 +7,86 @@
  * Standardized animations with consistent timing and easing
  */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInLeft {
-  from { transform: translateX(-20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @layer utilities {
@@ -52,27 +94,27 @@
   .animate-fadeIn {
     animation: fadeIn 0.3s ease-out forwards;
   }
-  
+
   .animate-fadeOut {
     animation: fadeOut 0.3s ease-in forwards;
   }
-  
+
   .animate-slideUp {
     animation: slideUp 0.4s ease-out forwards;
   }
-  
+
   .animate-slideDown {
     animation: slideDown 0.4s ease-out forwards;
   }
-  
+
   .animate-slideInRight {
     animation: slideInRight 0.4s ease-out forwards;
   }
-  
+
   .animate-slideInLeft {
     animation: slideInLeft 0.4s ease-out forwards;
   }
-  
+
   .animate-pulse {
     animation: pulse 1.5s ease-in-out infinite;
   }
@@ -80,27 +122,39 @@
   .animate-spin-slow {
     animation: spin 3s linear infinite;
   }
-  
+
   /* Animation delay utilities */
   .animation-delay-100 {
     animation-delay: 100ms;
   }
-  
+
   .animation-delay-200 {
     animation-delay: 200ms;
   }
-  
+
   .animation-delay-300 {
     animation-delay: 300ms;
   }
-  
+
   /* Staggered children animations */
-  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
-  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
-  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
-  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
-  .stagger-children > *:nth-child(n+6) { animation-delay: 250ms; }
+  .stagger-children > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 200ms;
+  }
+  .stagger-children > *:nth-child(n + 6) {
+    animation-delay: 250ms;
+  }
 }
 
 @layer base {
@@ -111,25 +165,30 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Typography scale */
-  h1, .h1 {
+  h1,
+  .h1 {
     @apply text-4xl font-bold leading-tight tracking-tight;
   }
-  
-  h2, .h2 {
+
+  h2,
+  .h2 {
     @apply text-3xl font-bold leading-tight tracking-tight;
   }
-  
-  h3, .h3 {
+
+  h3,
+  .h3 {
     @apply text-2xl font-bold leading-snug;
   }
-  
-  h4, .h4 {
+
+  h4,
+  .h4 {
     @apply text-xl font-bold leading-snug;
   }
-  
-  h5, .h5 {
+
+  h5,
+  .h5 {
     @apply text-lg font-bold;
   }
 
@@ -137,9 +196,11 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-primary;
   }
-  
+
   /* Code and CLI styling */
-  code, pre, .cli-text {
+  code,
+  pre,
+  .cli-text {
     @apply font-mono text-sm;
   }
 
@@ -153,29 +214,29 @@
   .card {
     @apply transition-all duration-300;
   }
-  
+
   .card-interactive {
     @apply cursor-pointer hover:shadow-md active:scale-[0.99] transition-all;
   }
-  
+
   /* Improved form controls */
   .form-control {
     @apply space-y-2;
   }
-  
+
   .form-label {
     @apply font-medium text-sm;
   }
-  
+
   .form-helper {
     @apply text-xs opacity-70;
   }
-  
+
   /* Better skeleton loaders */
   .skeleton-text {
     @apply h-4 bg-base-300 rounded animate-pulse;
   }
-  
+
   .skeleton-image {
     @apply bg-base-300 rounded-box animate-pulse;
   }
@@ -184,9 +245,8 @@
 /* Import DaisyUI */
 @custom-variant dark (&:is(.dark *));
 
-
 @plugin "daisyui/theme" {
-    name: "architech";
+  name: "architech";
   default: true;
   prefersdark: true;
   color-scheme: "dark";
@@ -220,37 +280,34 @@
   --noise: 0;
 }
 
-
-
-
 @plugin "daisyui/theme" {
   name: "architech-light";
   default: false;
   prefersdark: false;
   color-scheme: "light";
-  
+
   /* Couleurs de base - Fond clair avec subtile teinte bleue */
   --color-base-100: oklch(99% 0.01 240);
   --color-base-200: oklch(96% 0.01 240);
   --color-base-300: oklch(93% 0.01 240);
   --color-base-content: oklch(22% 0.02 240);
-  
+
   /* Primaire - Bleu professionnel, légèrement plus foncé pour contraste sur fond clair */
   --color-primary: oklch(60% 0.2 230);
   --color-primary-content: oklch(99% 0.005 0);
-  
+
   /* Secondaire - Violet créatif ajusté pour le mode clair */
   --color-secondary: oklch(65% 0.18 280);
   --color-secondary-content: oklch(99% 0.005 0);
-  
+
   /* Accent - Cyan énergique ajusté pour le mode clair */
   --color-accent: oklch(70% 0.19 190);
   --color-accent-content: oklch(99% 0.005 0);
-  
+
   /* Neutre - Gris bleuté pour équilibrer */
   --color-neutral: oklch(75% 0.02 240);
   --color-neutral-content: oklch(99% 0.005 0);
-  
+
   /* États informatifs - Ajustés pour le mode clair */
   --color-info: oklch(70% 0.17 210);
   --color-info-content: oklch(99% 0.005 0);
@@ -260,7 +317,7 @@
   --color-warning-content: oklch(20% 0.03 85);
   --color-error: oklch(68% 0.18 25);
   --color-error-content: oklch(99% 0.005 0);
-  
+
   /* Rayons et tailles - Identiques au thème sombre pour cohérence */
   --radius-selector: 1rem;
   --radius-field: 0.5rem;

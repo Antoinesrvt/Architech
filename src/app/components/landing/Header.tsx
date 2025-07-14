@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Menu, X, Braces } from 'lucide-react';
-import { NavItem, SectionProps } from './types';
+import { Braces, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { type NavItem, SectionProps } from "./types";
 
 interface HeaderProps {
   scrolled: boolean;
@@ -16,11 +16,15 @@ const navItems: NavItem[] = [
   { id: "access", name: "Early Access" },
 ];
 
-export const Header = ({ scrolled, activeSection, scrollToSection }: HeaderProps) => {
+export const Header = ({
+  scrolled,
+  activeSection,
+  scrollToSection,
+}: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
-  
+
   return (
     <header
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
@@ -33,7 +37,9 @@ export const Header = ({ scrolled, activeSection, scrollToSection }: HeaderProps
         {/* Logo */}
         <button
           onClick={() => scrollToSection("hero")}
-          className={`text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600 transition-all duration-300 transform hover:scale-105`}
+          className={
+            "text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600 transition-all duration-300 transform hover:scale-105"
+          }
         >
           The Architect
         </button>
@@ -51,11 +57,13 @@ export const Header = ({ scrolled, activeSection, scrollToSection }: HeaderProps
               }`}
             >
               {item.name}
-              <span 
+              <span
                 className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-600 transform origin-left transition-transform duration-300 rounded-full ${
-                  activeSection === item.id ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  activeSection === item.id
+                    ? "scale-x-100"
+                    : "scale-x-0 group-hover:scale-x-100"
                 }`}
-              ></span>
+              />
             </button>
           ))}
         </nav>
@@ -101,4 +109,4 @@ export const Header = ({ scrolled, activeSection, scrollToSection }: HeaderProps
       </div>
     </header>
   );
-}; 
+};

@@ -1,17 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
-import { useWizardNavigation, WizardStep } from './hooks/useWizardNavigation';
-import { FrameworkStep } from './steps/FrameworkStep';
-import { BasicInfoStep } from './steps/BasicInfoStep';
-import { ModulesStep } from './steps/ModulesStep';
-import { ConfigurationStep } from './steps/ConfigurationStep';
-import { SummaryStep } from './steps/SummaryStep';
-import { useProjectStore } from '@/lib/store/project-store';
-import { cn } from '@/lib/utils/cn';
-import { useRouter } from 'next/navigation';
 import Button from "@/components/ui/Button";
-import { WizardSideNavigation } from './WizardSideNavigation';
+import { useProjectStore } from "@/lib/store/project-store";
+import { cn } from "@/lib/utils/cn";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { WizardSideNavigation } from "./WizardSideNavigation";
+import {
+  type WizardStep,
+  useWizardNavigation,
+} from "./hooks/useWizardNavigation";
+import { BasicInfoStep } from "./steps/BasicInfoStep";
+import { ConfigurationStep } from "./steps/ConfigurationStep";
+import { FrameworkStep } from "./steps/FrameworkStep";
+import { ModulesStep } from "./steps/ModulesStep";
+import { SummaryStep } from "./steps/SummaryStep";
 
-import { useToast } from '@/components/ui/Toast';
+import { useToast } from "@/components/ui/Toast";
 
 export function ProjectWizard() {
   const {
@@ -32,10 +35,12 @@ export function ProjectWizard() {
   const { toast } = useToast();
   const [hasUserMadeChanges, setHasUserMadeChanges] = useState(false);
   const [isStepChanging, setIsStepChanging] = useState(false);
-  const [direction, setDirection] = useState<'forward' | 'backward' | null>(null);
+  const [direction, setDirection] = useState<"forward" | "backward" | null>(
+    null,
+  );
   const initialStateRef = useRef({
-    projectName: '',
-    projectPath: '',
+    projectName: "",
+    projectPath: "",
     selectedFrameworkId: null as string | null,
     selectedModuleIds: [] as string[],
   });
@@ -67,28 +72,30 @@ export function ProjectWizard() {
   // Check for user changes whenever relevant state changes
   useEffect(() => {
     const initialState = initialStateRef.current;
-    
-    const hasChanges = 
+
+    const hasChanges =
       projectName !== initialState.projectName ||
       projectPath !== initialState.projectPath ||
       selectedFrameworkId !== initialState.selectedFrameworkId ||
       selectedModuleIds.length !== initialState.selectedModuleIds.length ||
-      !selectedModuleIds.every(id => initialState.selectedModuleIds.includes(id));
-    
+      !selectedModuleIds.every((id) =>
+        initialState.selectedModuleIds.includes(id),
+      );
+
     setHasUserMadeChanges(hasChanges);
   }, [projectName, projectPath, selectedFrameworkId, selectedModuleIds]);
 
   // Custom navigation handlers with animations
   const navigateWithAnimation = (
-    direction: 'forward' | 'backward', 
-    callback: () => void
+    direction: "forward" | "backward",
+    callback: () => void,
   ) => {
     setDirection(direction);
     setIsStepChanging(true);
-    
+
     // Execute the callback immediately to start loading the next step content
     callback();
-    
+
     // Reset the animation state after it completes
     setTimeout(() => {
       setIsStepChanging(false);
@@ -117,7 +124,7 @@ export function ProjectWizard() {
             message: "Your project draft has been saved successfully.",
           });
         } catch (error) {
-          console.error('Failed to save draft:', error);
+          console.error("Failed to save draft:", error);
         }
       }
     },
@@ -125,38 +132,45 @@ export function ProjectWizard() {
 
   // Wrap navigation methods with animations
   const goToNextStep = () => {
-    navigateWithAnimation('forward', originalGoToNextStep);
+    navigateWithAnimation("forward", originalGoToNextStep);
   };
 
   const goToPreviousStep = () => {
-    navigateWithAnimation('backward', originalGoToPreviousStep);
+    navigateWithAnimation("backward", originalGoToPreviousStep);
   };
 
   const goToStep = (index: number) => {
-    const direction = index > currentStepIndex ? 'forward' : 'backward';
+    const direction = index > currentStepIndex ? "forward" : "backward";
     navigateWithAnimation(direction, () => originalGoToStep(index));
   };
 
   // Auto-save draft periodically when changes are made
   useEffect(() => {
     if (!hasUserMadeChanges) return;
-    
+
     const saveTimer = setTimeout(async () => {
       try {
         await saveDraft();
       } catch (error) {
-        console.error('Failed to auto-save draft:', error);
+        console.error("Failed to auto-save draft:", error);
       }
     }, 30000); // Auto-save every 30 seconds if changes were made
-    
+
     return () => clearTimeout(saveTimer);
-  }, [hasUserMadeChanges, projectName, projectPath, selectedFrameworkId, selectedModuleIds, saveDraft]);
+  }, [
+    hasUserMadeChanges,
+    projectName,
+    projectPath,
+    selectedFrameworkId,
+    selectedModuleIds,
+    saveDraft,
+  ]);
 
   // Convert visitedSteps object to Set for components that need it
   const visitedStepsSet = new Set(
     Object.entries(visitedSteps)
       .filter(([_, visited]) => visited)
-      .map(([index]) => parseInt(index))
+      .map(([index]) => Number.parseInt(index)),
   );
 
   // Navigation handlers
@@ -166,9 +180,11 @@ export function ProjectWizard() {
       router.push("/");
       return;
     }
-    
+
     // Otherwise, show the modal by triggering the checkbox
-    const modal = document.getElementById('back-confirmation-modal') as HTMLInputElement;
+    const modal = document.getElementById(
+      "back-confirmation-modal",
+    ) as HTMLInputElement;
     if (modal) {
       modal.checked = true;
     }
@@ -185,16 +201,18 @@ export function ProjectWizard() {
           message: "Your project draft has been saved.",
         });
       } catch (error) {
-        console.error('Failed to save draft:', error);
+        console.error("Failed to save draft:", error);
       }
     }
-    
+
     // Close the modal first
-    const modal = document.getElementById('back-confirmation-modal') as HTMLInputElement;
+    const modal = document.getElementById(
+      "back-confirmation-modal",
+    ) as HTMLInputElement;
     if (modal) {
       modal.checked = false;
     }
-    
+
     // Small delay to ensure state is updated and modal is closed
     setTimeout(() => {
       router.push("/");
@@ -210,13 +228,15 @@ export function ProjectWizard() {
         message: "Draft discarded.",
       });
     }
-    
+
     // Close the modal first
-    const modal = document.getElementById('back-confirmation-modal') as HTMLInputElement;
+    const modal = document.getElementById(
+      "back-confirmation-modal",
+    ) as HTMLInputElement;
     if (modal) {
       modal.checked = false;
     }
-    
+
     // Small delay to ensure state is updated and modal is closed
     setTimeout(() => {
       router.push("/");
@@ -265,7 +285,7 @@ export function ProjectWizard() {
               : "",
             !isStepChanging && direction === "backward"
               ? "animate-slideFromLeft"
-              : ""
+              : "",
           )}
         >
           <CurrentStepComponent
@@ -303,10 +323,7 @@ export function ProjectWizard() {
             </button>
           </div>
         </div>
-        <label
-          className="modal-backdrop"
-          htmlFor="back-confirmation-modal"
-        ></label>
+        <label className="modal-backdrop" htmlFor="back-confirmation-modal" />
       </div>
     </div>
   );

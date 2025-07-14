@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/utils/cn";
-import { Spinner, SpinnerProps } from "./Spinner";
+import type React from "react";
+import { Spinner, type SpinnerProps } from "./Spinner";
 
 export interface LoadingOverlayProps {
   /**
@@ -57,13 +57,13 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   return (
     <div className={cn("relative", className)}>
       {children}
-      
+
       {isLoading && (
-        <div 
+        <div
           className={cn(
             "absolute inset-0 flex flex-col items-center justify-center z-50",
             `bg-base-100/${bgOpacity}`,
-            blurClasses[blurAmount]
+            blurClasses[blurAmount],
           )}
           aria-live="polite"
           aria-busy="true"
@@ -78,4 +78,4 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   );
 };
 
-export default LoadingOverlay; 
+export default LoadingOverlay;

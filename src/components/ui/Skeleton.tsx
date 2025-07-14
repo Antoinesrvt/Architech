@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/utils/cn";
+import type React from "react";
 
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -62,9 +62,19 @@ export function Skeleton({
   ...props
 }: SkeletonProps) {
   const style = {
-    width: width !== undefined ? (typeof width === 'number' ? `${width}px` : width) : undefined,
-    height: height !== undefined ? (typeof height === 'number' ? `${height}px` : height) : undefined,
-    ...propStyle
+    width:
+      width !== undefined
+        ? typeof width === "number"
+          ? `${width}px`
+          : width
+        : undefined,
+    height:
+      height !== undefined
+        ? typeof height === "number"
+          ? `${height}px`
+          : height
+        : undefined,
+    ...propStyle,
   };
 
   const baseClasses = cn(
@@ -73,7 +83,7 @@ export function Skeleton({
     circle && "rounded-full",
     animate && "animate-pulse",
     !noResponsive && "transition-all duration-300",
-    className
+    className,
   );
 
   if (text) {
@@ -81,10 +91,10 @@ export function Skeleton({
       <div {...props}>
         {Array.from({ length: lines }).map((_, index) => {
           const isLastLine = index === lines - 1;
-          const lineStyle = isLastLine 
+          const lineStyle = isLastLine
             ? { ...style, width: `${lastLineWidth}%` }
             : style;
-          
+
           return (
             <div
               key={index}
@@ -100,12 +110,7 @@ export function Skeleton({
   return (
     <>
       {Array.from({ length: count }).map((_, index) => (
-        <div
-          key={index}
-          className={baseClasses}
-          style={style}
-          {...props}
-        />
+        <div key={index} className={baseClasses} style={style} {...props} />
       ))}
     </>
   );
@@ -114,7 +119,10 @@ export function Skeleton({
 /**
  * Skeleton for cards with a consistent layout
  */
-export function SkeletonCard({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function SkeletonCard({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("card bg-base-200 shadow-sm", className)} {...props}>
       <div className="card-body">
@@ -131,15 +139,15 @@ export function SkeletonCard({ className, ...props }: React.HTMLAttributes<HTMLD
 /**
  * Skeleton for table with customizable rows and columns
  */
-export function SkeletonTable({ 
-  rows = 5, 
-  columns = 4, 
+export function SkeletonTable({
+  rows = 5,
+  columns = 4,
   hasHeader = true,
   className,
   ...props
-}: { 
-  rows?: number; 
-  columns?: number; 
+}: {
+  rows?: number;
+  columns?: number;
   hasHeader?: boolean;
   className?: string;
 } & React.HTMLAttributes<HTMLDivElement>) {
@@ -162,9 +170,11 @@ export function SkeletonTable({
             <tr key={`row-${rowIndex}`} className="hover">
               {Array.from({ length: columns }).map((_, colIndex) => (
                 <td key={`cell-${rowIndex}-${colIndex}`}>
-                  <Skeleton 
-                    height={16} 
-                    width={colIndex === 0 ? 150 : colIndex === columns - 1 ? 60 : 100}
+                  <Skeleton
+                    height={16}
+                    width={
+                      colIndex === 0 ? 150 : colIndex === columns - 1 ? 60 : 100
+                    }
                   />
                 </td>
               ))}
@@ -194,17 +204,17 @@ export function SkeletonGrid({
   className?: string;
 } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div 
+    <div
       className={cn(
         "grid w-full",
         `grid-cols-1 sm:grid-cols-2 md:grid-cols-${Math.min(columns, 12)}`,
         `gap-${gap}`,
-        className
+        className,
       )}
       {...props}
     >
       {Array.from({ length: items }).map((_, index) => (
-        <Skeleton 
+        <Skeleton
           key={`grid-item-${index}`}
           height={itemHeight}
           className="w-full"
@@ -218,4 +228,4 @@ export default Object.assign(Skeleton, {
   Card: SkeletonCard,
   Table: SkeletonTable,
   Grid: SkeletonGrid,
-}); 
+});

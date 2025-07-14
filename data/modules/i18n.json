@@ -8,9 +8,7 @@
     "dependencies": [],
     "incompatible_with": [],
     "installation": {
-      "commands": [
-        "npm install next-intl"
-      ],
+      "commands": ["npm install next-intl"],
       "file_operations": [
         {
           "operation": "create",
@@ -43,15 +41,15 @@
           "description": "Languages to support",
           "default": ["en", "fr"],
           "choices": [
-            {"value": "en", "label": "English"},
-            {"value": "fr", "label": "French"},
-            {"value": "es", "label": "Spanish"},
-            {"value": "de", "label": "German"},
-            {"value": "ja", "label": "Japanese"},
-            {"value": "pt", "label": "Portuguese"}
+            { "value": "en", "label": "English" },
+            { "value": "fr", "label": "French" },
+            { "value": "es", "label": "Spanish" },
+            { "value": "de", "label": "German" },
+            { "value": "ja", "label": "Japanese" },
+            { "value": "pt", "label": "Portuguese" }
           ]
         }
       ]
     }
   }
-] 
+]

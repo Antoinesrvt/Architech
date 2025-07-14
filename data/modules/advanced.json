@@ -8,9 +8,7 @@
     "dependencies": [],
     "incompatible_with": [],
     "installation": {
-      "commands": [
-        "npm install next-auth"
-      ],
+      "commands": ["npm install next-auth"],
       "file_operations": [
         {
           "operation": "create",
@@ -33,13 +31,13 @@
           "description": "Select authentication providers to include",
           "default": ["credentials"],
           "choices": [
-            {"value": "credentials", "label": "Email/Password"},
-            {"value": "google", "label": "Google"},
-            {"value": "github", "label": "GitHub"},
-            {"value": "discord", "label": "Discord"}
+            { "value": "credentials", "label": "Email/Password" },
+            { "value": "google", "label": "Google" },
+            { "value": "github", "label": "GitHub" },
+            { "value": "discord", "label": "Discord" }
           ]
         }
       ]
     }
   }
-] 
+]

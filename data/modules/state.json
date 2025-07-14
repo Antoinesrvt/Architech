@@ -8,9 +8,7 @@
     "dependencies": [],
     "incompatible_with": [],
     "installation": {
-      "commands": [
-        "npm install zustand"
-      ],
+      "commands": ["npm install zustand"],
       "file_operations": [
         {
           "operation": "create",
@@ -31,4 +29,4 @@
       ]
     }
   }
-] 
+]

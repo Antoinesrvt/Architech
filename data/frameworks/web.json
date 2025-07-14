@@ -43,7 +43,15 @@
       },
       "interactive": false
     },
-    "compatible_modules": ["tailwind", "daisyui", "i18n", "zustand", "forms", "auth", "testing"],
+    "compatible_modules": [
+      "tailwind",
+      "daisyui",
+      "i18n",
+      "zustand",
+      "forms",
+      "auth",
+      "testing"
+    ],
     "directory_structure": {
       "enforced": true,
       "directories": [
@@ -80,15 +88,17 @@
         }
       ]
     },
-    "compatible_modules": ["tailwind", "daisyui", "i18n", "zustand", "forms", "testing"],
+    "compatible_modules": [
+      "tailwind",
+      "daisyui",
+      "i18n",
+      "zustand",
+      "forms",
+      "testing"
+    ],
     "directory_structure": {
       "enforced": true,
-      "directories": [
-        "src/components",
-        "src/lib",
-        "src/styles",
-        "public"
-      ]
+      "directories": ["src/components", "src/lib", "src/styles", "public"]
     }
   },
   {
@@ -127,12 +137,7 @@
     "compatible_modules": ["tailwind", "daisyui", "i18n"],
     "directory_structure": {
       "enforced": true,
-      "directories": [
-        "src/components",
-        "src/layouts",
-        "src/pages",
-        "public"
-      ]
+      "directories": ["src/components", "src/layouts", "src/pages", "public"]
     }
   }
-] 
+]

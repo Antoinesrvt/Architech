@@ -8,9 +8,7 @@
     "dependencies": [],
     "incompatible_with": [],
     "installation": {
-      "commands": [
-        "npm install react-hook-form zod @hookform/resolvers"
-      ],
+      "commands": ["npm install react-hook-form zod @hookform/resolvers"],
       "file_operations": [
         {
           "operation": "create",
@@ -28,12 +26,12 @@
           "description": "Library to use for form validation",
           "default": "zod",
           "choices": [
-            {"value": "zod", "label": "Zod"},
-            {"value": "yup", "label": "Yup"},
-            {"value": "joi", "label": "Joi"}
+            { "value": "zod", "label": "Zod" },
+            { "value": "yup", "label": "Yup" },
+            { "value": "joi", "label": "Joi" }
           ]
         }
       ]
     }
   }
-] 
+]

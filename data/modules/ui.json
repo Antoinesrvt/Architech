@@ -8,9 +8,7 @@
     "dependencies": ["tailwind"],
     "incompatible_with": [],
     "installation": {
-      "commands": [
-        "npm install daisyui@latest"
-      ],
+      "commands": ["npm install daisyui@latest"],
       "file_operations": [
         {
           "operation": "modify",
@@ -29,19 +27,19 @@
           "description": "DaisyUI themes to include",
           "default": ["light", "dark"],
           "choices": [
-            {"value": "light", "label": "Light"},
-            {"value": "dark", "label": "Dark"},
-            {"value": "cupcake", "label": "Cupcake"},
-            {"value": "bumblebee", "label": "Bumblebee"},
-            {"value": "emerald", "label": "Emerald"},
-            {"value": "corporate", "label": "Corporate"},
-            {"value": "synthwave", "label": "Synthwave"},
-            {"value": "retro", "label": "Retro"},
-            {"value": "cyberpunk", "label": "Cyberpunk"},
-            {"value": "valentine", "label": "Valentine"}
+            { "value": "light", "label": "Light" },
+            { "value": "dark", "label": "Dark" },
+            { "value": "cupcake", "label": "Cupcake" },
+            { "value": "bumblebee", "label": "Bumblebee" },
+            { "value": "emerald", "label": "Emerald" },
+            { "value": "corporate", "label": "Corporate" },
+            { "value": "synthwave", "label": "Synthwave" },
+            { "value": "retro", "label": "Retro" },
+            { "value": "cyberpunk", "label": "Cyberpunk" },
+            { "value": "valentine", "label": "Valentine" }
           ]
         }
       ]
     }
   }
-] 
+]

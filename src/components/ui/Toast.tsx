@@ -255,7 +255,11 @@ export function Toast({
       </div>
       {action && (
         <div className="flex-none">
-          <button type="button" className="btn btn-sm btn-ghost" onClick={action.onClick}>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={action.onClick}
+          >
             {action.label}
           </button>
         </div>

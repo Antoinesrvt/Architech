@@ -242,9 +242,9 @@ export default function CommandPreview({
         {/* Terminal header */}
         <div className="bg-slate-700 p-2 flex items-center">
           <div className="flex space-x-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+            <div className="w-3 h-3 rounded-full bg-green-500" />
           </div>
           <div className="flex-1 text-center text-xs text-white/70 font-sans">
             terminal
@@ -252,7 +252,7 @@ export default function CommandPreview({
         </div>
 
         {/* Gradient divider */}
-        <div className="h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+        <div className="h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
 
         {/* Terminal content */}
         <div className="bg-slate-800 text-white p-4 space-y-1 font-mono text-xs sm:text-sm overflow-x-auto">

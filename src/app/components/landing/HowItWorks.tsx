@@ -118,7 +118,7 @@ const ProcessSteps = ({
 
         return (
           <div
-            key={index}
+            key={`step-${step.title.toLowerCase().replace(/\s+/g, '-')}`}
             className={`relative z-10 transition-all duration-500 transform ${
               isVisible
                 ? "opacity-100 translate-y-0"
@@ -243,17 +243,17 @@ const WorkflowDemo = ({
     >
       {/* Blurred gradient decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-64 h-64 bg-blue-900/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-900/20 rounded-full blur-3xl"></div>
+        <div className="absolute -top-32 -left-32 w-64 h-64 bg-blue-900/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-900/20 rounded-full blur-3xl" />
       </div>
 
       {/* Browser chrome */}
       <div className="relative z-10">
         <div className="bg-gray-900 px-4 py-3 flex items-center border-b border-gray-800">
           <div className="flex space-x-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+            <div className="w-3 h-3 rounded-full bg-green-500" />
           </div>
           <div className="mx-auto px-4 py-1 bg-gray-800 rounded-md text-gray-400 text-sm max-w-md">
             app.thearchitect.dev
@@ -268,7 +268,7 @@ const WorkflowDemo = ({
               <div className="space-y-4">
                 {[0, 1, 2].map((step) => (
                   <button
-                    key={step}
+                    key={`workflow-step-${step}`}
                     type="button"
                     onClick={() => setActiveStep(step)}
                     className={`w-full flex items-center p-3 rounded-lg transition-all ${
@@ -349,7 +349,7 @@ const WorkflowDemo = ({
                           "Performance",
                         ].map((tag, i) => (
                           <span
-                            key={i}
+                            key={`tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
                             className="px-2 py-1 bg-gray-800 text-gray-400 rounded text-xs"
                           >
                             {tag}
@@ -422,7 +422,7 @@ const WorkflowDemo = ({
                         const TechIcon = tech.icon;
                         return (
                           <div
-                            key={i}
+                            key={`tech-${tech.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
                             className="flex items-start p-3 bg-gray-900/50 rounded-lg border border-gray-800"
                           >
                             <div className="w-8 h-8 rounded-full bg-purple-900/50 flex items-center justify-center mr-3 flex-shrink-0">
@@ -808,7 +808,7 @@ const KeyFeatures = ({ isVisible }: { isVisible?: boolean }) => {
 
           return (
             <div
-              key={index}
+              key={`feature-${feature.title.toLowerCase().replace(/\s+/g, '-')}`}
               className={`p-6 rounded-xl border border-gray-800 ${feature.bgColor} transition-all duration-700 ${
                 isVisible
                   ? "opacity-100 transform translate-y-0"

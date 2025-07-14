@@ -14,29 +14,59 @@ export default function TestComponentsPage() {
             <div className="card-body">
               <h2 className="card-title">Buttons</h2>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn btn-primary">Primary</button>
-                <button type="button" className="btn btn-secondary">Secondary</button>
-                <button type="button" className="btn btn-accent">Accent</button>
-                <button type="button" className="btn btn-neutral">Neutral</button>
-                <button type="button" className="btn btn-info">Info</button>
-                <button type="button" className="btn btn-success">Success</button>
-                <button type="button" className="btn btn-warning">Warning</button>
-                <button type="button" className="btn btn-error">Error</button>
+                <button type="button" className="btn btn-primary">
+                  Primary
+                </button>
+                <button type="button" className="btn btn-secondary">
+                  Secondary
+                </button>
+                <button type="button" className="btn btn-accent">
+                  Accent
+                </button>
+                <button type="button" className="btn btn-neutral">
+                  Neutral
+                </button>
+                <button type="button" className="btn btn-info">
+                  Info
+                </button>
+                <button type="button" className="btn btn-success">
+                  Success
+                </button>
+                <button type="button" className="btn btn-warning">
+                  Warning
+                </button>
+                <button type="button" className="btn btn-error">
+                  Error
+                </button>
               </div>
 
               <h3 className="text-lg font-semibold mt-4">Button Sizes</h3>
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className="btn btn-xs">Extra Small</button>
-                <button type="button" className="btn btn-sm">Small</button>
-                <button type="button" className="btn">Normal</button>
-                <button type="button" className="btn btn-lg">Large</button>
+                <button type="button" className="btn btn-xs">
+                  Extra Small
+                </button>
+                <button type="button" className="btn btn-sm">
+                  Small
+                </button>
+                <button type="button" className="btn">
+                  Normal
+                </button>
+                <button type="button" className="btn btn-lg">
+                  Large
+                </button>
               </div>
 
               <h3 className="text-lg font-semibold mt-4">Button Variants</h3>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn btn-outline btn-primary">Outline</button>
-                <button type="button" className="btn btn-ghost">Ghost</button>
-                <button type="button" className="btn btn-link">Link</button>
+                <button type="button" className="btn btn-outline btn-primary">
+                  Outline
+                </button>
+                <button type="button" className="btn btn-ghost">
+                  Ghost
+                </button>
+                <button type="button" className="btn btn-link">
+                  Link
+                </button>
               </div>
             </div>
           </div>

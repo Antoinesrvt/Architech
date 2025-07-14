@@ -318,7 +318,11 @@ export function ProjectWizard() {
             <Button variant="error" onClick={handleDiscardDraft}>
               Discard
             </Button>
-            <button type="button" className="btn btn-primary" onClick={handleKeepDraft}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleKeepDraft}
+            >
               Save Draft
             </button>
           </div>

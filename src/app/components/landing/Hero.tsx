@@ -70,14 +70,15 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         <div className="mt-12 text-gray-400 flex flex-col items-center mb-8">
           <div className="flex items-center">
             <div className="flex -space-x-2 mr-3">
-              {[...Array(5)].map((_, i) => (
+              {Array.from({ length: 5 }, (_, i) => (
                 <div
-                  key={`avatar-${i}`}
+                  key={`user-avatar-${i + 1}`}
                   className={`w-8 h-8 rounded-full bg-gradient-to-br border-2 border-gray-800 ${
                     i % 2 === 0
                       ? "from-blue-500 to-purple-600"
                       : "from-purple-600 to-pink-500"
                   }`}
+                  aria-hidden="true"
                 />
               ))}
             </div>
@@ -109,6 +110,15 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setShowDemo(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setShowDemo(false);
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="demo-title"
+          tabIndex={-1}
         >
           <div
             className="w-full max-w-4xl aspect-video bg-black relative"
@@ -118,6 +128,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
               type="button"
               className="absolute -top-10 right-0 text-white hover:text-purple-400 transition-colors"
               onClick={() => setShowDemo(false)}
+              aria-label="Close demo preview"
             >
               Close preview
             </button>
@@ -125,10 +136,14 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
               <div className="text-white text-center max-w-lg">
                 <div className="mb-4 flex justify-center">
                   <div className="w-16 h-16 rounded-full bg-purple-900/30 flex items-center justify-center border border-purple-500/50">
-                    <Code size={30} className="text-purple-400" />
+                    <Code
+                      size={30}
+                      className="text-purple-400"
+                      aria-hidden="true"
+                    />
                   </div>
                 </div>
-                <h3 className="text-xl font-medium mb-2">
+                <h3 id="demo-title" className="text-xl font-medium mb-2">
                   The Architect in Action
                 </h3>
                 <p className="text-gray-400 mb-6">
@@ -144,7 +159,11 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
                   </div>
                 </div>
                 <div className="flex justify-center">
-                  <button type="button" className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors"
+                    onClick={() => scrollToSection("access")}
+                  >
                     Get notified when full demo is released
                   </button>
                 </div>
@@ -189,6 +208,7 @@ const FeatureHighlights = () => {
               <FeatureIcon
                 size={24}
                 className="text-blue-400 mr-3 flex-shrink-0"
+                aria-hidden="true"
               />
               <div>
                 <div className="text-white font-medium">{feature.title}</div>

@@ -58,7 +58,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
     >
       <h3 className="text-xl font-bold text-white mb-6 flex items-center">
         <span className="w-10 h-10 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-3">
-          <Clock size={20} />
+          <Clock size={20} aria-hidden="true" />
         </span>
         Return on Investment Calculator
       </h3>
@@ -68,11 +68,15 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
           {/* Inputs */}
           <div className="space-y-6">
             <div>
-              <label className="block text-purple-300 mb-2 font-medium flex justify-between">
+              <label
+                htmlFor="projects-per-year"
+                className="block text-purple-300 mb-2 font-medium flex justify-between"
+              >
                 <span>Number of new projects per year: {projectsPerYear}</span>
                 <span className="text-gray-400 text-sm">(1-12)</span>
               </label>
               <input
+                id="projects-per-year"
                 type="range"
                 min="1"
                 max="12"
@@ -81,6 +85,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                   setProjectsPerYear(Number.parseInt(e.target.value))
                 }
                 className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
+                aria-describedby="projects-per-year-help"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>1</span>
@@ -91,11 +96,15 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
             </div>
 
             <div>
-              <label className="block text-purple-300 mb-2 font-medium flex justify-between">
+              <label
+                htmlFor="hours-per-project"
+                className="block text-purple-300 mb-2 font-medium flex justify-between"
+              >
                 <span>Hours per project setup: {hoursPerProject}</span>
                 <span className="text-gray-400 text-sm">(10-60)</span>
               </label>
               <input
+                id="hours-per-project"
                 type="range"
                 min="10"
                 max="60"
@@ -104,6 +113,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                   setHoursPerProject(Number.parseInt(e.target.value))
                 }
                 className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
+                aria-describedby="hours-per-project-help"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>10</span>
@@ -114,17 +124,22 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
             </div>
 
             <div>
-              <label className="block text-purple-300 mb-2 font-medium flex justify-between">
+              <label
+                htmlFor="hourly-rate"
+                className="block text-purple-300 mb-2 font-medium flex justify-between"
+              >
                 <span>Developer hourly rate: ${hourlyRate}</span>
                 <span className="text-gray-400 text-sm">(50-200)</span>
               </label>
               <input
+                id="hourly-rate"
                 type="range"
                 min="50"
                 max="200"
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(Number.parseInt(e.target.value))}
                 className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
+                aria-describedby="hourly-rate-help"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$50</span>
@@ -171,14 +186,20 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
               </div>
 
               <button
+                type="button"
                 onClick={() => setShowDetailed(!showDetailed)}
                 className="text-sm text-purple-400 hover:text-purple-300 transition-colors underline"
+                aria-expanded={showDetailed}
+                aria-controls="detailed-breakdown"
               >
                 {showDetailed ? "Hide" : "Show"} detailed breakdown
               </button>
 
               {showDetailed && (
-                <div className="mt-4 text-left text-sm space-y-2 pt-4 border-t border-gray-800">
+                <div
+                  id="detailed-breakdown"
+                  className="mt-4 text-left text-sm space-y-2 pt-4 border-t border-gray-800"
+                >
                   <div className="flex justify-between">
                     <span className="text-gray-400">
                       Traditional approach cost:
@@ -205,7 +226,10 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
           </div>
 
           <div className="mt-6 text-center">
-            <button type="button" className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-700 to-blue-700 hover:from-purple-600 hover:to-blue-600 text-white font-medium transition-all">
+            <button
+              type="button"
+              className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-700 to-blue-700 hover:from-purple-600 hover:to-blue-600 text-white font-medium transition-all"
+            >
               <span>Get your personalized ROI report</span>
               <ChevronRight size={16} className="ml-1" />
             </button>
@@ -292,7 +316,7 @@ const ComparisonSlider = ({ isVisible }: { isVisible?: boolean }) => {
           <div className="absolute top-0 left-0 w-full h-full p-8 flex flex-col">
             <div className="flex items-center mb-4">
               <div className="p-2 rounded-full bg-red-900/40 text-red-400 mr-3">
-                <Clock size={22} />
+                <Clock size={22} aria-hidden="true" />
               </div>
               <h4 className="text-xl font-bold text-white">
                 Traditional Development
@@ -370,7 +394,7 @@ const ComparisonSlider = ({ isVisible }: { isVisible?: boolean }) => {
           <div className="absolute top-0 left-0 w-full h-full p-8 flex flex-col">
             <div className="flex items-center mb-4">
               <div className="p-2 rounded-full bg-blue-900/40 text-blue-400 mr-3">
-                <Zap size={22} />
+                <Zap size={22} aria-hidden="true" />
               </div>
               <h4 className="text-xl font-bold text-white">
                 With The Architect
@@ -996,7 +1020,7 @@ const TraditionalDevelopment = ({ isVisible }: { isVisible?: boolean }) => {
       {/* Pain points */}
       <div className="space-y-3">
         {painPoints.map((point, i) => (
-          <div key={i} className="flex items-center text-gray-300">
+          <div key={`pain-point-${i}`} className="flex items-center text-gray-300">
             <X size={16} className="text-red-400 mr-2 flex-shrink-0" />
             <span className="text-sm">{point}</span>
           </div>
@@ -1132,7 +1156,7 @@ const WithArchitect = ({ isVisible }: { isVisible?: boolean }) => {
       {/* Benefits */}
       <div className="space-y-3">
         {benefits.map((point, i) => (
-          <div key={i} className="flex items-center text-gray-300">
+          <div key={`benefit-${i}`} className="flex items-center text-gray-300">
             <Check size={16} className="text-blue-400 mr-2 flex-shrink-0" />
             <span className="text-sm">{point}</span>
           </div>
@@ -1171,7 +1195,7 @@ const StatsComparison = ({ isVisible }: { isVisible?: boolean }) => {
     <div className="mt-16 grid md:grid-cols-3 gap-6">
       {stats.map((stat, index) => (
         <div
-          key={index}
+          key={`stat-${stat.value.replace(/[^a-zA-Z0-9]/g, '')}`}
           className={`p-6 rounded-xl bg-gray-800/50 border border-gray-700 text-center transform transition-all duration-500 ${stat.delay} ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}

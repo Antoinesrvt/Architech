@@ -211,11 +211,12 @@ function UserComponent() {
           const isActive = activeTab === index;
 
           return (
-            <div
+            <button
               key={benefit.title}
+              type="button"
               className={`p-6 rounded-xl ${benefit.bgColor} border ${
                 benefit.borderColor
-              } transition-all duration-500 transform cursor-pointer ${
+              } transition-all duration-500 transform cursor-pointer text-left w-full ${
                 isVisible
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-12"
@@ -227,14 +228,8 @@ function UserComponent() {
               style={{ transitionDelay: `${index * 150}ms` }}
               aria-hidden={!isVisible}
               onClick={() => setActiveTab(index)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setActiveTab(index);
-                }
-              }}
-              role="button"
-              tabIndex={0}
+              aria-pressed={isActive}
+              aria-label={`Select ${benefit.title} benefit details`}
             >
               {/* Pain point tag */}
               <div className="flex justify-between items-center mb-4">
@@ -247,7 +242,11 @@ function UserComponent() {
                   <div
                     className={`w-5 h-5 rounded-full flex items-center justify-center ${benefit.bgColor}`}
                   >
-                    <CheckCircle size={12} className={benefit.color} />
+                    <CheckCircle
+                      size={12}
+                      className={benefit.color}
+                      aria-hidden="true"
+                    />
                   </div>
                 )}
               </div>
@@ -257,7 +256,11 @@ function UserComponent() {
                 className={`w-16 h-16 rounded-full mb-6 flex items-center justify-center ${benefit.bgColor} ${benefit.borderColor} border`}
                 aria-hidden="true"
               >
-                <BenefitIcon size={32} className={benefit.color} />
+                <BenefitIcon
+                  size={32}
+                  className={benefit.color}
+                  aria-hidden="true"
+                />
               </div>
 
               {/* Stat */}
@@ -279,10 +282,14 @@ function UserComponent() {
                 <span className="line-through text-red-400">
                   {benefit.beforeExample}
                 </span>
-                <ArrowRight size={14} className="mx-2 text-gray-600" />
+                <ArrowRight
+                  size={14}
+                  className="mx-2 text-gray-600"
+                  aria-hidden="true"
+                />
                 <span className="text-green-400">{benefit.afterExample}</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -319,7 +326,11 @@ function UserComponent() {
             <div
               className={`w-10 h-10 rounded-full ${benefits[activeTab].bgColor} flex items-center justify-center mr-3`}
             >
-              <Code size={20} className={benefits[activeTab].color} />
+              <Code
+                size={20}
+                className={benefits[activeTab].color}
+                aria-hidden="true"
+              />
             </div>
             <h3 className="text-xl font-bold text-white">
               Real-World Example: {benefits[activeTab].title}
@@ -331,7 +342,11 @@ function UserComponent() {
             <div className="bg-gray-950 rounded-lg overflow-hidden border border-gray-800">
               <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center">
-                  <Terminal size={16} className="text-red-400 mr-2" />
+                  <Terminal
+                    size={16}
+                    className="text-red-400 mr-2"
+                    aria-hidden="true"
+                  />
                   <span className="text-gray-300 text-sm">
                     Without The Architect
                   </span>
@@ -351,7 +366,11 @@ function UserComponent() {
             <div className="bg-gray-950 rounded-lg overflow-hidden border border-gray-800">
               <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center">
-                  <GitBranch size={16} className="text-green-400 mr-2" />
+                  <GitBranch
+                    size={16}
+                    className="text-green-400 mr-2"
+                    aria-hidden="true"
+                  />
                   <span className="text-gray-300 text-sm">
                     With The Architect
                   </span>

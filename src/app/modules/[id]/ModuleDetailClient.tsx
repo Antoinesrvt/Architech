@@ -96,7 +96,11 @@ export default function ModuleDetailClient({
           </p>
         </div>
         <div className="flex-none mt-4 md:mt-0">
-          <button type="button" className="btn btn-primary" onClick={handleCreateProject}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleCreateProject}
+          >
             Create Project with this Module
           </button>
         </div>
@@ -125,7 +129,10 @@ export default function ModuleDetailClient({
                       className="bg-base-300 rounded-lg p-3 font-mono text-sm relative group"
                     >
                       {command}
-                      <button type="button" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           className="h-5 w-5"

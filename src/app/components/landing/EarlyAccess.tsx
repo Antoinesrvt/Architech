@@ -138,15 +138,24 @@ export const EarlyAccess = ({ sectionRef, isVisible }: SectionProps) => {
         <div className="mt-16 text-gray-300 text-center">
           <p>Want to learn more before signing up?</p>
           <div className="mt-4 flex justify-center space-x-4">
-            <button type="button" className="text-blue-400 hover:text-blue-300 flex items-center transition-colors">
+            <button
+              type="button"
+              className="text-blue-400 hover:text-blue-300 flex items-center transition-colors"
+            >
               <Github size={20} className="mr-2" />
               <span>GitHub</span>
             </button>
-            <button type="button" className="text-blue-400 hover:text-blue-300 flex items-center transition-colors">
+            <button
+              type="button"
+              className="text-blue-400 hover:text-blue-300 flex items-center transition-colors"
+            >
               <Twitter size={20} className="mr-2" />
               <span>Twitter</span>
             </button>
-            <button type="button" className="text-blue-400 hover:text-blue-300 flex items-center transition-colors">
+            <button
+              type="button"
+              className="text-blue-400 hover:text-blue-300 flex items-center transition-colors"
+            >
               <Mail size={20} className="mr-2" />
               <span>Contact</span>
             </button>

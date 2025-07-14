@@ -242,14 +242,9 @@
   }
 }
 
-/* Import DaisyUI */
-@custom-variant dark (&:is(.dark *));
-
-@plugin "daisyui/theme" {
-  name: "architech";
-  default: true;
-  prefersdark: true;
-  color-scheme: "dark";
+/* Custom CSS Variables for Theme Support */
+:root {
+  /* Dark theme variables (default) */
   --color-base-100: oklch(20.768% 0.039 265.754);
   --color-base-200: oklch(19.314% 0.037 265.754);
   --color-base-300: oklch(17.86% 0.034 265.754);
@@ -270,45 +265,22 @@
   --color-warning-content: oklch(16.648% 0.027 82.95);
   --color-error: oklch(71.785% 0.17 13.118);
   --color-error-content: oklch(14.357% 0.034 13.118);
-  --radius-selector: 1rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
 }
 
-@plugin "daisyui/theme" {
-  name: "architech-light";
-  default: false;
-  prefersdark: false;
-  color-scheme: "light";
-
-  /* Couleurs de base - Fond clair avec subtile teinte bleue */
+/* Light theme variables */
+[data-theme="light"] {
   --color-base-100: oklch(99% 0.01 240);
   --color-base-200: oklch(96% 0.01 240);
   --color-base-300: oklch(93% 0.01 240);
   --color-base-content: oklch(22% 0.02 240);
-
-  /* Primaire - Bleu professionnel, légèrement plus foncé pour contraste sur fond clair */
   --color-primary: oklch(60% 0.2 230);
   --color-primary-content: oklch(99% 0.005 0);
-
-  /* Secondaire - Violet créatif ajusté pour le mode clair */
   --color-secondary: oklch(65% 0.18 280);
   --color-secondary-content: oklch(99% 0.005 0);
-
-  /* Accent - Cyan énergique ajusté pour le mode clair */
   --color-accent: oklch(70% 0.19 190);
   --color-accent-content: oklch(99% 0.005 0);
-
-  /* Neutre - Gris bleuté pour équilibrer */
   --color-neutral: oklch(75% 0.02 240);
   --color-neutral-content: oklch(99% 0.005 0);
-
-  /* États informatifs - Ajustés pour le mode clair */
   --color-info: oklch(70% 0.17 210);
   --color-info-content: oklch(99% 0.005 0);
   --color-success: oklch(72% 0.16 160);
@@ -317,14 +289,4 @@
   --color-warning-content: oklch(20% 0.03 85);
   --color-error: oklch(68% 0.18 25);
   --color-error-content: oklch(99% 0.005 0);
-
-  /* Rayons et tailles - Identiques au thème sombre pour cohérence */
-  --radius-selector: 1rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
 }

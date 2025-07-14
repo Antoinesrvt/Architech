@@ -1,8 +1,7 @@
 //! Directory structure task implementation
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter};
+use tauri::{Emitter};
 
 use async_trait::async_trait;
 use log::{info, error};

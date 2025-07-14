@@ -114,6 +114,7 @@ export const Hero = ({ sectionRef, scrollToSection }: SectionProps) => {
             if (e.key === "Escape") {
               setShowDemo(false);
             }
+            return;
           }}
           role="dialog"
           aria-modal="true"

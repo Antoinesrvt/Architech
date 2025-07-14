@@ -5,24 +5,21 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
-use tokio::sync::mpsc;
+
 use tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
 use std::path::{PathBuf};
 use log::{debug, info, warn, error};
-use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
-use std::thread::sleep as thread_sleep;
-use std::time::Duration as StdDuration;
+
 
 use crate::state::{AppState, ProjectStatus};
 use crate::commands::framework::{get_framework_by_id as get_framework, get_modules};
 use crate::commands::command_runner::{modify_file, modify_import};
 use crate::tasks::{
-    Task, TaskContext, TaskExecutor, TaskResult, TaskState,
-    FrameworkTask, ModuleTask, DirectoryTask, CleanupTask
+    Task, TaskContext, TaskExecutor, TaskState,
+    FrameworkTask, ModuleTask, CleanupTask
 };
-use crate::commands::command_runner::{CommandBuilder, CommandResult as CommandRunnerResult};
+use crate::commands::command_runner::{ CommandResult as CommandRunnerResult};
 
 // Task result type
 #[derive(Debug, Clone, Serialize, Deserialize)]

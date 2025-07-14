@@ -81,9 +81,9 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                 min="1"
                 max="12"
                 value={projectsPerYear}
-                onChange={(e) =>
-                  setProjectsPerYear(Number.parseInt(e.target.value))
-                }
+                onChange={(e) => {
+                  setProjectsPerYear(Number.parseInt(e.target.value));
+                }}
                 className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
                 aria-describedby="projects-per-year-help"
               />
@@ -109,9 +109,9 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                 min="10"
                 max="60"
                 value={hoursPerProject}
-                onChange={(e) =>
-                  setHoursPerProject(Number.parseInt(e.target.value))
-                }
+                onChange={(e) => {
+                  setHoursPerProject(Number.parseInt(e.target.value));
+                }}
                 className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
                 aria-describedby="hours-per-project-help"
               />
@@ -137,7 +137,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
                 min="50"
                 max="200"
                 value={hourlyRate}
-                onChange={(e) => setHourlyRate(Number.parseInt(e.target.value))}
+                onChange={(e) => { setHourlyRate(Number.parseInt(e.target.value)); }}
                 className="w-full h-2 rounded-lg appearance-none bg-gray-700 outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0"
                 aria-describedby="hourly-rate-help"
               />
@@ -187,7 +187,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
 
               <button
                 type="button"
-                onClick={() => setShowDetailed(!showDetailed)}
+                onClick={() => { setShowDetailed(!showDetailed); }}
                 className="text-sm text-purple-400 hover:text-purple-300 transition-colors underline"
                 aria-expanded={showDetailed}
                 aria-controls="detailed-breakdown"
@@ -796,7 +796,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
           <div className="inline-flex bg-gray-900/50 p-1 rounded-lg border border-gray-800">
             <button
               type="button"
-              onClick={() => setShowAdvancedComparison(false)}
+              onClick={() => { setShowAdvancedComparison(false); }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 !showAdvancedComparison
                   ? "bg-purple-800/30 text-purple-300"
@@ -807,7 +807,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
             </button>
             <button
               type="button"
-              onClick={() => setShowAdvancedComparison(true)}
+              onClick={() => { setShowAdvancedComparison(true); }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 showAdvancedComparison
                   ? "bg-purple-800/30 text-purple-300"
@@ -829,7 +829,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
             <div className="mb-10 flex md:hidden">
               <button
                 type="button"
-                onClick={() => setActiveTab("before")}
+                onClick={() => { setActiveTab("before"); }}
                 className={`flex-1 py-3 text-center font-medium rounded-l-lg transition-colors ${
                   activeTab === "before"
                     ? "bg-red-900/30 text-red-300 border-t border-l border-b border-red-800"
@@ -840,7 +840,7 @@ export const Problem = ({ sectionRef, isVisible }: SectionProps) => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("after")}
+                onClick={() => { setActiveTab("after"); }}
                 className={`flex-1 py-3 text-center font-medium rounded-r-lg transition-colors ${
                   activeTab === "after"
                     ? "bg-blue-900/30 text-blue-300 border-t border-r border-b border-blue-800"

@@ -76,7 +76,7 @@ export default function ModulesPage() {
     for (const moduleItem of modules) {
       result.push({
         ...moduleItem,
-        uses: usageMap.get(moduleItem.id) || new Set(),
+        uses: usageMap.get(moduleItem.id) ?? new Set(),
       });
     }
 
@@ -180,9 +180,7 @@ export default function ModulesPage() {
                 key={tag}
                 type="button"
                 className={`badge badge-lg ${selectedTag === tag ? "badge-primary" : "badge-outline"}`}
-                onClick={() => {
-                  handleTagClick(tag);
-                }}
+                onClick={() => handleTagClick(tag)}
               >
                 {tag}
               </button>
@@ -259,9 +257,7 @@ export default function ModulesPage() {
                 key={module.id}
                 type="button"
                 className="card bg-base-100 border border-base-300 hover:border-primary cursor-pointer transition-all hover:shadow-md text-left w-full"
-                onClick={() => {
-                  handleModuleClick(module.id);
-                }}
+                onClick={() => handleModuleClick(module.id)}
                 aria-label={`View details for ${module.name} module`}
               >
                 <figure className="h-40 bg-gradient-to-br from-primary/5 to-secondary/5">

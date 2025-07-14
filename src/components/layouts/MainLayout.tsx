@@ -66,7 +66,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <button
               type="button"
               className="btn btn-square btn-ghost"
-              onClick={handleThemeToggle}
+              onClick={() => void handleThemeToggle()}
             >
               {theme === "architech" ? (
                 <svg
@@ -126,7 +126,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <button
                 type="button"
                 className="btn btn-square btn-ghost"
-                onClick={handleThemeToggle}
+                onClick={() => void handleThemeToggle()}
               >
                 {theme === "architech" ? (
                   <svg

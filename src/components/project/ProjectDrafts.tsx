@@ -203,7 +203,7 @@ export default function ProjectDrafts() {
     try {
       await loadDraft(draftId);
       // Use a slight delay to ensure the state is updated before navigation
-      setTimeout(() => {
+      void setTimeout(() => {
         router.push("/new-project");
       }, 100);
     } catch (error) {
@@ -285,7 +285,7 @@ export default function ProjectDrafts() {
         <button
           type="button"
           className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-base-200"
-          onClick={(e) => handleContinueDraft(e, activeDropdown)}
+          onClick={(e) => void handleContinueDraft(e, activeDropdown)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -309,7 +309,7 @@ export default function ProjectDrafts() {
             <button
               type="button"
               className="btn btn-sm btn-ghost justify-start gap-2 w-full my-1 hover:bg-primary/10 text-primary"
-              onClick={(e) => handleContinueDraft(e, activeDropdown)}
+              onClick={(e) => void handleContinueDraft(e, activeDropdown)}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -332,7 +332,7 @@ export default function ProjectDrafts() {
         <button
           type="button"
           className="btn btn-sm btn-ghost text-error justify-start gap-2 w-full my-1 hover:bg-error/10"
-          onClick={(e) => handleDeleteDraft(e, activeDropdown)}
+          onClick={(e) => void handleDeleteDraft(e, activeDropdown)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -482,7 +482,7 @@ export default function ProjectDrafts() {
                                   className="btn btn-sm btn-error"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleContinueDraft(e, draft.id);
+                                    void handleContinueDraft(e, draft.id);
                                   }}
                                 >
                                   <svg

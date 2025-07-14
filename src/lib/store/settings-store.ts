@@ -16,9 +16,7 @@ interface SettingsState {
   setUseGit: (value: boolean) => void;
 }
 
-// @ts-expect-error - Zustand version compatibility issues with persist middleware
 export const useSettingsStore = create<SettingsState>()(
-  // @ts-expect-error - Persist middleware typing issue
   persist(
     (set) => ({
       theme: "architech", // Use your custom dark theme as default

@@ -164,7 +164,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadRecentProjects: async () => {
     const db = await getDatabase();
-    const result = await db.select<RecentProject[]>(
+    const result = await db.select<{
+      id: string;
+      name: string;
+      path: string;
+      framework: string;
+      created_at: string;
+      last_opened_at: string;
+    }[]>(
       "SELECT * FROM recent_projects ORDER BY last_opened_at DESC LIMIT 10",
     );
 
@@ -214,7 +221,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     );
 
     // Keep only the 3 most recent drafts
-    const allDrafts = await db.select<any[]>(
+    const allDrafts = await db.select<{
+      id: string;
+    }[]>(
       "SELECT id FROM project_drafts ORDER BY last_updated DESC",
     );
 
@@ -279,7 +288,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadDraft: async (draftId) => {
     const db = await getDatabase();
-    const result = await db.select<any[]>(
+    const result = await db.select<{
+      id: string;
+      name: string;
+      path: string;
+      description: string | null;
+      framework_id: string | null;
+      module_ids: string;
+      module_configurations: string;
+      last_updated: string;
+    }[]>(
       "SELECT * FROM project_drafts WHERE id = ?",
       [draftId],
     );
@@ -291,10 +309,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       currentDraftId: draftId,
       projectName: draft.name,
       projectPath: draft.path,
-      projectDescription: draft.description || "",
+      projectDescription: draft.description ?? "",
       selectedFrameworkId: draft.framework_id,
-      selectedModuleIds: JSON.parse(draft.module_ids || "[]"),
-      moduleConfigurations: JSON.parse(draft.module_configurations || "{}"),
+      selectedModuleIds: JSON.parse(draft.module_ids ?? "[]"),
+      moduleConfigurations: JSON.parse(draft.module_configurations ?? "{}"),
       lastSaved: draft.last_updated,
     });
   },
@@ -316,7 +334,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadDrafts: async () => {
     const db = await getDatabase();
-    const result = await db.select<any[]>(
+    const result = await db.select<{
+      id: string;
+      name: string;
+      path: string;
+      description: string | null;
+      framework_id: string | null;
+      module_ids: string;
+      module_configurations: string;
+      last_updated: string;
+      generation_id: string | null;
+      generation_status: string | null;
+      generation_progress: number | null;
+      generation_error: string | null;
+    }[]>(
       "SELECT * FROM project_drafts ORDER BY last_updated DESC LIMIT 3",
     );
 
@@ -327,8 +358,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         path: row.path,
         description: row.description,
         frameworkId: row.framework_id,
-        moduleIds: JSON.parse(row.module_ids || "[]"),
-        moduleConfigurations: JSON.parse(row.module_configurations || "{}"),
+        moduleIds: JSON.parse(row.module_ids ?? "[]"),
+        moduleConfigurations: JSON.parse(row.module_configurations ?? "{}"),
         lastUpdated: row.last_updated,
         generationId: row.generation_id,
         generationStatus: row.generation_status,
@@ -342,45 +373,61 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   ...DEFAULT_PROJECT_STATE,
 
   // Actions
-  setProjectName: (name) => set({ projectName: name }),
-  setProjectPath: (path) => set({ projectPath: path }),
-  setProjectDescription: (description) =>
-    set({ projectDescription: description }),
-  setSelectedFramework: (frameworkId) =>
-    set({ selectedFrameworkId: frameworkId }),
-  setSelectedModules: (moduleIds) => set({ selectedModuleIds: moduleIds }),
-  setModuleConfiguration: (moduleId, config) =>
+  setProjectName: (name) => {
+    set({ projectName: name });
+  },
+  setProjectPath: (path) => {
+    set({ projectPath: path });
+  },
+  setProjectDescription: (description) => {
+    set({ projectDescription: description });
+  },
+  setSelectedFramework: (frameworkId) => {
+    set({ selectedFrameworkId: frameworkId });
+  },
+  setSelectedModules: (moduleIds) => {
+    set({ selectedModuleIds: moduleIds });
+  },
+  setModuleConfiguration: (moduleId, config) => {
     set((state) => ({
       moduleConfigurations: {
         ...state.moduleConfigurations,
         [moduleId]: config,
       },
-    })),
-  resetProject: () => set({ ...DEFAULT_PROJECT_STATE, currentDraftId: null }),
+    }));
+  },
+  resetProject: () => {
+    set({ ...DEFAULT_PROJECT_STATE, currentDraftId: null });
+  },
 
   // Generation state
   generationState: DEFAULT_GENERATION_STATE,
-  setGenerationState: (generationState) => set({ generationState }),
-  updateGenerationProgress: (progress) =>
+  setGenerationState: (generationState) => {
+    set({ generationState });
+  },
+  updateGenerationProgress: (progress) => {
     set((state) => ({
       generationState: { ...state.generationState, progress },
-    })),
-  addGenerationTask: (task) =>
+    }));
+  },
+  addGenerationTask: (task) => {
     set((state) => ({
       generationState: {
         ...state.generationState,
         tasks: [...state.generationState.tasks, task],
       },
-    })),
-  updateGenerationTask: (taskId, updates) =>
+    }));
+  },
+  updateGenerationTask: (taskId, updates) => {
     set((state) => ({
       generationState: {
         ...state.generationState,
         tasks: state.generationState.tasks.map((task) =>
-          task.id === taskId ? { ...task, ...updates } : task,
+          (task as TaskResult & { id: string }).id === taskId ? { ...task, ...updates } : task,
         ),
       },
-    })),
+    }));
+  },
 
   // Generation actions (keeping existing implementation)
   generateProject: async () => {
@@ -443,7 +490,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             status: "cancelled",
           },
         }));
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to cancel generation:", error);
       }
     }

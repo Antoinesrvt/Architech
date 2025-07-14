@@ -31,9 +31,9 @@ export function DataMigration() {
     try {
       const data = exportLocalStorageData();
       const hasProjects =
-        data.projects?.recentProjects?.length || data.projects?.drafts?.length;
+        data.projects?.recentProjects?.length ?? data.projects?.drafts?.length;
       const hasFrameworks =
-        data.frameworks?.frameworks?.length || data.frameworks?.modules?.length;
+        data.frameworks?.frameworks?.length ?? data.frameworks?.modules?.length;
       const hasSettings = !!data.settings?.theme;
 
       const hasData = !!(hasProjects || hasFrameworks || hasSettings);
@@ -42,11 +42,11 @@ export function DataMigration() {
         const dataDescription = [];
         if (hasProjects)
           dataDescription.push(
-            `${(data.projects?.recentProjects?.length || 0) + (data.projects?.drafts?.length || 0)} projects`,
+            `${(data.projects?.recentProjects?.length ?? 0) + (data.projects?.drafts?.length ?? 0)} projects`,
           );
         if (hasFrameworks)
           dataDescription.push(
-            `${(data.frameworks?.frameworks?.length || 0) + (data.frameworks?.modules?.length || 0)} frameworks/modules`,
+            `${(data.frameworks?.frameworks?.length ?? 0) + (data.frameworks?.modules?.length ?? 0)} frameworks/modules`,
           );
         if (hasSettings) dataDescription.push("settings");
 
@@ -258,7 +258,7 @@ export function DataMigration() {
         {migrationStatus.status === "idle" && migrationStatus.hasData && (
           <>
             <button
-              onClick={performMigration}
+              onClick={() => void performMigration()}
               className="btn btn-primary"
               disabled={migrationStatus.status === "migrating"}
             >

@@ -49,7 +49,9 @@ export default function Dashboard() {
           message: "Failed to load application data.",
           action: {
             label: "Retry",
-            onClick: () => fetchData(),
+            onClick: () => {
+              void fetchData();
+            },
           },
         });
       } finally {
@@ -57,7 +59,7 @@ export default function Dashboard() {
       }
     }
 
-    fetchData();
+    void fetchData();
   }, [setFrameworks, setModules, toast]);
 
   // Card skeleton loader component for consistency
@@ -258,7 +260,7 @@ export default function Dashboard() {
               onClick={() => {
                 setError(null);
                 setIsLoading(true);
-                setTimeout(() => {
+                void setTimeout(() => {
                   window.location.reload();
                 }, 500);
               }}

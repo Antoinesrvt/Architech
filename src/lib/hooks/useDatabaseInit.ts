@@ -60,7 +60,7 @@ export function useDatabaseInit() {
       }
     };
 
-    initializeApp();
+    void initializeApp();
 
     return () => {
       isMounted = false;

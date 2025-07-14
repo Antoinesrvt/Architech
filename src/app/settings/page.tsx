@@ -39,7 +39,7 @@ export default function SettingsPage() {
       setIsSaved(true);
 
       // Reset the saved indicator after a delay
-      setTimeout(() => {
+      void setTimeout(() => {
         setIsSaved(false);
       }, 3000);
     } catch (error) {
@@ -92,18 +92,8 @@ export default function SettingsPage() {
                     key={themeOption.id}
                     className={`border-2 cursor-pointer p-4 rounded-lg
                       ${theme === themeOption.id ? "border-primary" : "border-base-300"}`}
-                    onClick={async () => {
-                      try {
-                        await setTheme(
-                          themeOption.id as "architech" | "architech-light",
-                        );
-                      } catch (error) {
-                        console.error("Failed to set theme:", error);
-                      }
-                    }}
-                    onKeyDown={async (e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
+                    onClick={() => {
+                      void (async () => {
                         try {
                           await setTheme(
                             themeOption.id as "architech" | "architech-light",
@@ -111,6 +101,20 @@ export default function SettingsPage() {
                         } catch (error) {
                           console.error("Failed to set theme:", error);
                         }
+                      })();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        void (async () => {
+                          try {
+                            await setTheme(
+                              themeOption.id as "architech" | "architech-light",
+                            );
+                          } catch (error) {
+                            console.error("Failed to set theme:", error);
+                          }
+                        })();
                       }
                     }}
                     tabIndex={0}
@@ -218,15 +222,17 @@ export default function SettingsPage() {
                   type="checkbox"
                   className="checkbox checkbox-primary"
                   checked={autoOpenProjectAfterGeneration}
-                  onChange={async (e) => {
-                    try {
-                      await setAutoOpenProjectAfterGeneration(e.target.checked);
-                    } catch (error) {
-                      console.error(
-                        "Failed to update auto-open setting:",
-                        error,
-                      );
-                    }
+                  onChange={(e) => {
+                    void (async () => {
+                      try {
+                        await setAutoOpenProjectAfterGeneration(e.target.checked);
+                      } catch (error) {
+                        console.error(
+                          "Failed to update auto-open setting:",
+                          error,
+                        );
+                      }
+                    })();
                   }}
                 />
                 <span className="label-text">
@@ -241,12 +247,14 @@ export default function SettingsPage() {
                   type="checkbox"
                   className="checkbox checkbox-primary"
                   checked={useGit}
-                  onChange={async (e) => {
-                    try {
-                      await setUseGit(e.target.checked);
-                    } catch (error) {
-                      console.error("Failed to update Git setting:", error);
-                    }
+                  onChange={(e) => {
+                    void (async () => {
+                      try {
+                        await setUseGit(e.target.checked);
+                      } catch (error) {
+                        console.error("Failed to update Git setting:", error);
+                      }
+                    })();
                   }}
                 />
                 <span className="label-text">

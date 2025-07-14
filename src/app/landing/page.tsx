@@ -27,11 +27,11 @@ const useParallax = () => {
       const scrollPosition = window.scrollY;
 
       for (const element of parallaxElements) {
-        const speed = element.getAttribute("data-speed") || "0.1";
+        const speed = element.getAttribute("data-speed") ?? "0.1";
         const movement = scrollPosition * Number(speed);
 
         // Apply transform based on direction attribute
-        const direction = element.getAttribute("data-direction") || "up";
+        const direction = element.getAttribute("data-direction") ?? "up";
         if (direction === "up") {
           element.style.transform = `translate3d(0, -${movement}px, 0)`;
         } else if (direction === "down") {

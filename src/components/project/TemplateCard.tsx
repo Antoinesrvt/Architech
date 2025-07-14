@@ -5,8 +5,16 @@ import { useTemplateStore } from "@/lib/store";
 import Link from "next/link";
 import { useState } from "react";
 
+interface Template {
+  id: string;
+  name: string;
+  description: string;
+  screenshot?: string;
+  tags: string[];
+}
+
 interface TemplateCardProps {
-  template: any;
+  template: Template;
   onSelect?: () => void;
 }
 
@@ -105,11 +113,11 @@ export default function TemplateCard({
         <p className="text-base-content/70">{template.description}</p>
 
         <div className="flex flex-wrap gap-1 mt-2">
-          {template.tags.map((tag: any) => (
+          {template.tags?.map((tag: string) => (
             <span key={tag} className="badge badge-outline">
               {tag}
             </span>
-          ))}
+          )) ?? []}
         </div>
 
         {!onSelect && (

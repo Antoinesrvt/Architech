@@ -32,7 +32,7 @@ export default function FrameworksPage() {
         setError(null);
 
         const fetchedFrameworks = await frameworkService.getFrameworks();
-        void setFrameworks(fetchedFrameworks);
+        setFrameworks(fetchedFrameworks);
       } catch (err) {
         console.error("Failed to load frameworks:", err);
         setError("Failed to load frameworks. Please try again.");
@@ -205,7 +205,9 @@ export default function FrameworksPage() {
               <div
                 key={framework.id}
                 className="card bg-base-100 border border-base-300 hover:border-primary cursor-pointer transition-all hover:shadow-md"
-                onClick={() => handleFrameworkClick(framework.id)}
+                onClick={() => {
+                  handleFrameworkClick(framework.id);
+                }}
               >
                 <figure className="h-40 bg-gradient-to-br from-primary/5 to-secondary/5">
                   {framework.logo ? (
@@ -243,7 +245,9 @@ export default function FrameworksPage() {
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      onClick={(e) => toggleFavorite(e, framework.id)}
+                      onClick={(e) => {
+                        toggleFavorite(e, framework.id);
+                      }}
                     >
                       {favoriteFrameworks.includes(framework.id) ? (
                         <svg
@@ -301,7 +305,14 @@ export default function FrameworksPage() {
                     >
                       {framework.type}
                     </div>
-                    <button type="button" className="btn btn-sm btn-primary">
+                    <button 
+                      type="button" 
+                      className="btn btn-sm btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFrameworkClick(framework.id);
+                      }}
+                    >
                       Use Framework
                     </button>
                   </div>

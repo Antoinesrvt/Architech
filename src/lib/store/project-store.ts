@@ -118,27 +118,30 @@ export const useProjectStore = create<ProjectState>()(
     (set, get) => ({
       // Recent projects
       recentProjects: [],
-      addProject: (project) =>
+      addProject: (project) => {
         set((state) => ({
           recentProjects: [
             project,
             ...state.recentProjects.filter((p) => p.id !== project.id),
           ].slice(0, 10),
-        })),
-      removeProject: (projectId) =>
+        }));
+      },
+      removeProject: (projectId) => {
         set((state) => ({
           recentProjects: state.recentProjects.filter(
             (p) => p.id !== projectId,
           ),
-        })),
-      updateLastOpened: (projectId) =>
+        }));
+      },
+      updateLastOpened: (projectId) => {
         set((state) => ({
           recentProjects: state.recentProjects.map((p) =>
             p.id === projectId
               ? { ...p, lastOpenedAt: new Date().toISOString() }
               : p,
           ),
-        })),
+        }));
+      },
 
       // Project drafts
       drafts: [],
@@ -207,12 +210,12 @@ export const useProjectStore = create<ProjectState>()(
 
         set({
           currentDraftId: draftId,
-          projectName: draft.name || "",
-          projectPath: draft.path || "",
-          projectDescription: draft.description || "",
-          selectedFrameworkId: draft.frameworkId || null,
-          selectedModuleIds: moduleIds,
-          moduleConfigurations: draft.moduleConfigurations || {}, // Add default empty object if not present
+          projectName: draft.name,
+          projectPath: draft.path,
+          projectDescription: draft.description ?? "",
+          selectedFrameworkId: draft.frameworkId ?? null,
+          selectedModuleIds: draft.moduleIds,
+          moduleConfigurations: draft.moduleConfigurations ?? {}, // Add default empty object if not present
           lastSaved: draft.lastUpdated ? new Date(draft.lastUpdated) : null,
         });
       },
@@ -238,8 +241,12 @@ export const useProjectStore = create<ProjectState>()(
       // Project generation state
       isLoading: false,
       error: null,
-      setIsLoading: (loading) => set({ isLoading: loading }),
-      setError: (error) => set({ error }),
+      setIsLoading: (loading) => {
+        set({ isLoading: loading });
+      },
+      setError: (error) => {
+        set({ error });
+      },
 
       // New generation tracking
       currentGenerationId: null,
@@ -263,7 +270,7 @@ export const useProjectStore = create<ProjectState>()(
         set({ selectedFrameworkId: frameworkId });
         get().saveDraft();
       },
-      addModule: (moduleId) =>
+      addModule: (moduleId) => {
         set((state) => {
           const newState = {
             selectedModuleIds: [...state.selectedModuleIds, moduleId],
@@ -271,8 +278,9 @@ export const useProjectStore = create<ProjectState>()(
           set(newState);
           get().saveDraft();
           return newState;
-        }),
-      removeModule: (moduleId) =>
+        });
+      },
+      removeModule: (moduleId) => {
         set((state) => {
           const newState = {
             selectedModuleIds: state.selectedModuleIds.filter(
@@ -282,8 +290,9 @@ export const useProjectStore = create<ProjectState>()(
           set(newState);
           get().saveDraft();
           return newState;
-        }),
-      setModuleConfiguration: (moduleId, options) =>
+        });
+      },
+      setModuleConfiguration: (moduleId, options) => {
         set((state) => {
           const newState = {
             moduleConfigurations: {
@@ -294,7 +303,8 @@ export const useProjectStore = create<ProjectState>()(
           set(newState);
           get().saveDraft();
           return newState;
-        }),
+        });
+      },
       resetWizardState: () => {
         // Completely reset all project-related state
         set({
@@ -332,21 +342,21 @@ export const useProjectStore = create<ProjectState>()(
         // Validate required fields
         if (!projectName) {
           set({ error: "Project name is required" });
-          return Promise.reject("Project name is required");
+          return Promise.reject(new Error("Project name is required"));
         }
 
         if (!projectPath) {
           set({ error: "Project path is required" });
-          return Promise.reject("Project path is required");
+          return Promise.reject(new Error("Project path is required"));
         }
 
         if (!selectedFrameworkId) {
           set({ error: "Framework selection is required" });
-          return Promise.reject("Framework selection is required");
+          return Promise.reject(new Error("Framework selection is required"));
         }
 
         // Ensure we have a draft to track generation
-        const draftId = currentDraftId || get().createDraft();
+        const draftId = currentDraftId ?? get().createDraft();
 
         // Reset any previous generation state
         get().resetGenerationState();
@@ -362,7 +372,7 @@ export const useProjectStore = create<ProjectState>()(
             framework: selectedFrameworkId,
             modules: selectedModuleIds.map((id) => ({
               id,
-              options: moduleConfigurations[id] || {},
+              options: moduleConfigurations[id] ?? {},
             })),
             options: {
               typescript: true,
@@ -406,13 +416,15 @@ export const useProjectStore = create<ProjectState>()(
           get().setupGenerationListeners();
 
           // Get initial status after a short delay to allow backend to initialize
-          setTimeout(async () => {
-            try {
-              await get().getGenerationStatus();
-              await get().getGenerationLogs();
-            } catch (error) {
-              console.error("Failed to get initial status/logs:", error);
-            }
+          setTimeout(() => {
+            void (async () => {
+              try {
+                await get().getGenerationStatus();
+                await get().getGenerationLogs();
+              } catch (error) {
+                console.error("Failed to get initial status/logs:", error);
+              }
+            })();
           }, 500);
 
           return projectId;
@@ -438,7 +450,7 @@ export const useProjectStore = create<ProjectState>()(
             error: errorMessage,
           }));
 
-          return Promise.reject(error);
+          return Promise.reject(new Error(error instanceof Error ? error.message : String(error)));
         }
       },
 
@@ -467,8 +479,7 @@ export const useProjectStore = create<ProjectState>()(
                       generationStatus: status.status,
                       generationProgress: status.progress,
                       generationError: TaskStatusHelpers.isFailed(status.status)
-                        ? TaskStatusHelpers.getReason(status.status) ||
-                          "Generation failed"
+                        ? (TaskStatusHelpers.getReason(status.status) ?? "Generation failed")
                         : null,
                     }
                   : draft,
@@ -510,7 +521,7 @@ export const useProjectStore = create<ProjectState>()(
           // But if we've been failing repeatedly, we should update the UI
           if (get().isLoading) {
             // After 5 seconds of failing, give up and show error
-            setTimeout(() => {
+            void setTimeout(() => {
               if (get().isLoading) {
                 const errorMsg =
                   error instanceof Error ? error.message : String(error);
@@ -554,7 +565,7 @@ export const useProjectStore = create<ProjectState>()(
             await frameworkService.getProjectLogs(currentGenerationId);
           set({ generationLogs: logs });
           return logs;
-        } catch (error) {
+        } catch (error: unknown) {
           console.error("Failed to get generation logs:", error);
           // Don't set error state here to avoid interrupting the UI
         }
@@ -591,7 +602,7 @@ export const useProjectStore = create<ProjectState>()(
           set({ isLoading: false });
           // Immediately update status to reflect cancellation
           await get().getGenerationStatus();
-        } catch (error) {
+        } catch (error: unknown) {
           console.error("Failed to cancel generation:", error);
 
           // Update draft with error status
@@ -629,8 +640,8 @@ export const useProjectStore = create<ProjectState>()(
           (result: TaskResult) => {
             console.log("Task update received:", result);
             // Update status whenever we get a task update
-            get().getGenerationStatus();
-            get().getGenerationLogs();
+            void get().getGenerationStatus();
+            void get().getGenerationLogs();
           },
         );
 
@@ -646,7 +657,7 @@ export const useProjectStore = create<ProjectState>()(
 
               if (draftWithGeneration) {
                 // Create project from the draft
-                get()
+                void get()
                   .getGenerationStatus()
                   .then((status) => {
                     if (status) {
@@ -666,12 +677,15 @@ export const useProjectStore = create<ProjectState>()(
                       // Delete the draft
                       get().deleteDraft(draftWithGeneration.id);
                     }
+                  })
+                  .catch((error) => {
+                    console.error("Failed to handle generation completion:", error);
                   });
               }
 
               set({ isLoading: false });
-              get().getGenerationStatus();
-              get().getGenerationLogs();
+              void get().getGenerationStatus();
+              void get().getGenerationLogs();
             }
           },
         );
@@ -705,8 +719,8 @@ export const useProjectStore = create<ProjectState>()(
                 isLoading: false,
                 error: `Generation failed: ${reason}`,
               });
-              get().getGenerationStatus();
-              get().getGenerationLogs();
+              void get().getGenerationStatus();
+              void get().getGenerationLogs();
             }
           },
         );

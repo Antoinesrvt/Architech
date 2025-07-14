@@ -198,7 +198,18 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
   // Data loading
   loadFrameworks: async () => {
     const db = await getDatabase();
-    const result = await db.select<any[]>(
+    const result = await db.select<{
+      id: string;
+      name: string;
+      description: string;
+      version: string;
+      type: string;
+      tags: string;
+      cli: string;
+      compatible_modules: string;
+      directory_structure: string;
+      logo: string | null;
+    }[]>(
       "SELECT * FROM frameworks ORDER BY name",
     );
 
@@ -208,9 +219,9 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
       description: row.description,
       version: row.version,
       type: row.type,
-      tags: JSON.parse(row.tags || "[]"),
+      tags: JSON.parse(row.tags ?? "[]"),
       cli: JSON.parse(row.cli),
-      compatible_modules: JSON.parse(row.compatible_modules || "[]"),
+      compatible_modules: JSON.parse(row.compatible_modules ?? "[]"),
       directory_structure: JSON.parse(row.directory_structure),
       logo: row.logo,
     }));
@@ -220,7 +231,16 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
 
   loadModules: async () => {
     const db = await getDatabase();
-    const result = await db.select<any[]>(
+    const result = await db.select<{
+      id: string;
+      name: string;
+      description: string;
+      version: string;
+      category: string;
+      dependencies: string;
+      file_operations: string;
+      options: string;
+    }[]>(
       "SELECT * FROM modules ORDER BY category, name",
     );
 
@@ -230,9 +250,9 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
       description: row.description,
       version: row.version,
       category: row.category,
-      dependencies: JSON.parse(row.dependencies || "[]"),
-      file_operations: JSON.parse(row.file_operations || "[]"),
-      options: JSON.parse(row.options || "[]"),
+      dependencies: JSON.parse(row.dependencies ?? "[]"),
+      file_operations: JSON.parse(row.file_operations ?? "[]"),
+      options: JSON.parse(row.options ?? "[]"),
     }));
 
     set({ modules });
@@ -240,7 +260,9 @@ export const useFrameworkStore = create<FrameworkState>((set, get) => ({
 
   loadFavorites: async () => {
     const db = await getDatabase();
-    const result = await db.select<any[]>(
+    const result = await db.select<{
+      framework_id: string;
+    }[]>(
       "SELECT framework_id FROM favorite_frameworks ORDER BY created_at DESC",
     );
 

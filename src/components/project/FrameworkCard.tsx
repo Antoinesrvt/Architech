@@ -21,6 +21,7 @@ export default function FrameworkCard({
       onClick={() => onSelect(framework)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
           onSelect(framework);
         }
       }}

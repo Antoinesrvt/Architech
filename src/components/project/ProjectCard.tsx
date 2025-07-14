@@ -98,7 +98,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleRemoveProject}
+            onClick={() => void handleRemoveProject()}
             leftIcon={
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -122,7 +122,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           <Button
             variant="primary"
             size="sm"
-            onClick={handleOpenProject}
+            onClick={() => void handleOpenProject()}
             isLoading={isLoading}
             leftIcon={
               !isLoading && (

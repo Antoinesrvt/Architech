@@ -1,15 +1,14 @@
 //! Module installation task implementation
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter};
+use tauri::{ Emitter};
 
 use async_trait::async_trait;
-use log::{info, error, warn, debug};
+use log::{info, warn, debug};
 use tokio::time::{sleep, Duration};
 
 use crate::commands::command_runner::CommandBuilder;
-use crate::commands::framework::{Module as ModuleDetails, get_modules};
+use crate::commands::framework::{get_modules};
 use crate::commands::file::modify_file;
 use super::{Task, TaskContext};
 

@@ -2,14 +2,12 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::fs;
 
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
 use tokio::sync::Mutex;
 use tokio::sync::broadcast;
-use log::{info, warn, error, debug};
+use log::{info, warn, error};
 
 use crate::tasks::{TaskState, TaskResult};
 

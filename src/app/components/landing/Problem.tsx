@@ -70,7 +70,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
             <div>
               <label
                 htmlFor="projects-per-year"
-                className="block text-purple-300 mb-2 font-medium flex justify-between"
+                className="block text-purple-300 mb-2 font-medium justify-between"
               >
                 <span>Number of new projects per year: {projectsPerYear}</span>
                 <span className="text-gray-400 text-sm">(1-12)</span>
@@ -98,7 +98,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
             <div>
               <label
                 htmlFor="hours-per-project"
-                className="block text-purple-300 mb-2 font-medium flex justify-between"
+                className="block text-purple-300 mb-2 font-medium justify-between"
               >
                 <span>Hours per project setup: {hoursPerProject}</span>
                 <span className="text-gray-400 text-sm">(10-60)</span>
@@ -126,7 +126,7 @@ const ROICalculator = ({ isVisible }: { isVisible?: boolean }) => {
             <div>
               <label
                 htmlFor="hourly-rate"
-                className="block text-purple-300 mb-2 font-medium flex justify-between"
+                className="block text-purple-300 mb-2 font-medium justify-between"
               >
                 <span>Developer hourly rate: ${hourlyRate}</span>
                 <span className="text-gray-400 text-sm">(50-200)</span>

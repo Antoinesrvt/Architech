@@ -1,4 +1,4 @@
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Stdio};
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::io::{Read, BufRead, BufReader};
@@ -8,12 +8,11 @@ use regex::Regex;
 use tauri::AppHandle;
 use tauri::Emitter;
 use tokio::time::{sleep, Duration};
-use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::async_runtime::spawn_blocking;
 use tokio::time::{timeout};
-use log::{debug, info, warn, error};
+use log::{debug, info, warn};
 
 /// Options for command execution
 #[derive(Debug, Clone)]

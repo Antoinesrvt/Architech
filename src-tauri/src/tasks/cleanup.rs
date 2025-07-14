@@ -1,12 +1,10 @@
 //! Cleanup task implementation
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter};
+use tauri::{ Emitter};
 
 use async_trait::async_trait;
-use log::{info, warn, error};
-use tokio::time::{sleep, Duration};
+use log::{info, warn};
 use serde_json::Value;
 
 use crate::commands::command_runner::CommandBuilder;
